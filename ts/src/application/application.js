@@ -1,5 +1,4 @@
-import { __wbg_set_wasm, __wbindgen_throw } from "./bootstrap_bg.js";
-import * as gb1 from "./bootstrap_bg.js";
+import { __wbg_set_wasm } from "./application_bg.js";
 import fs from "fs";
 
 let _print_buf = [];
@@ -12,19 +11,41 @@ function print_result() {
   console.log("Wasm_dbg_char result",result);
 }
 
-const __wbg_star0 = {
-  abort: () => {
-    console.error("abort in wasm!");
-    throw new Error("Unsupported wasm api: abort");
-  },
-  get_record: (obj, c) => {
-    console.log(obj);
-    console.log(obj, c);
-    throw new Error("get record");
-  },
-  update_record: () => {
-    throw new Error("get record");
-  },
+const __wbg_star0 = (env) => {
+  return {
+    ...env,
+    abort: () => {
+      console.error("abort in wasm!");
+      throw new Error("Unsupported wasm api: abort");
+    },
+    require: (b) => {
+      if (!b) {
+        console.error("require failed");
+        throw new Error("Require failed");
+      }
+    },
+    wasm_dbg: (c) => {
+      console.log("wasm_dbg", c);
+    },
+      /**
+     * - Convert the number to a character
+     * - Check if the character is a newline
+     * - Print the accumulated result when encountering a newline
+     * - Append the character to the print buffer
+     */
+    wasm_dbg_char: (data) =>
+    String.fromCharCode(Number(data)) === "\n"
+      ? print_result()
+      : _print_buf.push(Number(data)),
+    wasm_input: () => {
+      console.error("wasm_input should not been called in non-zkwasm mode");
+      throw new Error("Unsupported wasm api: wasm_input");
+    },
+    wasm_output: () => {
+      console.error("wasm_input should not been called in non-zkwasm mode");
+      throw new Error("Unsupported wasm api: wasm_input");
+    },
+  };
 }
 
 async function __wbg_load(module, imports) {
@@ -54,11 +75,10 @@ async function __wbg_load(module, imports) {
   }
 }
 
-function __wbg_get_imports() {
+function __wbg_get_imports(env) {
   const imports = {};
   imports.wbg = {};
-  imports['env'] = __wbg_star0;
-  imports["./bootstrap_bg.js"] = gb1;
+  imports['env'] = __wbg_star0(env);
   return imports;
 }
 
@@ -86,14 +106,14 @@ function initSync(module) {
   return __wbg_finalize_init(instance, module);
 }
 
-async function __wbg_init(input) {
+async function __wbg_init(env, input) {
   if (wasm !== null) return wasm;
 
   if (typeof input === 'undefined') {
-    input = new URL('bootstrap_bg.wasm', import.meta.url);
+    input = new URL('application_bg.wasm', import.meta.url);
   }
 
-  const imports = __wbg_get_imports();
+  const imports = __wbg_get_imports(env);
 
   if (typeof input === 'string' || (typeof Request === 'function' && input instanceof Request) || (typeof URL === 'function' && input instanceof URL)) {
     input = fs.readFileSync(input, function (err) {
@@ -112,4 +132,4 @@ async function __wbg_init(input) {
 
 export { initSync }
 export default __wbg_init;
-export * from "./bootstrap_bg.js";
+export * from "./application_bg.js";

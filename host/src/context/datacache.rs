@@ -8,7 +8,7 @@ const STORE_MODE: u64 = 1;
 
 #[wasm_bindgen(module = "rpcbind.js")]
 extern "C" {
-    pub fn update_record(hash: JsValue, data: Vec<u64>);
+    pub fn update_record(hash: Vec<u8>, data: Vec<u64>);
     pub fn get_record(hash: Vec<u8>) -> js_sys::BigUint64Array;
 }
 
@@ -67,7 +67,7 @@ impl CacheContext {
                 // put data and hash into mongo_datahash
                 if !self.data.is_empty() {
                     update_record(
-                        array_from_u8_to_js(&hash),
+                        hash.to_vec(),
                         self.data.clone()
                     )
                 }

@@ -815,6 +815,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
 
 [[package]]
+name = "crunchy"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
+
+[[package]]
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -897,6 +903,26 @@ name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcc3dd5e9e9c0b295d6e1e4d811fb6f157d5ffd784b8d202fc62eac8035a770b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "derive_builder"
+version = "0.1.0"
+source = "git+https://github.com/DelphinusLab/zkWasm-rust.git?branch=unbounded-kvpair#4d2b4a3dd6a7dc48cac10a1b7ba815b1264385fd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "derive_builder"
+version = "0.1.0"
+source = "git+https://github.com/DelphinusLab/zkWasm-rust.git#ce5b89d1c3ac9c3fd76ef481bd9bc5dcdccc9cb0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1105,6 +1131,15 @@ name = "finl_unicode"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fcfdc7a0362c9f4444381a9e697c79d435fe65b52a37466fc2c1184cee9edc6"
+
+[[package]]
+name = "fixed-hash"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "835c052cb0c08c1acf6ffd71c022172e18723949c8282f2b9f27efbc51e64534"
+dependencies = [
+ "static_assertions",
+]
 
 [[package]]
 name = "fnv"
@@ -2711,6 +2746,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
+name = "primitive-types"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b34d9fd68ae0b74a41b21c03c2f62847aa0ffea044eee893b4c140b37e244e2"
+dependencies = [
+ "fixed-hash",
+ "uint",
+]
+
+[[package]]
 name = "proc-macro-crate"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3839,6 +3884,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9"
 
 [[package]]
+name = "uint"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76f64bba2c53b04fcab63c01a7d7427eadc821e3bc48c34dc9ba29c501164b52"
+dependencies = [
+ "byteorder",
+ "crunchy",
+ "hex",
+ "static_assertions",
+]
+
+[[package]]
 name = "unic-char-property"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4438,4 +4495,27 @@ dependencies = [
  "serde",
  "serde_json",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "zkwasm-rust-sdk"
+version = "0.1.0"
+source = "git+https://github.com/DelphinusLab/zkWasm-rust.git?branch=unbounded-kvpair#4d2b4a3dd6a7dc48cac10a1b7ba815b1264385fd"
+dependencies = [
+ "derive_builder 0.1.0 (git+https://github.com/DelphinusLab/zkWasm-rust.git?branch=unbounded-kvpair)",
+ "primitive-types",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "zkwasm-settlement-test"
+version = "0.1.0"
+dependencies = [
+ "derive_builder 0.1.0 (git+https://github.com/DelphinusLab/zkWasm-rust.git)",
+ "primitive-types",
+ "serde",
+ "serde_json",
+ "sha2",
+ "wasm-bindgen",
+ "zkwasm-rust-sdk",
 ]

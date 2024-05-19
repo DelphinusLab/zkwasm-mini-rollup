@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 use context::{datacache::{array_from_u8_to_js, CacheContext}, jubjub::sum::BabyJubjubSumContext, merkle::MerkleContext, poseidon::PoseidonContext};
+use js_sys::BigUint64Array;
 use wasm_bindgen::prelude::*;
 
 pub mod poseidon;
@@ -65,35 +66,35 @@ pub fn babyjubjub_sum_finalize() -> u64 {
     JUBJUB_CONTEXT.lock().unwrap().babyjubjub_sum_finalize()
 }
 
-//#[wasm_bindgen]
+#[wasm_bindgen]
 pub fn merkle_setroot(arg: u64) {
     MERKLE_CONTEXT.lock().unwrap().merkle_setroot(arg);
 }
 
-//#[wasm_bindgen]
+#[wasm_bindgen]
 pub fn merkle_getroot() -> u64 {
     MERKLE_CONTEXT.lock().unwrap().merkle_getroot()
 }
 
-//#[wasm_bindgen]
+#[wasm_bindgen]
 pub fn merkle_address(arg: u64) {
     MERKLE_CONTEXT.lock().unwrap().merkle_address(arg);
 }
 
-//#[wasm_bindgen]
+#[wasm_bindgen]
 pub fn merkle_set(arg: u64) {
     MERKLE_CONTEXT.lock().unwrap().merkle_set(arg);
 }
 
-//#[wasm_bindgen]
+#[wasm_bindgen]
 pub fn merkle_get() -> u64 {
     MERKLE_CONTEXT.lock().unwrap().merkle_get()
 }
 
 
 #[wasm_bindgen]
-pub fn check() {
+pub fn check() -> BigUint64Array {
     unsafe {
         crate::context::datacache::get_record([10;32].to_vec())
-    };
+    }
 }

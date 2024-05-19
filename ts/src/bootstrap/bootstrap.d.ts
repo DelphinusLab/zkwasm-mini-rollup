@@ -41,5 +41,26 @@ export function babyjubjub_sum_push(arg: bigint): void;
 */
 export function babyjubjub_sum_finalize(): bigint;
 /**
+* @param {bigint} arg
 */
-export function check(): void;
+export function merkle_setroot(arg: bigint): void;
+/**
+* @returns {bigint}
+*/
+export function merkle_getroot(): bigint;
+/**
+* @param {bigint} arg
+*/
+export function merkle_address(arg: bigint): void;
+/**
+* @param {bigint} arg
+*/
+export function merkle_set(arg: bigint): void;
+/**
+* @returns {bigint}
+*/
+export function merkle_get(): bigint;
+/**
+* @returns {BigUint64Array}
+*/
+export function check(): BigUint64Array;

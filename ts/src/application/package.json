@@ -1,0 +1,17 @@
+{
+  "name": "zkwasm-sample-application",
+  "version": "0.1.0",
+  "files": [
+    "application_bg.wasm",
+    "application.js",
+    "application_bg.js",
+    "application.d.ts"
+  ],
+  "type": "module",
+  "module": "application.js",
+  "types": "application.d.ts",
+  "sideEffects": [
+    "./application.js",
+    "./snippets/*"
+  ]
+}

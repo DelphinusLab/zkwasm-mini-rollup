@@ -1,9 +1,11 @@
 use bytes_helper::Reduce;
 use bytes_helper::ReduceRule;
+use wasm_bindgen::prelude::wasm_bindgen;
 
+#[wasm_bindgen(module = "rpcbind.js")]
 extern "C" {
-    pub fn update_leaf(root: &[u8; 32], index: u64, leafdata: &[u8; 32]) -> js_sys::Array;
-    pub fn get_leaf(root: &[u8; 32], index: u64) -> js_sys::Array; // result needs to be [u8; 32]
+    pub fn update_leaf(root: Vec<u8>, index: u64, leafdata: Vec<u8>) -> js_sys::Array; // root and leaf data is [u8; 32]
+    pub fn get_leaf(root: Vec<u8>, index: u64) -> js_sys::Array; // result needs to be [u8; 32]
 }
 
 pub const MERKLE_TREE_HEIGHT: usize = 32;
@@ -77,25 +79,22 @@ impl MerkleContext {
             let address = self.address.rules[0].u64_value().unwrap() as u32;
             let index = (address as u64) + (1u64 << MERKLE_TREE_HEIGHT) - 1;
             let hash = self.set.rules[0].bytes_value().unwrap();
-            self.root = unsafe {
-                update_leaf(&self.root, index, &hash.try_into().unwrap())
+            self.root = update_leaf(self.root.to_vec(), index, hash)
                     .into_iter()
                     .map(|v| v.as_f64().unwrap() as u8)
                     .collect::<Vec<_>>()
                     .try_into()
-                    .unwrap()
-            };
+                    .unwrap();
         }
     }
 
     pub fn merkle_get(&mut self) -> u64 {
         let address = self.address.rules[0].u64_value().unwrap() as u32;
         let index = (address as u64) + (1u64 << MERKLE_TREE_HEIGHT) - 1;
-        let leaf = unsafe {get_leaf(&self.root, index)
+        let leaf = get_leaf(self.root.to_vec(), index)
             .into_iter()
             .map(|v| v.as_f64().unwrap() as u8)
-            .collect::<Vec<_>>()
-        };
+            .collect::<Vec<_>>();
         let values = leaf
             .chunks(8)
             .into_iter()
