@@ -1,35 +1,8 @@
-[package]
-name = "chunked-sparse-merkle"
-authors = ["DelphinusLab <xgao@zoyoe.com>"]
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["host", "dbservice"]
+resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-name = "chunked_sparse_merkle"
-path = "src/lib.rs"
-
-[dependencies]
-strum = "0.24.1"
-strum_macros = "0.24.1"
-ff = "0.12"
-cfg-if = "1.0.0"
-itertools = "0.10.0"
-num-bigint = { version = "0.4", features = ["rand"] }
-ark-std = { version = "0.3.0", features = ["print-trace"] }
-serde = { version = "1.0", features = ["serde_derive"] }
-serde_json = "1.0"
-clap = { version = "3.2.22", features = ["derive", "cargo"] }
-subtle = "2.4"
-lazy_static = "1.4.0"
-hex = "0.4"
-mongodb = { version = "2.5.0", default-features = false}
-halo2_proofs = { git = "https://github.com/DelphinusLab/halo2-gpu-specific.git", default-features = true }
-poseidon = { git = "https://github.com/DelphinusLab/poseidon" }
-lru = "0.11.0"
-
-[features]
-default = ["mongo-tokio-sync"]
-mongo-tokio-sync = ["mongodb/tokio-sync"]
-mongo-std-sync = ["mongodb/sync"]
+[workspace.dependencies]
+bytes-helper= { git = "https://github.com/xgaozoyoe/bytes-reducer.git" }
+pairing = { git = "https://github.com/lanbones/pairing", package = "pairing_bn256"}
+poseidon = { git = "https://github.com/DelphinusLab/poseidon", branch="no-std" }

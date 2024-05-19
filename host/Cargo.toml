@@ -1,0 +1,31 @@
+[package]
+name = "zkwasm-host-local"
+authors = ["DelphinusLab <xgao@zoyoe.com>"]
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "zkwasmhostlocal"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+
+[dependencies]
+ff = "0.12"
+bytes-helper= { git = "https://github.com/xgaozoyoe/bytes-reducer.git" }
+halo2curves = { git = "https://github.com/xgaozoyoe/halo2curves.git" }
+poseidon = { git = "https://github.com/DelphinusLab/poseidon", branch="no-std" }
+wasm-bindgen = "0.2.83"
+js-sys = "0.3"
+serde_json = "1.0"
+lazy_static = "1.4.0"
+hex = "0.4"
+cfg-if = "1.0.0"
+serde = { version = "1.0", features = ["serde_derive"] }
+num-bigint = { version = "0.4" }
+
+[features]
+defaut = []
+local = []
