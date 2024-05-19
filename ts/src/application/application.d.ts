@@ -3,3 +3,6 @@
 /**
 */
 export function zkmain(): void;
+/**
+*/
+export function test_merkle(): void;

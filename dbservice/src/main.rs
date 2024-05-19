@@ -19,8 +19,8 @@ lazy_static::lazy_static! {
 #[derive (Clone, Deserialize, Serialize)]
 pub struct UpdateLeafRequest {
     root: [u8;32],
-    index: u64,
-    data: [u8;32]
+    data: [u8;32],
+    index: String, // u64 encoding
 }
 #[derive (Clone, Deserialize, Serialize)]
 pub struct GetLeafRequest {
@@ -31,7 +31,7 @@ pub struct GetLeafRequest {
 #[derive (Clone, Deserialize, Serialize)]
 pub struct UpdateRecordRequest {
     hash: [u8;32],
-    data: Vec<u64>
+    data: Vec<String> // vec u64 string
 }
 #[derive (Clone, Deserialize, Serialize)]
 pub struct GetRecordRequest {
@@ -54,8 +54,9 @@ pub trait Rpc {
 pub struct RpcImpl;
 impl Rpc for RpcImpl {
     fn update_leaf(&self, request: UpdateLeafRequest) -> Result<[u8; 32]> {
+        let index = u64::from_str_radix(request.index.as_str(), 10).unwrap();
         let mut mt = MongoMerkle::<MERKLE_DEPTH>::construct([0;32], request.root, None);
-        mt.update_leaf_data_with_proof(request.index, &request.data.to_vec()).map_err(|_| jsonrpc_core::Error::new(ErrorCode::InternalError))?;
+        mt.update_leaf_data_with_proof(index, &request.data.to_vec()).map_err(|_| jsonrpc_core::Error::new(ErrorCode::InternalError))?;
         Ok(mt.get_root_hash())
 	}
     fn get_leaf(&self, request: GetLeafRequest) -> Result<[u8; 32]> {
@@ -81,7 +82,10 @@ impl Rpc for RpcImpl {
                     data: request
                         .data
                         .iter()
-                        .map(|x| x.to_le_bytes())
+                        .map(|x| {
+                            let x = u64::from_str_radix(x, 10).unwrap();
+                             x.to_le_bytes()
+                        })
                         .flatten()
                         .collect::<Vec<u8>>(),
                 }

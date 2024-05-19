@@ -1,15 +1,31 @@
-import fetch from 'node-fetch';
+import fetch from 'sync-fetch';
 const url = 'http://127.0.0.1:3030';
 
-async function async_get_leaf(root, index) {
+function hash2array(hash) {
+  const hasharray = [];
+  for (v of hash) {
+      hasharray.push(v);
+  }
+  return hasharray;
+}
+
+function bigintArray2array(hash) {
+  const hasharray = [];
+  for (v of hash) {
+      hasharray.push(v.toString());
+  }
+  return hasharray;
+}
+
+function async_get_leaf(root, index) {
+  let roothash = hash2array(root);
   const requestData = {
     jsonrpc: '2.0',
     method: 'get_leaf',
-    params: [{root: root, index: index.toString()}],
-    id: 123
+    params: [{root: roothash, index: index.toString()}],
+    id: 1
   };
-
-  const response = await fetch(url, {
+  const response = fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -18,28 +34,31 @@ async function async_get_leaf(root, index) {
   });
 
   if (response.ok) {
-    const jsonResponse = await response.json();
-    console.log(jsonResponse);
+    const jsonResponse = response.json();
     return jsonResponse.result;
   } else {
+    console.log("get_leaf");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to get leaf");
   }
 }
 
 export function get_leaf(root, index) {
-  async_get_leaf(root, index).then((value)=> value)
+  let data = async_get_leaf(root, index);
+  return data;
 }
 
-async function async_update_leaf(root, index, data) {
+function async_update_leaf(root, index, data) {
+  let roothash = hash2array(root);
+  let datahash = hash2array(data);
   const requestData = {
     jsonrpc: '2.0',
     method: 'update_leaf',
-    params: [{root: root, index: index.toString(), data: data}],
-    id: 123
+    params: [{root: roothash, index: index.toString(), data: datahash}],
+    id: 2
   };
 
-  const response = await fetch(url, {
+  const response = fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -48,27 +67,32 @@ async function async_update_leaf(root, index, data) {
   });
 
   if (response.ok) {
-    const jsonResponse = await response.json();
+    const jsonResponse = response.json();
     console.log(jsonResponse);
     return jsonResponse.result;
   } else {
+    console.log("update_leaf");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to get leaf");
   }
 }
 export function update_leaf(root, index, data) {
-  async_update_leaf(root, index, data).then((value)=> value)
+  return async_update_leaf(root, index, data);
 }
 
-async function async_update_record(hash, data) {
+function async_update_record(hash, data) {
+  console.log("data is ", data);
+  let roothash = hash2array(hash);
+  let datavec = bigintArray2array(data);
+  console.log("datahash is ", datavec);
   const requestData = {
     jsonrpc: '2.0',
     method: 'update_record',
-    params: [{hash: hash, data: data}],
-    id: 123
+    params: [{hash: roothash, data: datavec}],
+    id: 3
   };
 
-  const response = await fetch(url, {
+  const response = fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -77,28 +101,30 @@ async function async_update_record(hash, data) {
   });
 
   if (response.ok) {
-    const jsonResponse = await response.json();
+    const jsonResponse = response.json();
     console.log(jsonResponse);
     return jsonResponse.result;
   } else {
+    console.log("update_record");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to update_record");
   }
 }
 
-export function update_record(hash) {
-  async_update_record(hash, data).then((value)=> value)
+export function update_record(hash, data) {
+  return async_update_record(hash, data);
 }
 
-async function async_get_record(hash, data) {
+function async_get_record(hash) {
+  let hasharray = hash2array(hash);
   const requestData = {
     jsonrpc: '2.0',
     method: 'get_record',
-    params: [{hash: hash, data: data}],
-    id: 123
+    params: [{hash: hasharray}],
+    id: 4
   };
 
-  const response = await fetch(url, {
+  const response = fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -107,17 +133,19 @@ async function async_get_record(hash, data) {
   });
 
   if (response.ok) {
-    const jsonResponse = await response.json();
+    const jsonResponse = response.json();
     console.log(jsonResponse);
-    return jsonResponse.result;
+    let result = jsonResponse.result.map((x)=>{return BigInt(x)});
+    return result;
   } else {
+    console.log("get_record");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to update_record");
   }
 }
 
 export function get_record(hash) {
-  async_get_record(hash).then((value)=> value)
+  return async_get_record(hash);
 }
 
 

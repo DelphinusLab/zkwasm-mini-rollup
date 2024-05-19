@@ -1,6 +1,6 @@
-import fetch from 'node-fetch';
+import fetch from 'sync-fetch';
 
-async function main() {
+function main() {
   const url = 'http://127.0.0.1:3030';
 
   const requestData = {
@@ -16,7 +16,7 @@ async function main() {
     id: 123
   };
 
-  const response = await fetch(url, {
+  const response = fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -25,7 +25,7 @@ async function main() {
   });
 
   if (response.ok) {
-    const jsonResponse = await response.json();
+    const jsonResponse = response.json();
     console.log(jsonResponse);
   } else {
     console.error('Failed to fetch:', response.statusText);

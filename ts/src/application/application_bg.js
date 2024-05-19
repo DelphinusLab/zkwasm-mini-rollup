@@ -9,3 +9,9 @@ export function zkmain() {
     wasm.zkmain();
 }
 
+/**
+*/
+export function test_merkle() {
+    wasm.test_merkle();
+}
+

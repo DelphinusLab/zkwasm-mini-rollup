@@ -12,6 +12,7 @@ async function main() {
    await (initApplication as any)(bootstrap);
    bootstrap.poseidon_new(1n);
    bootstrap.cache_set_mode(1n);
+   application.test_merkle();
 }
 
 main();
