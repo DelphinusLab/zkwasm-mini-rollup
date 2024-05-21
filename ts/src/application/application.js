@@ -93,19 +93,6 @@ function __wbg_finalize_init(instance, module) {
   return wasm;
 }
 
-function initSync(module) {
-  if (wasm !== undefined) return wasm;
-  const imports = __wbg_get_imports();
-  __wbg_init_memory(imports);
-
-  if (!(module instanceof WebAssembly.Module)) {
-    module = new WebAssembly.Module(module);
-  }
-
-  const instance = new WebAssembly.Instance(module, imports);
-  return __wbg_finalize_init(instance, module);
-}
-
 async function __wbg_init(env, input) {
   if (wasm !== null) return wasm;
 
@@ -130,6 +117,5 @@ async function __wbg_init(env, input) {
   return wasm;
 }
 
-export { initSync }
 export default __wbg_init;
 export * from "./application_bg.js";

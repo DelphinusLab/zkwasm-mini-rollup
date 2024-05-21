@@ -1,11 +1,8 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
-import { Queue } from 'bullmq';
-import { Worker } from 'bullmq';
 import { verify_sign, LeHexBN } from "./sign.js";
-import IORedis from 'ioredis';
-import express from 'express';
+import {test_sending_transaction} from "./rpctest.js";
 console.log("abc");
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
@@ -23,33 +20,14 @@ async function main() {
   console.log(initBootstrap);
   await (initBootstrap as any)();
   console.log(bootstrap);
-  console.log("host binder initialized ...");
+  console.log("host binder initialized, initialize application ...");
   await (initApplication as any)(bootstrap);
+  console.log("application initialized, testing merkle db service ...");
   application.test_merkle();
+  console.log("testing merkle db service done. ");
 
-  const connection = new IORedis(
-    {
-      host: 'localhost',  // Your Redis server host
-      port: 6379,        // Your Redis server port
-      maxRetriesPerRequest: null  // Important: set this to null
-    }
-  );
+  test_sending_transaction();
 
-  const myQueue = new Queue('sequencer', {connection});
-
-  console.log("start worker ...");
-
-  const worker = new Worker('sequencer', async job => {
-    console.log("handling {}", job.id);
-    console.log(job.data);
-  }, {connection});
-
-
-  worker.on('failed', (job, err) => {
-      console.error(`Job ${job!.id} failed with error ${err.message}`);
-  });
-
-  await myQueue.add('myJob', { a: 123 });
 }
 
 main();
