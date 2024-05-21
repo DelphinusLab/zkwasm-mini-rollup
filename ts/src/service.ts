@@ -2,8 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import { Queue } from 'bullmq';
-import { Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
 

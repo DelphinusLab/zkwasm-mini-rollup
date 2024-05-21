@@ -3,7 +3,7 @@ const url = 'http://127.0.0.1:3030';
 
 function hash2array(hash) {
   const hasharray = [];
-  for (v of hash) {
+  for (let v of hash) {
       hasharray.push(v);
   }
   return hasharray;
@@ -11,7 +11,7 @@ function hash2array(hash) {
 
 function bigintArray2array(hash) {
   const hasharray = [];
-  for (v of hash) {
+  for (let v of hash) {
       hasharray.push(v.toString());
   }
   return hasharray;
