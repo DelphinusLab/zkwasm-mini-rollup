@@ -45,6 +45,27 @@ async function main() {
       console.log("handle auto", job.data);
     } else if (job.name == 'transaction') {
       console.log("handle transaction");
+      try {
+        let value = job.data.value;
+        const msg = new LeHexBN(value.msg).toU64Array();
+        const pkx = new LeHexBN(value.pkx).toU64Array();
+        const pky = new LeHexBN(value.pky).toU64Array();
+        const sigx = new LeHexBN(value.sigx).toU64Array();
+        const sigy = new LeHexBN(value.sigy).toU64Array();
+        const sigr = new LeHexBN(value.sigr).toU64Array();
+
+        let u64array = new BigUint64Array(24);
+        u64array.set(msg);
+        u64array.set(pkx, 4);
+        u64array.set(pky, 8);
+        u64array.set(sigx, 12);
+        u64array.set(sigy, 16);
+        u64array.set(sigr, 20);
+        application.handle_tx(u64array);
+      } catch (error) {
+        console.log("handling tx error");
+        console.log(error);
+      }
     }
   }, {connection});
 
@@ -75,7 +96,10 @@ async function main() {
         res.status(500).send('Invalid signature');
       } else {
         const job = await myQueue.add('transaction', { value });
-        res.status(201).send(`Transaction ${value} added to the queue with job ${job.id}`);
+        res.status(201).send({
+          success: true,
+          jobid: job.id
+        });
       }
     } catch (error) {
       console.error('Error adding job to the queue:', error);

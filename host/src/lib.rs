@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use context::{datacache::{array_from_u8_to_js, CacheContext}, jubjub::sum::BabyJubjubSumContext, merkle::MerkleContext, poseidon::PoseidonContext};
+use context::{datacache::CacheContext, jubjub::sum::BabyJubjubSumContext, merkle::MerkleContext, poseidon::PoseidonContext};
 use js_sys::BigUint64Array;
 use wasm_bindgen::prelude::*;
 
@@ -94,7 +94,5 @@ pub fn merkle_get() -> u64 {
 
 #[wasm_bindgen]
 pub fn check() -> BigUint64Array {
-    unsafe {
-        crate::context::datacache::get_record([10;32].to_vec())
-    }
+    crate::context::datacache::get_record([10;32].to_vec())
 }

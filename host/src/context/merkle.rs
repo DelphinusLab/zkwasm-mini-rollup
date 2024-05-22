@@ -59,7 +59,6 @@ impl MerkleContext {
             .collect::<Vec<u64>>();
         let cursor = self.get_root.cursor;
         self.get_root.reduce(values[self.get_root.cursor]);
-        web_sys::console::log_1(&format!("Root, {:?}!", values).into());
         values[cursor]
     }
 

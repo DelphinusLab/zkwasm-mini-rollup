@@ -1,5 +1,5 @@
 import fetch from 'sync-fetch';
-import { verify_sign, LeHexBN } from "./sign.js";
+import { verify_sign, LeHexBN, sign } from "./sign.js";
 
 export function test_merkle_db_service() {
   const url = 'http://127.0.0.1:3030';
@@ -57,6 +57,26 @@ export function test_sending_transaction() {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(requestData)
+  });
+
+  if (response.ok) {
+    const jsonResponse = response.json();
+    console.log(jsonResponse);
+  } else {
+    console.log(response);
+    console.error('Failed to fetch:', response.statusText);
+  }
+}
+
+export function sending_transaction(cmd: Array<bigint>, prikey: string) {
+  const url = 'http://localhost:3000/send';
+  let data = sign(cmd, prikey);
+  const response = fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
   });
 
   if (response.ok) {

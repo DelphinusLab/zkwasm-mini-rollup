@@ -4,9 +4,50 @@ use zkwasm_rust_sdk::wasm_input;
 use zkwasm_rust_sdk::wasm_output;
 use sha2::{Sha256, Digest};
 use primitive_types::U256;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn get_tx(inputs: [u64; 24]) {
+pub fn handle_tx(inputs: Vec<u64>) {
+    let pk = unsafe {BabyJubjubPoint {
+        x: U256([
+                inputs[4],
+                inputs[5],
+                inputs[6],
+                inputs[7],
+        ]),
+        y: U256([
+                inputs[8],
+                inputs[9],
+                inputs[10],
+                inputs[11],
+        ]),
+    }};
+    zkwasm_rust_sdk::dbg!("process sig\n");
+    let sig = unsafe {JubjubSignature {
+        sig_r: BabyJubjubPoint {
+            x: U256([
+                inputs[12],
+                inputs[13],
+                inputs[14],
+                inputs[15],
+            ]),
+            y: U256([
+                inputs[16],
+                inputs[17],
+                inputs[18],
+                inputs[19],
+            ]),
+        },
+        sig_s: [
+            inputs[20],
+            inputs[21],
+            inputs[22],
+            inputs[23],
+        ]
+    }};
+
+    zkwasm_rust_sdk::dbg!("verifying signature ...\n");
+    sig.verify(&pk, &[inputs[0], inputs[1], inputs[2], inputs[3]]);
 }
 
 pub fn process_inputs(step: &mut impl FnMut(u64)) -> [u64; 4] {
