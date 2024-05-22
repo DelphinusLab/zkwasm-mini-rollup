@@ -5,6 +5,10 @@ use zkwasm_rust_sdk::wasm_output;
 use sha2::{Sha256, Digest};
 use primitive_types::U256;
 
+#[wasm_bindgen]
+pub fn get_tx(inputs: [u64; 24]) {
+}
+
 pub fn process_inputs(step: &mut impl FnMut(u64)) -> [u64; 4] {
     let mut hasher = Sha256::new();
 

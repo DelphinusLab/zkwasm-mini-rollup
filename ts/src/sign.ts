@@ -3,6 +3,7 @@ import { Point } from "delphinus-curves/src/altjubjub";
 
 function littleEndianHexToBN(hexString: string) {
   // Remove the '0x' prefix if it exists
+  console.log("hexString is", hexString);
   if (hexString.startsWith('0x')) {
     hexString = hexString.slice(2);
   }
@@ -38,6 +39,9 @@ export function verify_sign(msg: LeHexBN, pkx: LeHexBN, pky: LeHexBN, rx:LeHexBN
   let r = (new Point(rx.toBN(), ry.toBN())).add(pkey.mul(msg.toBN()))
   console.log(l);
   console.log(r);
-  return (l==r);
+  const negr  = new Point(r.x.neg(), r.y);
+  console.log(negr);
+  console.log(l.add(negr));
+  return (l.add(negr).isZero());
 }
 

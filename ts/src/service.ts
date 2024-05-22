@@ -55,7 +55,7 @@ async function main() {
 
   app.use(express.json());
   app.post('/send', async (req, res) => {
-    const { value } = req.body;
+    const value = req.body;
 
     console.log("value is", value);
 
