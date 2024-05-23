@@ -61,6 +61,7 @@ async function main() {
         u64array.set(sigx, 12);
         u64array.set(sigy, 16);
         u64array.set(sigr, 20);
+        application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
       } catch (error) {
         console.log("handling tx error");

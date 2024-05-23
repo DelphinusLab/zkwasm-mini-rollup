@@ -3,7 +3,19 @@
 /**
 * @param {BigUint64Array} inputs
 */
-export function handle_tx(inputs: BigUint64Array): void;
+export function verify_tx_signature(inputs: BigUint64Array): void;
+/**
+* @param {BigUint64Array} params
+*/
+export function handle_tx(params: BigUint64Array): void;
+/**
+* @param {BigUint64Array} root
+*/
+export function initialize(root: BigUint64Array): void;
+/**
+* @returns {BigUint64Array}
+*/
+export function query_root(): BigUint64Array;
 /**
 */
 export function zkmain(): void;

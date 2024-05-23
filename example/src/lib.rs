@@ -7,7 +7,7 @@ use primitive_types::U256;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn handle_tx(inputs: Vec<u64>) {
+pub fn verify_tx_signature(inputs: Vec<u64>) {
     let pk = unsafe {BabyJubjubPoint {
         x: U256([
                 inputs[4],

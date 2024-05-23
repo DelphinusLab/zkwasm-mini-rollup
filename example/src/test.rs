@@ -6,29 +6,27 @@ use zkwasm_rust_sdk::{
     Merkle,
     require,
 };
-use crate::DepositInfo;
+use crate::{verify_tx_signature, DepositInfo};
 use crate::output_tx_info;
-use crate::process_inputs;
 
 struct State {
     balance: u64
 }
 
-#[wasm_bindgen]
-pub fn zkmain() {
-    let merkle = unsafe {
-        Merkle::load([
-            wasm_input(1),
-            wasm_input(1),
-            wasm_input(1),
-            wasm_input(1),
-        ])
-    };
-    let mut inputs = vec![];
-    let user_address = process_inputs(&mut |x| {inputs.push(x)});
-    let balance = inputs[0];
+static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
+    root: [
+        14789582351289948625,
+        10919489180071018470,
+        10309858136294505219,
+        2839580074036780766,
+    ]}
+};
 
-    let mut kvpair = KeyValueMap::new(merkle);
+#[wasm_bindgen]
+pub fn handle_tx(params: Vec<u64>) {
+    let kvpair = unsafe {&mut MERKLE_MAP};
+    let balance = params[0];
+    let user_address = [params[4], params[5], params[6], params[7]];
 
     //let state_buf = kvpair.get([0; 4]); // store the global state at [0; 4]
     let user_data = kvpair.get(&user_address);
@@ -44,10 +42,44 @@ pub fn zkmain() {
     };
 
     state.balance += balance; // charge
-
     kvpair.set(&user_address, &[state.balance]);
+}
 
-    let root = kvpair.merkle.root;
+#[wasm_bindgen]
+pub fn initialize(root: Vec<u64>) {
+    unsafe {
+        let merkle = Merkle::load([root[0], root[1], root[2], root[3]]);
+        MERKLE_MAP.merkle = merkle;
+    };
+}
+
+#[wasm_bindgen]
+pub fn query_root() -> Vec<u64> {
+    unsafe {
+        MERKLE_MAP.merkle.root.to_vec()
+    }
+}
+
+#[wasm_bindgen]
+pub fn zkmain() {
+
+    let merkle_ref = unsafe {&mut MERKLE_MAP};
+    let tx_length = unsafe {wasm_input(0)};
+
+    unsafe {
+        initialize([wasm_input(1), wasm_input(1), wasm_input(1), wasm_input(1)].to_vec())
+    }
+
+    for _ in 0..tx_length {
+        let mut params = Vec::with_capacity(24);
+        for _ in 0..24 {
+            params.push(unsafe {wasm_input(0)});
+        }
+        verify_tx_signature(params.clone());
+        handle_tx(params);
+    }
+
+    let root = merkle_ref.merkle.root;
     unsafe {
             wasm_output(root[0]);
             wasm_output(root[1]);
@@ -55,15 +87,6 @@ pub fn zkmain() {
             wasm_output(root[3]);
     }
 
-    let deposit = DepositInfo::new(
-        0,
-        0,
-        0,
-        [balance, 0, 0, 0],
-        [0; 32]
-    );
-
-    output_tx_info(&deposit.to_be_bytes());
 }
 
 #[wasm_bindgen]

@@ -24,10 +24,58 @@ function passArray64ToWasm0(arg, malloc) {
 /**
 * @param {BigUint64Array} inputs
 */
-export function handle_tx(inputs) {
+export function verify_tx_signature(inputs) {
     const ptr0 = passArray64ToWasm0(inputs, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
+    wasm.verify_tx_signature(ptr0, len0);
+}
+
+/**
+* @param {BigUint64Array} params
+*/
+export function handle_tx(params) {
+    const ptr0 = passArray64ToWasm0(params, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
     wasm.handle_tx(ptr0, len0);
+}
+
+/**
+* @param {BigUint64Array} root
+*/
+export function initialize(root) {
+    const ptr0 = passArray64ToWasm0(root, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    wasm.initialize(ptr0, len0);
+}
+
+let cachedInt32Memory0 = null;
+
+function getInt32Memory0() {
+    if (cachedInt32Memory0 === null || cachedInt32Memory0.byteLength === 0) {
+        cachedInt32Memory0 = new Int32Array(wasm.memory.buffer);
+    }
+    return cachedInt32Memory0;
+}
+
+function getArrayU64FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getBigUint64Memory0().subarray(ptr / 8, ptr / 8 + len);
+}
+/**
+* @returns {BigUint64Array}
+*/
+export function query_root() {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        wasm.query_root(retptr);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var v1 = getArrayU64FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_free(r0, r1 * 8, 8);
+        return v1;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 /**
