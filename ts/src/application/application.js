@@ -8,7 +8,7 @@ function print_result() {
   const result = String.fromCharCode(..._print_buf);
 
   _print_buf = [];
-  console.log("Wasm_dbg_char result",result);
+  console.log("wasmdbg:>>> ",result);
 }
 
 const __wbg_star0 = (env) => {

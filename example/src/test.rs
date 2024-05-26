@@ -100,6 +100,11 @@ pub fn test_insert() {
         zkwasm_rust_sdk::dbg!("test store\n");
         object.store();
         player.store();
+        zkwasm_rust_sdk::dbg!("test load\n");
+        let object = Object::get(&oid);
+        zkwasm_rust_sdk::dbg!("test load obj done\n");
+        let player = Player::get(&pid);
+        zkwasm_rust_sdk::dbg!("test load player done\n");
         queue.insert(&oid, &pid, 10, 0);
         queue.dump();
         queue.tick();
@@ -108,12 +113,23 @@ pub fn test_insert() {
         queue.dump();
         queue.insert(&oid, &pid, 10, 0);
         queue.insert(&oid, &pid, 10, 0);
-        queue.insert(&oid, &pid, 10, 0);
-        queue.insert(&oid, &pid, 10, 0);
         queue.dump();
         queue.tick();
         queue.tick();
         queue.tick();
         queue.insert(&oid, &pid, 10, 0);
+        queue.dump();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.tick();
         queue.dump();
 }

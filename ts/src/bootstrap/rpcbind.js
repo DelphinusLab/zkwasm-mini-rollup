@@ -22,10 +22,10 @@ function async_get_leaf(root, index) {
   const requestData = {
     jsonrpc: '2.0',
     method: 'get_leaf',
-    params: [{root: roothash, index: index.toString()}],
+    params: {root: roothash, index: index.toString()},
     id: 1
   };
-  console.log("get leaf", root);
+  //console.log("get leaf", root);
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -36,10 +36,9 @@ function async_get_leaf(root, index) {
 
   if (response.ok) {
     const jsonResponse = response.json();
-    console.log(jsonResponse);
+    //console.log(jsonResponse);
     return jsonResponse.result;
   } else {
-    console.log("get_leaf");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to get leaf");
   }
@@ -56,11 +55,11 @@ function async_update_leaf(root, index, data) {
   const requestData = {
     jsonrpc: '2.0',
     method: 'update_leaf',
-    params: [{root: roothash, index: index.toString(), data: datahash}],
+    params: {root: roothash, index: index.toString(), data: datahash},
     id: 2
   };
 
-  console.log("update leaf ...");
+  //console.log("update leaf ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -71,7 +70,7 @@ function async_update_leaf(root, index, data) {
 
   if (response.ok) {
     const jsonResponse = response.json();
-    console.log(jsonResponse);
+    //console.log(jsonResponse);
     return jsonResponse.result;
   } else {
     console.error('Failed to fetch:', response.statusText);
@@ -88,11 +87,11 @@ function async_update_record(hash, data) {
   const requestData = {
     jsonrpc: '2.0',
     method: 'update_record',
-    params: [{hash: roothash, data: datavec}],
+    params: {hash: roothash, data: datavec},
     id: 3
   };
 
-  console.log("update record ...");
+  //console.log("update record ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -103,7 +102,7 @@ function async_update_record(hash, data) {
 
   if (response.ok) {
     const jsonResponse = response.json();
-    console.log(jsonResponse);
+    //console.log(jsonResponse);
     return jsonResponse.result;
   } else {
     console.log("update_record");
@@ -121,11 +120,10 @@ function async_get_record(hash) {
   const requestData = {
     jsonrpc: '2.0',
     method: 'get_record',
-    params: [{hash: hasharray}],
+    params: {hash: hasharray},
     id: 4
   };
 
-  console.log("get record ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -136,7 +134,6 @@ function async_get_record(hash) {
 
   if (response.ok) {
     const jsonResponse = response.json();
-    console.log(jsonResponse);
     let result = jsonResponse.result.map((x)=>{return BigInt(x)});
     return result;
   } else {

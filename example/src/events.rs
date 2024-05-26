@@ -36,6 +36,10 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
     object.store();
     player.store();
     if applied {
+        zkwasm_rust_sdk::dbg!("applied modifier\n");
+        zkwasm_rust_sdk::dbg!("obj: {:?}\n", object);
+        zkwasm_rust_sdk::dbg!("obj: {:?}\n", player);
+
         let next_index = (modifier_index + 1) % object.modifiers.len();
         let modifier_id = object.modifiers[next_index];
         let (delay, _) = get_modifier(modifier_id);
@@ -52,23 +56,27 @@ impl EventQueue {
         }
     }
     pub fn dump(&self) {
-        zkwasm_rust_sdk::dbg!("=-=-= dump queue =-=-=");
+        zkwasm_rust_sdk::dbg!("=-=-= dump queue =-=-=\n");
         for m in self.list.iter() {
             let delta = m.delta;
             let obj = m.object;
             let midx = m.modifier_index;
-            zkwasm_rust_sdk::dbg!("[{}] - {:?} - {}",  delta, obj, midx);
+            zkwasm_rust_sdk::dbg!("[{}] - {:?} - {}\n",  delta, obj, midx);
         }
-        zkwasm_rust_sdk::dbg!("=-=-= end =-=-=");
+        zkwasm_rust_sdk::dbg!("=-=-= end =-=-=\n");
     }
     pub fn tick(&mut self) {
-        if self.list.is_empty() { ()}
+        if self.list.is_empty() {()}
         else {
+            zkwasm_rust_sdk::dbg!("get head\n");
             let head = self.list.front_mut().unwrap();
+            zkwasm_rust_sdk::dbg!("delta\n");
             if head.delta == 1 {
                 let obj_id = head.object;
                 let owner_id = head.owner;
+                zkwasm_rust_sdk::dbg!("apply modifier\n");
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index);
+                zkwasm_rust_sdk::dbg!("apply modifier done\n");
                 if let Some ((delta, modifier)) = m {
                     self.insert(&obj_id, &owner_id, delta, modifier);
                 }

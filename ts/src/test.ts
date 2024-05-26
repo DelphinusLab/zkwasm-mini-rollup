@@ -2,7 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import {sending_transaction, test_sending_transaction} from "./rpctest.js";
+import { test_merkle_db_service, sending_transaction, test_sending_transaction} from "./rpctest.js";
 console.log("abc");
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");

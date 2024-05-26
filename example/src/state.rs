@@ -1,7 +1,5 @@
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
-use zkwasm_rust_sdk::{
-    Merkle,
-};
+use zkwasm_rust_sdk::Merkle;
 
 pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
     root: [
@@ -12,7 +10,7 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
     ]}
 };
 
-#[derive (Clone, Default)]
+#[derive (Clone, Debug)]
 pub struct Attributes (Vec<i64>);
 
 impl Attributes {
@@ -38,6 +36,7 @@ impl Attributes {
     }
 }
 
+#[derive (Debug)]
 pub struct Object {
     pub object_id: [u64; 4],
     pub current_modifier_index: u64,
@@ -45,11 +44,21 @@ pub struct Object {
     pub entity: Attributes,
 }
 
-#[derive (Clone, Default)]
+#[derive (Clone)]
 pub struct Modifier {
     pub entity: Attributes,
     pub local: Attributes,
     pub global: Attributes,
+}
+
+impl Modifier {
+    pub fn default() -> Self {
+        Modifier {
+            entity: Attributes::default_entities(),
+            local: Attributes::default_local(),
+            global: Attributes (vec![]),
+        }
+    }
 }
 
 impl Object {
@@ -63,7 +72,8 @@ impl Object {
 
     }
     pub fn store(&self) {
-        zkwasm_rust_sdk::dbg!("store object\n");
+        let oid = self.object_id;
+        zkwasm_rust_sdk::dbg!("store object {:?}\n", oid);
         let mut data = Vec::with_capacity(3 + self.entity.0.len() + self.modifiers.len() + 2);
         data.push(self.current_modifier_index);
         data.push(self.modifiers.len() as u64);
@@ -85,7 +95,9 @@ impl Object {
 
     pub fn get(object_id: &[u64; 4]) -> Option<Self> {
         let kvpair = unsafe {&mut MERKLE_MAP};
+        zkwasm_rust_sdk::dbg!("get object with oid {:?}\n", object_id);
         let data = kvpair.get(&object_id);
+        zkwasm_rust_sdk::dbg!("get object with {:?}\n", data);
         if data.is_empty() {
             None
         } else {
@@ -106,6 +118,7 @@ impl Object {
 
 }
 
+#[derive (Debug)]
 pub struct Player {
     player_id: [u64; 4],
     objects: Vec<u64>,
@@ -139,7 +152,7 @@ impl Player {
 
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
         let mut id = self.player_id;
-        id[0] = (self.objects[index] << 16) | (id[0] & 0xffff00000000ffff);
+        id[0] = (1 << 32) | (self.objects[index] << 16) | (id[0] & 0xffff00000000ffff);
         return id
     }
 
