@@ -25,6 +25,7 @@ function async_get_leaf(root, index) {
     params: [{root: roothash, index: index.toString()}],
     id: 1
   };
+  console.log("get leaf", root);
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -35,6 +36,7 @@ function async_get_leaf(root, index) {
 
   if (response.ok) {
     const jsonResponse = response.json();
+    console.log(jsonResponse);
     return jsonResponse.result;
   } else {
     console.log("get_leaf");
@@ -58,6 +60,7 @@ function async_update_leaf(root, index, data) {
     id: 2
   };
 
+  console.log("update leaf ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -71,7 +74,6 @@ function async_update_leaf(root, index, data) {
     console.log(jsonResponse);
     return jsonResponse.result;
   } else {
-    console.log("update_leaf");
     console.error('Failed to fetch:', response.statusText);
     throw("Failed to get leaf");
   }
@@ -81,10 +83,8 @@ export function update_leaf(root, index, data) {
 }
 
 function async_update_record(hash, data) {
-  console.log("data is ", data);
   let roothash = hash2array(hash);
   let datavec = bigintArray2array(data);
-  console.log("datahash is ", datavec);
   const requestData = {
     jsonrpc: '2.0',
     method: 'update_record',
@@ -92,6 +92,7 @@ function async_update_record(hash, data) {
     id: 3
   };
 
+  console.log("update record ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {
@@ -124,6 +125,7 @@ function async_get_record(hash) {
     id: 4
   };
 
+  console.log("get record ...");
   const response = fetch(url, {
     method: 'POST',
     headers: {

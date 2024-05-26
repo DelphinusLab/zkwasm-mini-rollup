@@ -22,3 +22,6 @@ export function zkmain(): void;
 /**
 */
 export function test_merkle(): void;
+/**
+*/
+export function test_insert(): void;

@@ -6,21 +6,13 @@ use zkwasm_rust_sdk::{
     Merkle,
     require,
 };
+use crate::events::EventQueue;
+use crate::state::{Object, Player, MERKLE_MAP};
 use crate::{verify_tx_signature, DepositInfo};
-use crate::output_tx_info;
 
 struct State {
     balance: u64
 }
-
-static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
-    root: [
-        14789582351289948625,
-        10919489180071018470,
-        10309858136294505219,
-        2839580074036780766,
-    ]}
-};
 
 #[wasm_bindgen]
 pub fn handle_tx(params: Vec<u64>) {
@@ -96,4 +88,32 @@ pub fn test_merkle() {
     kvpair.set(&[0,0,0,0], &[123]);
     let data = kvpair.get(&[0,0,0,0]);
     unsafe {require(data == [123])};
+}
+
+#[wasm_bindgen]
+pub fn test_insert() {
+        let mut queue = EventQueue::new();
+        let pid = [1,1,1,1];
+        let player = Player::new(&pid);
+        let oid = player.get_obj_id(0);
+        let object = Object::new(&oid,vec![0]);
+        zkwasm_rust_sdk::dbg!("test store\n");
+        object.store();
+        player.store();
+        queue.insert(&oid, &pid, 10, 0);
+        queue.dump();
+        queue.tick();
+        queue.dump();
+        queue.insert(&oid, &pid, 10, 0);
+        queue.dump();
+        queue.insert(&oid, &pid, 10, 0);
+        queue.insert(&oid, &pid, 10, 0);
+        queue.insert(&oid, &pid, 10, 0);
+        queue.insert(&oid, &pid, 10, 0);
+        queue.dump();
+        queue.tick();
+        queue.tick();
+        queue.tick();
+        queue.insert(&oid, &pid, 10, 0);
+        queue.dump();
 }

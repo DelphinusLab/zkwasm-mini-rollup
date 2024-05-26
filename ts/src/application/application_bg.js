@@ -90,3 +90,9 @@ export function test_merkle() {
     wasm.test_merkle();
 }
 
+/**
+*/
+export function test_insert() {
+    wasm.test_insert();
+}
+

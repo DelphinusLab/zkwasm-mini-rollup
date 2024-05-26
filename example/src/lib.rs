@@ -1,6 +1,5 @@
 use zkwasm_rust_sdk::jubjub::BabyJubjubPoint;
 use zkwasm_rust_sdk::jubjub::JubjubSignature;
-use zkwasm_rust_sdk::wasm_input;
 use zkwasm_rust_sdk::wasm_output;
 use sha2::{Sha256, Digest};
 use primitive_types::U256;
@@ -149,6 +148,7 @@ impl WithdrawInfo {
 }
 
 pub mod events;
+pub mod state;
 
 #[cfg(feature = "local")]
 mod test;

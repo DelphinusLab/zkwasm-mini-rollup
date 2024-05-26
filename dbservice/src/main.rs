@@ -54,9 +54,16 @@ pub trait Rpc {
 pub struct RpcImpl;
 impl Rpc for RpcImpl {
     fn update_leaf(&self, request: UpdateLeafRequest) -> Result<[u8; 32]> {
+        println!("update leaf {:?}", request.root);
         let index = u64::from_str_radix(request.index.as_str(), 10).unwrap();
         let mut mt = MongoMerkle::<MERKLE_DEPTH>::construct([0;32], request.root, None);
-        mt.update_leaf_data_with_proof(index, &request.data.to_vec()).map_err(|_| jsonrpc_core::Error::new(ErrorCode::InternalError))?;
+        println!("update leaf processing ");
+        mt.update_leaf_data_with_proof(index, &request.data.to_vec())
+            .map_err(|e|{
+                println!("error {:?}", e);
+                 jsonrpc_core::Error::new(ErrorCode::InternalError)
+             })?;
+        println!("update leaf done");
         Ok(mt.get_root_hash())
 	}
     fn get_leaf(&self, request: GetLeafRequest) -> Result<[u8; 32]> {
@@ -65,6 +72,7 @@ impl Rpc for RpcImpl {
             jsonrpc_core::Error::new(ErrorCode::InternalError)
         })?;
         */
+        println!("get leaf");
         let index = u64::from_str_radix(request.index.as_str(), 10).unwrap();
         let mt = MongoMerkle::<MERKLE_DEPTH>::construct([0;32], request.root, None);
         let (leaf, _) = mt.get_leaf_with_proof(index)
@@ -72,9 +80,11 @@ impl Rpc for RpcImpl {
                 println!("error is {:?}", e);
                 jsonrpc_core::Error::new(ErrorCode::InternalError)
             })?;
+        println!("get leaf done");
         Ok(leaf.data)
     }
     fn update_record(&self, request: UpdateRecordRequest) -> Result<()> {
+        println!("update record");
         let mut mongo_datahash = MongoDataHash::construct([0; 32], None);
         mongo_datahash.update_record({
                 DataHashRecord {
@@ -91,9 +101,11 @@ impl Rpc for RpcImpl {
                 }
             })
         .unwrap();
+        println!("update record done");
         Ok(())
 	}
     fn get_record(&self, request: GetRecordRequest) -> Result<Vec<u64>> {
+        println!("get record");
         let mongo_datahash = MongoDataHash::construct([0; 32], None);
         let datahashrecord = mongo_datahash.get_record(&request.hash).unwrap();
         let data = datahashrecord.map_or(vec![], |r| {
@@ -104,6 +116,7 @@ impl Rpc for RpcImpl {
                 .map(|x| u64::from_le_bytes(x.try_into().unwrap()))
                 .collect::<Vec<u64>>()
         });
+        println!("get record done");
         Ok(data)
     }
 

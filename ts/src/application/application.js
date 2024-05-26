@@ -20,10 +20,9 @@ const __wbg_star0 = (env) => {
     },
     require: (b) => {
       if (!b) {
-        console.error("require failed");
         throw new Error("Require failed");
       } else {
-        console.log("require check success", b);
+        //console.log("require check success", b);
       }
     },
     wasm_dbg: (c) => {
