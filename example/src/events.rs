@@ -1,6 +1,6 @@
 use std::collections::LinkedList;
 
-use crate::state::{Modifier, Object, Player};
+use crate::{config::get_modifier, state::{Modifier, Object, Player}};
 
 
 #[derive (Clone)]
@@ -22,10 +22,6 @@ pub fn apply_modifier(player: &mut Player, object: &mut Object, modifier: Modifi
     } else {
         false
     }
-}
-
-fn get_modifier(index: u64) -> (usize, Modifier) {
-    (10, Modifier::default())
 }
 
 fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index: usize) -> Option<(usize, usize)> {
@@ -66,18 +62,16 @@ impl EventQueue {
         zkwasm_rust_sdk::dbg!("=-=-= end =-=-=\n");
     }
     pub fn tick(&mut self) {
+        self.dump();
         if self.list.is_empty() {()}
         else {
-            zkwasm_rust_sdk::dbg!("get head\n");
             let head = self.list.front_mut().unwrap();
-            zkwasm_rust_sdk::dbg!("delta\n");
             if head.delta == 1 {
                 let obj_id = head.object;
                 let owner_id = head.owner;
-                zkwasm_rust_sdk::dbg!("apply modifier\n");
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index);
-                zkwasm_rust_sdk::dbg!("apply modifier done\n");
                 if let Some ((delta, modifier)) = m {
+                    self.list.pop_front();
                     self.insert(&obj_id, &owner_id, delta, modifier);
                 }
             } else {

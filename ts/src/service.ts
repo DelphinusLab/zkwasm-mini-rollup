@@ -43,6 +43,7 @@ async function main() {
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
+      application.handle_tx(BigUint64Array.from([0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]));
     } else if (job.name == 'transaction') {
       console.log("handle transaction");
       try {

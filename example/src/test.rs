@@ -7,8 +7,9 @@ use zkwasm_rust_sdk::{
     require,
 };
 use crate::events::EventQueue;
-use crate::state::{Object, Player, MERKLE_MAP};
-use crate::{verify_tx_signature, DepositInfo};
+use crate::state::{Transaction, MERKLE_MAP};
+use crate::verify_tx_signature;
+
 
 struct State {
     balance: u64
@@ -19,22 +20,9 @@ pub fn handle_tx(params: Vec<u64>) {
     let kvpair = unsafe {&mut MERKLE_MAP};
     let balance = params[0];
     let user_address = [params[4], params[5], params[6], params[7]];
-
-    //let state_buf = kvpair.get([0; 4]); // store the global state at [0; 4]
-    let user_data = kvpair.get(&user_address);
-
-    let mut state = if user_data.len() == 0 {
-        State {
-            balance: 0
-        }
-    } else {
-        State {
-            balance: user_data[0]
-        }
-    };
-
-    state.balance += balance; // charge
-    kvpair.set(&user_address, &[state.balance]);
+    let command = [params[0], params[1], params[2], params[3]];
+    let transaction = Transaction::decode(command);
+    transaction.process(&user_address);
 }
 
 #[wasm_bindgen]
@@ -92,44 +80,24 @@ pub fn test_merkle() {
 
 #[wasm_bindgen]
 pub fn test_insert() {
-        let mut queue = EventQueue::new();
         let pid = [1,1,1,1];
-        let player = Player::new(&pid);
-        let oid = player.get_obj_id(0);
-        let object = Object::new(&oid,vec![0]);
-        zkwasm_rust_sdk::dbg!("test store\n");
-        object.store();
-        player.store();
+        let t1 = Transaction {
+            command: 0,
+            objindex: 1,
+            modifiers: vec![0,1,2]
+        };
+
+        t1.install_player(&pid);
+        t1.install_object(&pid);
+
+        /*
         zkwasm_rust_sdk::dbg!("test load\n");
         let object = Object::get(&oid);
         zkwasm_rust_sdk::dbg!("test load obj done\n");
         let player = Player::get(&pid);
         zkwasm_rust_sdk::dbg!("test load player done\n");
-        queue.insert(&oid, &pid, 10, 0);
-        queue.dump();
-        queue.tick();
-        queue.dump();
-        queue.insert(&oid, &pid, 10, 0);
-        queue.dump();
-        queue.insert(&oid, &pid, 10, 0);
-        queue.insert(&oid, &pid, 10, 0);
-        queue.dump();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.insert(&oid, &pid, 10, 0);
-        queue.dump();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.tick();
-        queue.dump();
+        */
+        for _ in 0..30 {
+            Transaction::automaton()
+        }
 }

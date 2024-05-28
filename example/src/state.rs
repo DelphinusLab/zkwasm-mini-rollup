@@ -1,5 +1,10 @@
+use std::cell::RefCell;
+
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
 use zkwasm_rust_sdk::Merkle;
+
+use crate::config::get_modifier;
+use crate::events::EventQueue;
 
 pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
     root: [
@@ -180,3 +185,76 @@ impl Player {
 }
 
 pub struct State {}
+
+pub struct SafeEventQueue (RefCell<EventQueue>);
+unsafe impl Sync for SafeEventQueue {}
+
+lazy_static::lazy_static! {
+    pub static ref QUEUE: SafeEventQueue = SafeEventQueue (RefCell::new(EventQueue::new()));
+}
+
+
+
+pub struct Transaction {
+    pub command: u64,
+    pub objindex: usize,
+    pub modifiers: Vec<u64>
+}
+
+impl Transaction {
+    pub fn decode(params: [u64; 4]) -> Self {
+        let command = (params[0] >> 32) & 0xff;
+        let objindex = (params[0] & 0xff) as usize;
+        let mut modifiers = vec![];
+        for b in params[1].to_le_bytes() {
+            if b!=0 {
+                modifiers.push(b as u64);
+            }
+        };
+        Transaction {
+            command,
+            objindex,
+            modifiers
+        }
+    }
+    pub fn install_player(&self, pid: &[u64; 4]) -> bool {
+        let player = Player::get(pid);
+        match player {
+            Some(_) => false,
+            None => {
+                let player = Player::new(&pid);
+                player.store();
+                true
+            }
+        }
+    }
+    pub fn install_object(&self, pid: &[u64; 4]) -> bool {
+        let mut player = Player::get(pid);
+        match player.as_mut() {
+            None => false,
+            Some (player) => {
+                player.objects.push(self.objindex as u64);
+                let mid = self.modifiers[0];
+                let oid = player.get_obj_id(player.objects.len()-1);
+                let (delay, _)  = get_modifier(mid);
+                let object = Object::new(&oid,  self.modifiers.clone());
+                object.store();
+                player.store();
+                QUEUE.0.borrow_mut().insert(&oid, pid, delay, 0);
+                true
+            }
+        }
+    }
+
+    pub fn process(&self, pid: &[u64; 4]) -> bool {
+        match self.command {
+            1 => self.install_player(pid),
+            2 => self.install_object(pid),
+            _ => { QUEUE.0.borrow_mut().tick(); true }
+        }
+    }
+
+    pub fn automaton() {
+        QUEUE.0.borrow_mut().tick();
+    }
+}

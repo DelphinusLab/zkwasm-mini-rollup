@@ -149,6 +149,7 @@ impl WithdrawInfo {
 
 pub mod events;
 pub mod state;
+pub mod config;
 
 #[cfg(feature = "local")]
 mod test;

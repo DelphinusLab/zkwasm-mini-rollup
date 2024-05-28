@@ -4115,6 +4115,7 @@ name = "zkwasm-settlement-test"
 version = "0.1.0"
 dependencies = [
  "derive_builder 0.1.0 (git+https://github.com/DelphinusLab/zkWasm-rust.git)",
+ "lazy_static",
  "primitive-types",
  "serde",
  "serde_json",
