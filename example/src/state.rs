@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
 use zkwasm_rust_sdk::Merkle;
 
-use crate::config::get_modifier;
+use crate::config::{default_entities, default_local, get_modifier};
 use crate::events::EventQueue;
 
 pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
@@ -16,7 +16,7 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
 };
 
 #[derive (Clone, Debug)]
-pub struct Attributes (Vec<i64>);
+pub struct Attributes (pub Vec<i64>);
 
 impl Attributes {
     pub fn apply_modifier(&mut self, m: &Attributes) -> bool {
@@ -34,12 +34,15 @@ impl Attributes {
 
 impl Attributes {
     fn default_entities() -> Self {
-        Attributes (vec![1])
+        Attributes (default_entities().to_vec())
     }
     fn default_local() -> Self {
-        Attributes (vec![1])
+        Attributes (default_local().to_vec())
     }
 }
+
+
+
 
 #[derive (Debug)]
 pub struct Object {

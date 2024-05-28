@@ -723,7 +723,7 @@ checksum = "514de17de45fdb8dc022b1a7975556c53c86f9f0aa5f534b98977b171857c2c9"
 [[package]]
 name = "bytes-helper"
 version = "0.1.0"
-source = "git+https://github.com/xgaozoyoe/bytes-reducer.git#478b836a0e22d6921d3611351035dfc873df298a"
+source = "git+https://github.com/xgaozoyoe/bytes-reducer.git#f120d0ad3d4738fc655bb156ac89869e8f9d9fbf"
 dependencies = [
  "ff 0.12.1",
  "halo2curves",

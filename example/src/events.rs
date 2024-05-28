@@ -31,16 +31,18 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
     let applied = apply_modifier(&mut player, &mut object, modifier);
     object.store();
     player.store();
+    zkwasm_rust_sdk::dbg!("object before: {:?}\n", object);
+    zkwasm_rust_sdk::dbg!("player before: {:?}\n", player);
     if applied {
-        zkwasm_rust_sdk::dbg!("applied modifier\n");
-        zkwasm_rust_sdk::dbg!("obj: {:?}\n", object);
-        zkwasm_rust_sdk::dbg!("obj: {:?}\n", player);
+        zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
+        zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
 
         let next_index = (modifier_index + 1) % object.modifiers.len();
         let modifier_id = object.modifiers[next_index];
         let (delay, _) = get_modifier(modifier_id);
         Some((delay, next_index))
     } else {
+        zkwasm_rust_sdk::dbg!("apply modifier failed\n");
         None
     }
 }
@@ -70,8 +72,8 @@ impl EventQueue {
                 let obj_id = head.object;
                 let owner_id = head.owner;
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index);
+                self.list.pop_front();
                 if let Some ((delta, modifier)) = m {
-                    self.list.pop_front();
                     self.insert(&obj_id, &owner_id, delta, modifier);
                 }
             } else {

@@ -25,12 +25,15 @@ async function main() {
   console.log("application initialized, testing merkle db service ...");
   application.test_merkle();
   console.log("testing merkle db service done.\n");
+  /*
   application.test_insert();
-
+  test_sending_transaction();
   console.log("testing sending transaction ...");
-  //test_sending_transaction();
+  */
 
-  //sending_transaction([1n,1n,1n,1n], "1234");
+  //sending_transaction([0n,0n,0n,0n], "1234");
+  sending_transaction([1n<<32n,0n,0n,0n], "1234");
+  sending_transaction([2n<<32n,2n + (1n<<8n),0n,0n], "1234");
 
 }
 

@@ -84,7 +84,7 @@ pub fn test_insert() {
         let t1 = Transaction {
             command: 0,
             objindex: 1,
-            modifiers: vec![0,1,2]
+            modifiers: vec![0,1]
         };
 
         t1.install_player(&pid);

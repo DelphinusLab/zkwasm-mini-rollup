@@ -47,6 +47,7 @@ pub fn verify_tx_signature(inputs: Vec<u64>) {
 
     zkwasm_rust_sdk::dbg!("verifying signature ...\n");
     sig.verify(&pk, &[inputs[0], inputs[1], inputs[2], inputs[3]]);
+    zkwasm_rust_sdk::dbg!("verifying signature done!\n");
 }
 
 pub const DEPOSIT: u8 = 0x0;
