@@ -1,25 +1,5 @@
 import fetch from 'sync-fetch';
-import { verify_sign, LeHexBN, sign } from "./sign.js";
-
-/*
-    params: [[
-      209, 25, 6, 57, 202, 38, 63, 205,
-      230, 191, 218, 42, 142, 209, 137, 151,
-      3, 59, 129, 218, 89, 249, 19, 143,
-      222, 94, 61, 88, 8, 55, 104, 39
-    ], ((1n<<32n) + 2n).toString()
-    ],
-    */
-    /*
-
-      209, 25, 6, 57, 202, 38, 63, 205,
-      230, 191, 218, 42, 142, 209, 137, 151,
-      3, 59, 129, 218, 89, 249, 19, 143,
-      222, 94, 61, 88, 8, 55, 104, 39
-    ], index: ((1n).toString())
-    },
-    */
-
+import { verify_sign, LeHexBN, sign, query } from "./sign.js";
 
 export function test_merkle_db_service() {
   const url = 'http://127.0.0.1:3030';
@@ -88,6 +68,27 @@ export function test_sending_transaction() {
 export function sending_transaction(cmd: Array<bigint>, prikey: string) {
   const url = 'http://localhost:3000/send';
   let data = sign(cmd, prikey);
+  const response = fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (response.ok) {
+    const jsonResponse = response.json();
+    console.log(jsonResponse);
+  } else {
+    console.log(response);
+    console.error('Failed to fetch:', response.statusText);
+  }
+}
+
+export function query_state(cmd: Array<bigint>, prikey: string) {
+  const url = 'http://localhost:3000/query';
+  let data = query(prikey);
+  console.log("query data", data);
   const response = fetch(url, {
     method: 'POST',
     headers: {

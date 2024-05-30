@@ -5,6 +5,7 @@ export function verify_tx_signature(a: number, b: number): void;
 export function handle_tx(a: number, b: number): void;
 export function initialize(a: number, b: number): void;
 export function query_root(a: number): void;
+export function query_account(a: number, b: number, c: number): void;
 export function zkmain(): void;
 export function test_merkle(): void;
 export function test_insert(): void;

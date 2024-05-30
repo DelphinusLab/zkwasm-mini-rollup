@@ -1,4 +1,6 @@
 use std::cell::RefCell;
+use crate::events::restart_object_modifier;
+use serde::Serialize;
 
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
 use zkwasm_rust_sdk::Merkle;
@@ -15,7 +17,7 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
     ]}
 };
 
-#[derive (Clone, Debug)]
+#[derive (Clone, Debug, Serialize)]
 pub struct Attributes (pub Vec<i64>);
 
 impl Attributes {
@@ -44,10 +46,10 @@ impl Attributes {
 
 
 
-#[derive (Debug)]
+#[derive (Debug, Serialize)]
 pub struct Object {
     pub object_id: [u64; 4],
-    pub current_modifier_index: u64,
+    pub current_modifier_index: u64, // running << 63 + modifier index
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
 }
@@ -77,8 +79,19 @@ impl Object {
             modifiers,
             entity: Attributes::default_entities()
         }
-
     }
+    pub fn halt(&mut self) {
+        self.current_modifier_index |= 1 << 63;
+    }
+
+    pub fn is_halted(&mut self) -> bool {
+        (self.current_modifier_index >> 63) == 1
+    }
+
+    pub fn restart(&mut self) {
+        self.current_modifier_index = self.current_modifier_index & 0xffff
+    }
+
     pub fn store(&self) {
         let oid = self.object_id;
         zkwasm_rust_sdk::dbg!("store object {:?}\n", oid);
@@ -126,11 +139,11 @@ impl Object {
 
 }
 
-#[derive (Debug)]
+#[derive (Debug, Serialize)]
 pub struct Player {
-    player_id: [u64; 4],
-    objects: Vec<u64>,
-    local: Attributes,
+    pub player_id: [u64; 4],
+    pub objects: Vec<u64>,
+    pub local: Attributes,
 }
 
 impl Player {
@@ -153,14 +166,14 @@ impl Player {
     pub fn new(player_id: &[u64; 4]) -> Self {
         Self {
             player_id: player_id.clone(),
-            objects: vec![0],
+            objects: vec![],
             local: Attributes::default_local()
         }
     }
 
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
         let mut id = self.player_id;
-        id[0] = (1 << 32) | (self.objects[index] << 16) | (id[0] & 0xffff00000000ffff);
+        id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
         return id
     }
 
@@ -236,9 +249,13 @@ impl Transaction {
         match player.as_mut() {
             None => false,
             Some (player) => {
-                player.objects.push(self.objindex as u64);
+                if self.objindex > player.objects.len() {
+                    return false
+                } else if self.objindex == player.objects.len() {
+                    player.objects.push(0);
+                }
                 let mid = self.modifiers[0];
-                let oid = player.get_obj_id(player.objects.len()-1);
+                let oid = player.get_obj_id(self.objindex);
                 let (delay, _)  = get_modifier(mid);
                 let object = Object::new(&oid,  self.modifiers.clone());
                 object.store();
@@ -249,10 +266,28 @@ impl Transaction {
         }
     }
 
+    pub fn restart_object(&self, pid: &[u64; 4]) -> bool {
+        let mut player = Player::get(pid);
+        match player.as_mut() {
+            None => false,
+            Some (player) => {
+                let oid = player.get_obj_id(self.objindex);
+                if let Some ((delay, modifier))  = restart_object_modifier(&oid, &pid) {
+                    QUEUE.0.borrow_mut().insert(&oid, pid, delay, modifier);
+                    true
+                } else {
+                    false
+                }
+                
+            }
+        }
+    }
+
     pub fn process(&self, pid: &[u64; 4]) -> bool {
         match self.command {
             1 => self.install_player(pid),
             2 => self.install_object(pid),
+            3 => self.restart_object(pid),
             _ => { QUEUE.0.borrow_mut().tick(); true }
         }
     }

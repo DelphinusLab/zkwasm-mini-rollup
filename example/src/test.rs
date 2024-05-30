@@ -7,13 +7,8 @@ use zkwasm_rust_sdk::{
     require,
 };
 use crate::events::EventQueue;
-use crate::state::{Transaction, MERKLE_MAP};
+use crate::state::{Transaction, MERKLE_MAP, Object, Player};
 use crate::verify_tx_signature;
-
-
-struct State {
-    balance: u64
-}
 
 #[wasm_bindgen]
 pub fn handle_tx(params: Vec<u64>) {
@@ -38,6 +33,19 @@ pub fn query_root() -> Vec<u64> {
     unsafe {
         MERKLE_MAP.merkle.root.to_vec()
     }
+}
+
+#[wasm_bindgen]
+pub fn query_account(pid: Vec<u64>) -> String {
+    zkwasm_rust_sdk::dbg!("query account {:?}", pid);
+    let player = Player::get(&pid.try_into().unwrap()).unwrap();
+    let mut objs = vec![];
+    for (index, _) in player.objects.iter().enumerate() {
+        let oid = player.get_obj_id(index);
+        let obj = Object::get(&oid).unwrap();
+        objs.push(obj);
+    };
+    serde_json::to_string(&(player, objs)).unwrap()
 }
 
 #[wasm_bindgen]

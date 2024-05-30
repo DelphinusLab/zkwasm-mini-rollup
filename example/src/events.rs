@@ -29,11 +29,9 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
     let (_, modifier) = get_modifier(object.modifiers[modifier_index]);
     let mut player = Player::get(owner_id).unwrap();
     let applied = apply_modifier(&mut player, &mut object, modifier);
-    object.store();
-    player.store();
-    zkwasm_rust_sdk::dbg!("object before: {:?}\n", object);
-    zkwasm_rust_sdk::dbg!("player before: {:?}\n", player);
     if applied {
+        object.store();
+        player.store();
         zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
         zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
 
@@ -42,10 +40,30 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
         let (delay, _) = get_modifier(modifier_id);
         Some((delay, next_index))
     } else {
+        object.halt();
+        object.store();
         zkwasm_rust_sdk::dbg!("apply modifier failed\n");
         None
     }
 }
+
+pub fn restart_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4]) -> Option<(usize, usize)> {
+    let mut object = Object::get(obj_id).unwrap();
+    let halted = object.is_halted();
+    if halted {
+        let modifier_index = object.current_modifier_index | 0xffff ;
+        let (delay, _) = get_modifier(object.modifiers[modifier_index as usize]);
+        object.restart();
+        object.store();
+        zkwasm_rust_sdk::dbg!("object restarted\n");
+        Some((delay, modifier_index as usize))
+    } else {
+        zkwasm_rust_sdk::dbg!("restart modifier failed\n");
+        None
+    }
+}
+
+
 
 impl EventQueue {
     pub fn new() -> Self {
@@ -81,6 +99,7 @@ impl EventQueue {
             }
         }
     }
+
     pub fn insert(&mut self, object: &[u64; 4], owner: &[u64; 4], delta: usize, modifier_index: usize) {
         let mut delta = delta;
         let mut list = LinkedList::new();

@@ -2,7 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import { test_merkle_db_service, sending_transaction, test_sending_transaction} from "./rpctest.js";
+import { test_merkle_db_service, query_state, sending_transaction, test_sending_transaction} from "./rpctest.js";
 console.log("abc");
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
@@ -34,6 +34,7 @@ async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
   sending_transaction([1n<<32n,0n,0n,0n], "1234");
   sending_transaction([2n<<32n,2n + (1n<<8n),0n,0n], "1234");
+  query_state([1n], "1234");
 
 }
 

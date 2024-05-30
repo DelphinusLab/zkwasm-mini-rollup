@@ -109,6 +109,30 @@ async function main() {
     }
   });
 
+  app.post('/query', async (req, res) => {
+    console.log("receive query command");
+    const value = req.body;
+    console.log("value is", value);
+    if (!value) {
+      return res.status(400).send('Value is required');
+    }
+
+    try {
+      const pkx = new LeHexBN(value.pkx).toU64Array();
+      let u64array = new BigUint64Array(4);
+      u64array.set(pkx);
+      let jstr = application.query_account(pkx);
+      res.status(201).send({
+        success: true,
+        data: jstr
+      });
+
+    } catch (error) {
+      res.status(500).send('Get Status Error');
+    }
+  });
+
+
   // Start the server
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
