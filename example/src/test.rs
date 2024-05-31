@@ -6,43 +6,18 @@ use zkwasm_rust_sdk::{
     Merkle,
     require,
 };
-use crate::{verify_tx_signature, DepositInfo};
-use crate::output_tx_info;
-
-struct State {
-    balance: u64
-}
-
-static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
-    root: [
-        14789582351289948625,
-        10919489180071018470,
-        10309858136294505219,
-        2839580074036780766,
-    ]}
-};
+use crate::events::EventQueue;
+use crate::state::{Transaction, MERKLE_MAP, Object, Player};
+use crate::verify_tx_signature;
 
 #[wasm_bindgen]
 pub fn handle_tx(params: Vec<u64>) {
     let kvpair = unsafe {&mut MERKLE_MAP};
     let balance = params[0];
     let user_address = [params[4], params[5], params[6], params[7]];
-
-    //let state_buf = kvpair.get([0; 4]); // store the global state at [0; 4]
-    let user_data = kvpair.get(&user_address);
-
-    let mut state = if user_data.len() == 0 {
-        State {
-            balance: 0
-        }
-    } else {
-        State {
-            balance: user_data[0]
-        }
-    };
-
-    state.balance += balance; // charge
-    kvpair.set(&user_address, &[state.balance]);
+    let command = [params[0], params[1], params[2], params[3]];
+    let transaction = Transaction::decode(command);
+    transaction.process(&user_address);
 }
 
 #[wasm_bindgen]
@@ -58,6 +33,19 @@ pub fn query_root() -> Vec<u64> {
     unsafe {
         MERKLE_MAP.merkle.root.to_vec()
     }
+}
+
+#[wasm_bindgen]
+pub fn query_account(pid: Vec<u64>) -> String {
+    zkwasm_rust_sdk::dbg!("query account {:?}", pid);
+    let player = Player::get(&pid.try_into().unwrap()).unwrap();
+    let mut objs = vec![];
+    for (index, _) in player.objects.iter().enumerate() {
+        let oid = player.get_obj_id(index);
+        let obj = Object::get(&oid).unwrap();
+        objs.push(obj);
+    };
+    serde_json::to_string(&(player, objs)).unwrap()
 }
 
 #[wasm_bindgen]
@@ -96,4 +84,28 @@ pub fn test_merkle() {
     kvpair.set(&[0,0,0,0], &[123]);
     let data = kvpair.get(&[0,0,0,0]);
     unsafe {require(data == [123])};
+}
+
+#[wasm_bindgen]
+pub fn test_insert() {
+        let pid = [1,1,1,1];
+        let t1 = Transaction {
+            command: 0,
+            objindex: 1,
+            modifiers: vec![0,1]
+        };
+
+        t1.install_player(&pid);
+        t1.install_object(&pid);
+
+        /*
+        zkwasm_rust_sdk::dbg!("test load\n");
+        let object = Object::get(&oid);
+        zkwasm_rust_sdk::dbg!("test load obj done\n");
+        let player = Player::get(&pid);
+        zkwasm_rust_sdk::dbg!("test load player done\n");
+        */
+        for _ in 0..30 {
+            Transaction::automaton()
+        }
 }

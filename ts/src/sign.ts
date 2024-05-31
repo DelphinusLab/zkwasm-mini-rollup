@@ -69,3 +69,14 @@ export function sign(cmd: Array<bigint>, prikey: string) {
   };
   return data;
 }
+
+export function query(prikey: string) {
+  console.log("prikey", prikey);
+  let pkey = PrivateKey.fromString(prikey);
+  let pubkey = pkey.publicKey;
+  const data = {
+    pkx: bnToHexLe(pubkey.key.x.v),
+  };
+  console.log(data);
+  return data;
+}

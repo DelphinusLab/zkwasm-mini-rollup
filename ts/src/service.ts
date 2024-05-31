@@ -1,11 +1,13 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
+import { test_merkle_db_service } from "./rpc.js";
 import { verify_sign, LeHexBN } from "./sign.js";
 import { Queue } from 'bullmq';
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
+import { submit_proof, TxWitness } from "./prover.js";
 
 const connection = new IORedis(
     {
@@ -15,7 +17,22 @@ const connection = new IORedis(
     }
 );
 
-const commands = new BigUint64Array();
+const TRANSACTION_NUMBER = 4;
+let transactions_witness = new Array();
+
+async function install_transactions(tx: TxWitness) {
+  console.log("installing transaction into rollup ...");
+  transactions_witness.push(tx);
+  console.log("transaction installed, rollup pool length is:", transactions_witness.length); 
+  if (transactions_witness.length == TRANSACTION_NUMBER) {
+    console.log("rollup pool is full, generating proof:"); 
+    for (const t of transactions_witness) {
+      console.log(t);
+    }
+    await submit_proof(transactions_witness); 
+    transactions_witness = new Array(); 
+  }
+}
 
 async function main() {
   console.log("bootstraping ...");
@@ -25,6 +42,7 @@ async function main() {
   console.log(application);
   await (initApplication as any)(bootstrap);
 
+  test_merkle_db_service();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
 
@@ -43,6 +61,7 @@ async function main() {
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
+      application.handle_tx(BigUint64Array.from([0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]));
     } else if (job.name == 'transaction') {
       console.log("handle transaction");
       try {
@@ -63,6 +82,7 @@ async function main() {
         u64array.set(sigr, 20);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
+        await install_transactions(value); 
       } catch (error) {
         console.log("handling tx error");
         console.log(error);
@@ -76,6 +96,33 @@ async function main() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  app.post('/test', async (req, res) => {
+    const value = req.body;
+    if (!value) {
+      return res.status(400).send('Value is required');
+    }
+    try {
+      const msg = new LeHexBN(value.msg);
+      const pkx = new LeHexBN(value.pkx);
+      const pky = new LeHexBN(value.pky);
+      const sigx = new LeHexBN(value.sigx);
+      const sigy = new LeHexBN(value.sigy);
+      const sigr = new LeHexBN(value.sigr);
+      if (verify_sign(msg, pkx, pky, sigx, sigy, sigr) == false) {
+        console.error('Invalid signature:');
+        res.status(500).send('Invalid signature');
+      } else {
+        res.status(201).send({
+          success: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding job to the queue:', error);
+      res.status(500).send('Failed to add job to the queue');
+    }
+  });
+
   app.post('/send', async (req, res) => {
     const value = req.body;
 
@@ -107,6 +154,30 @@ async function main() {
       res.status(500).send('Failed to add job to the queue');
     }
   });
+
+  app.post('/query', async (req, res) => {
+    console.log("receive query command");
+    const value = req.body;
+    console.log("value is", value);
+    if (!value) {
+      return res.status(400).send('Value is required');
+    }
+
+    try {
+      const pkx = new LeHexBN(value.pkx).toU64Array();
+      let u64array = new BigUint64Array(4);
+      u64array.set(pkx);
+      let jstr = application.query_account(pkx);
+      res.status(201).send({
+        success: true,
+        data: jstr
+      });
+
+    } catch (error) {
+      res.status(500).send('Get Status Error');
+    }
+  });
+
 
   // Start the server
   app.listen(PORT, () => {

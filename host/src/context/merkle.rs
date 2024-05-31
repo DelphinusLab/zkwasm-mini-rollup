@@ -91,19 +91,19 @@ impl MerkleContext {
     pub fn merkle_get(&mut self) -> u64 {
         let address = self.address.rules[0].u64_value().unwrap() as u32;
         let index = (address as u64) + (1u64 << MERKLE_TREE_HEIGHT) - 1;
-        let leaf = get_leaf(self.root.to_vec(), index)
-            .into_iter()
-            .map(|v| v.as_f64().unwrap() as u8)
-            .collect::<Vec<_>>();
-        let values = leaf
-            .chunks(8)
-            .into_iter()
-            .map(|x| u64::from_le_bytes(x.try_into().unwrap()))
-            .collect::<Vec<u64>>();
         if self.data_cursor == 0 {
+            let leaf = get_leaf(self.root.to_vec(), index)
+                .into_iter()
+                .map(|v| v.as_f64().unwrap() as u8)
+                .collect::<Vec<_>>();
+            let values = leaf
+                .chunks(8)
+                .into_iter()
+                .map(|x| u64::from_le_bytes(x.try_into().unwrap()))
+                .collect::<Vec<u64>>();
             self.data = values.clone().try_into().unwrap();
         }
-        let v = values[self.data_cursor];
+        let v = self.data[self.data_cursor];
         self.data_cursor += 1;
         return v;
     }

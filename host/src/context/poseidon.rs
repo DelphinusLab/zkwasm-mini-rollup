@@ -89,7 +89,6 @@ impl PoseidonContext {
         assert!(self.buf.len() == 8);
         if self.generator.cursor == 0 {
             self.hasher.as_mut().map(|s| {
-                //log::debug!("perform hash with {:?}", self.buf);
                 let r = s.update_exact(&self.buf.clone().try_into().unwrap());
                 let dwords: Vec<u8> = r.to_repr().to_vec();
                 self.generator.values = dwords

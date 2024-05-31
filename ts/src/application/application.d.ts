@@ -17,8 +17,16 @@ export function initialize(root: BigUint64Array): void;
 */
 export function query_root(): BigUint64Array;
 /**
+* @param {BigUint64Array} pid
+* @returns {string}
+*/
+export function query_account(pid: BigUint64Array): string;
+/**
 */
 export function zkmain(): void;
 /**
 */
 export function test_merkle(): void;
+/**
+*/
+export function test_insert(): void;
