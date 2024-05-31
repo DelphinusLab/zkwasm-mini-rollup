@@ -1,5 +1,10 @@
 # A typescript mini server for ZKWASM server side application
 
+This repo is a sample REST service in RUST which is compiled to WASM and runs in nodejs. The external running environment is described in the following picture where the left most component is our mini-rest-server.
+![alt text](./images/mini-rest-service-rollup.png)
+
+The trustless part are the transaction handling part whose execution is proved using the ZKWASM proving service (the middle component in the graph) and the final proofs are verified onchain with settlement callbacks.
+
 ## Dependency
 
 - Redis
