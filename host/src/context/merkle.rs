@@ -2,7 +2,7 @@ use bytes_helper::Reduce;
 use bytes_helper::ReduceRule;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-#[wasm_bindgen(module = "rpcbind.js")]
+#[wasm_bindgen(raw_module = "./rpcbind.js")]
 extern "C" {
     pub fn update_leaf(root: Vec<u8>, index: u64, leafdata: Vec<u8>) -> js_sys::Array; // root and leaf data is [u8; 32]
     pub fn get_leaf(root: Vec<u8>, index: u64) -> js_sys::Array; // result needs to be [u8; 32]

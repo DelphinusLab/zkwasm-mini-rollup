@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 const FETCH_MODE: u64 = 0;
 const STORE_MODE: u64 = 1;
 
-#[wasm_bindgen(module = "rpcbind.js")]
+#[wasm_bindgen(raw_module = "./rpcbind.js")]
 extern "C" {
     pub fn update_record(hash: Vec<u8>, data: Vec<u64>);
     pub fn get_record(hash: Vec<u8>) -> js_sys::BigUint64Array;
