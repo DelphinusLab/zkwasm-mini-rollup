@@ -18,6 +18,7 @@
   },
   "scripts": {
     "start": "npx tsc src/index.ts",
+    "server": "npx tsx src/service.ts",
     "test": "jest"
   },
   "devDependencies": {
