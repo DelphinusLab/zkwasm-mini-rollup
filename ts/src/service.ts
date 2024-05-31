@@ -1,6 +1,7 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
+import { test_merkle_db_service } from "./rpc.js";
 import { verify_sign, LeHexBN } from "./sign.js";
 import { Queue } from 'bullmq';
 import { Worker } from 'bullmq';
@@ -25,6 +26,7 @@ async function main() {
   console.log(application);
   await (initApplication as any)(bootstrap);
 
+  test_merkle_db_service();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
 
@@ -77,6 +79,33 @@ async function main() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  app.post('/test', async (req, res) => {
+    const value = req.body;
+    if (!value) {
+      return res.status(400).send('Value is required');
+    }
+    try {
+      const msg = new LeHexBN(value.msg);
+      const pkx = new LeHexBN(value.pkx);
+      const pky = new LeHexBN(value.pky);
+      const sigx = new LeHexBN(value.sigx);
+      const sigy = new LeHexBN(value.sigy);
+      const sigr = new LeHexBN(value.sigr);
+      if (verify_sign(msg, pkx, pky, sigx, sigy, sigr) == false) {
+        console.error('Invalid signature:');
+        res.status(500).send('Invalid signature');
+      } else {
+        res.status(201).send({
+          success: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding job to the queue:', error);
+      res.status(500).send('Failed to add job to the queue');
+    }
+  });
+
   app.post('/send', async (req, res) => {
     const value = req.body;
 
