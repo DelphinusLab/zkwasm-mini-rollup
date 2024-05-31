@@ -7,6 +7,7 @@ import { Queue } from 'bullmq';
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
+import { submit_proof, TxWitness } from "./prover.js";
 
 const connection = new IORedis(
     {
@@ -16,7 +17,22 @@ const connection = new IORedis(
     }
 );
 
-const commands = new BigUint64Array();
+const TRANSACTION_NUMBER = 4;
+let transactions_witness = new Array();
+
+async function install_transactions(tx: TxWitness) {
+  console.log("installing transaction into rollup ...");
+  transactions_witness.push(tx);
+  console.log("transaction installed, rollup pool length is:", transactions_witness.length); 
+  if (transactions_witness.length == TRANSACTION_NUMBER) {
+    console.log("rollup pool is full, generating proof:"); 
+    for (const t of transactions_witness) {
+      console.log(t);
+    }
+    await submit_proof(transactions_witness); 
+    transactions_witness = new Array(); 
+  }
+}
 
 async function main() {
   console.log("bootstraping ...");
@@ -66,6 +82,7 @@ async function main() {
         u64array.set(sigr, 20);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
+        await install_transactions(value); 
       } catch (error) {
         console.log("handling tx error");
         console.log(error);
