@@ -8,6 +8,7 @@
     "bootstrap_bg.js",
     "bootstrap.d.ts"
   ],
+  "type": "module",
   "module": "game.js",
   "types": "bootstrap.d.ts",
   "sideEffects": [
