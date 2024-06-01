@@ -20,6 +20,7 @@ const connection = new IORedis(
 
 const TRANSACTION_NUMBER = 4;
 let transactions_witness = new Array();
+let merkle_root = [0n, 0n, 0n, 0n];
 
 async function install_transactions(tx: TxWitness) {
   console.log("installing transaction into rollup ...");
@@ -30,8 +31,9 @@ async function install_transactions(tx: TxWitness) {
     for (const t of transactions_witness) {
       console.log(t);
     }
-    await submit_proof(transactions_witness); 
+    await submit_proof(merkle_root, transactions_witness);
     transactions_witness = new Array(); 
+    merkle_root = application.query_root();
   }
 }
 
@@ -62,6 +64,8 @@ async function main() {
   await (initApplication as any)(bootstrap);
 
   test_merkle_db_service();
+  // initialize merkle_root
+  merkle_root = application.query_root();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
 
