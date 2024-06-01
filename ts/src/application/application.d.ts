@@ -10,12 +10,12 @@ export function handle_tx(params: BigUint64Array): void;
 */
 export function get_state(pid: BigUint64Array): string;
 /**
-*/
-export function zkmain(): void;
-/**
 * @param {BigUint64Array} root
 */
 export function initialize(root: BigUint64Array): void;
+/**
+*/
+export function zkmain(): void;
 /**
 * @returns {BigUint64Array}
 */

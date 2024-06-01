@@ -18,7 +18,7 @@ const connection = new IORedis(
     }
 );
 
-const TRANSACTION_NUMBER = 4;
+const TRANSACTION_NUMBER = 100;
 let transactions_witness = new Array();
 let merkle_root = [0n, 0n, 0n, 0n];
 
