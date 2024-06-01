@@ -2,11 +2,13 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./rpc.js";
-import { verify_sign, LeHexBN } from "./sign.js";
+import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
+
+const server_prikey = "1234567";
 
 const connection = new IORedis(
     {
@@ -31,6 +33,24 @@ async function install_transactions(tx: TxWitness) {
     await submit_proof(transactions_witness); 
     transactions_witness = new Array(); 
   }
+}
+
+function signature_to_u64array(value: any) {
+  const msg = new LeHexBN(value.msg).toU64Array();
+  const pkx = new LeHexBN(value.pkx).toU64Array();
+  const pky = new LeHexBN(value.pky).toU64Array();
+  const sigx = new LeHexBN(value.sigx).toU64Array();
+  const sigy = new LeHexBN(value.sigy).toU64Array();
+  const sigr = new LeHexBN(value.sigr).toU64Array();
+
+  let u64array = new BigUint64Array(24);
+  u64array.set(msg);
+  u64array.set(pkx, 4);
+  u64array.set(pky, 8);
+  u64array.set(sigx, 12);
+  u64array.set(sigy, 16);
+  u64array.set(sigr, 20);
+  return u64array;
 }
 
 async function main() {
@@ -60,28 +80,18 @@ async function main() {
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
-      application.handle_tx(BigUint64Array.from([0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]));
+      let signature = sign([0n, 0n, 0n, 0n], server_prikey);
+      let u64array = signature_to_u64array(signature);
+      application.handle_tx(u64array);
+      await install_transactions(signature);
     } else if (job.name == 'transaction') {
       console.log("handle transaction");
       try {
-        let value = job.data.value;
-        const msg = new LeHexBN(value.msg).toU64Array();
-        const pkx = new LeHexBN(value.pkx).toU64Array();
-        const pky = new LeHexBN(value.pky).toU64Array();
-        const sigx = new LeHexBN(value.sigx).toU64Array();
-        const sigy = new LeHexBN(value.sigy).toU64Array();
-        const sigr = new LeHexBN(value.sigr).toU64Array();
-
-        let u64array = new BigUint64Array(24);
-        u64array.set(msg);
-        u64array.set(pkx, 4);
-        u64array.set(pky, 8);
-        u64array.set(sigx, 12);
-        u64array.set(sigy, 16);
-        u64array.set(sigr, 20);
+        let signature = job.data.value;
+        let u64array = signature_to_u64array(signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
-        await install_transactions(value); 
+        await install_transactions(signature);
       } catch (error) {
         console.log("handling tx error");
         console.log(error);
