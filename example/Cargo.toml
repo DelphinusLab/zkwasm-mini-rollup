@@ -12,7 +12,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 primitive-types = {version="0.12.1", default-features = false}
-zkwasm-rust-sdk = { git = "https://github.com/DelphinusLab/zkWasm-rust.git", branch="unbounded-kvpair", features=["witness"] }
+zkwasm-rust-sdk = { git = "https://github.com/DelphinusLab/zkWasm-rust.git", features=["witness"] }
 derive_builder = { git = "https://github.com/DelphinusLab/zkWasm-rust.git" }
 lazy_static = "1.4.0"
 wasm-bindgen = "0.2.83"
