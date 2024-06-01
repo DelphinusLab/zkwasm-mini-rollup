@@ -166,7 +166,7 @@ async function main() {
       const pkx = new LeHexBN(value.pkx).toU64Array();
       let u64array = new BigUint64Array(4);
       u64array.set(pkx);
-      let jstr = application.query_account(pkx);
+      let jstr = application.get_state(pkx);
       res.status(201).send({
         success: true,
         data: jstr

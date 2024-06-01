@@ -1,5 +1,5 @@
 [workspace]
-members = ["host", "dbservice", "example"]
+members = ["host", "dbservice", "example", "abi"]
 resolver = "2"
 
 [workspace.dependencies]
