@@ -34,7 +34,6 @@ async function main() {
   send_transaction([1n<<32n,0n,0n,0n], "1234");
   send_transaction([2n<<32n,2n + (1n<<8n),0n,0n], "1234");
   query_state([1n], "1234");
-
 }
 
 main();

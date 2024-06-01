@@ -1,21 +1,9 @@
 use std::cell::RefCell;
 use crate::events::restart_object_modifier;
 use serde::Serialize;
-
-use zkwasm_rust_sdk::kvpair::KeyValueMap;
-use zkwasm_rust_sdk::Merkle;
-
 use crate::config::{default_entities, default_local, get_modifier};
 use crate::events::EventQueue;
-
-pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
-    root: [
-        14789582351289948625,
-        10919489180071018470,
-        10309858136294505219,
-        2839580074036780766,
-    ]}
-};
+use crate::MERKLE_MAP;
 
 #[derive (Clone, Debug, Serialize)]
 pub struct Attributes (pub Vec<i64>);
@@ -42,9 +30,6 @@ impl Attributes {
         Attributes (default_local().to_vec())
     }
 }
-
-
-
 
 #[derive (Debug, Serialize)]
 pub struct Object {
@@ -202,14 +187,27 @@ impl Player {
 
 pub struct State {}
 
+impl State {
+    pub fn get_state(pid: Vec<u64>) -> String {
+        zkwasm_rust_sdk::dbg!("get state {:?}", pid);
+        let player = Player::get(&pid.try_into().unwrap()).unwrap();
+        zkwasm_rust_sdk::dbg!("get state {:?}", player);
+        let mut objs = vec![];
+        for (index, _) in player.objects.iter().enumerate() {
+            let oid = player.get_obj_id(index);
+            let obj = Object::get(&oid).unwrap();
+            objs.push(obj);
+        };
+        serde_json::to_string(&(player, objs)).unwrap()
+    }
+}
+
 pub struct SafeEventQueue (RefCell<EventQueue>);
 unsafe impl Sync for SafeEventQueue {}
 
 lazy_static::lazy_static! {
     pub static ref QUEUE: SafeEventQueue = SafeEventQueue (RefCell::new(EventQueue::new()));
 }
-
-
 
 pub struct Transaction {
     pub command: u64,

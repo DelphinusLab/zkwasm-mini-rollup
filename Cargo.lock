@@ -4101,6 +4101,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "zkwasm-rest-abi"
+version = "0.1.0"
+dependencies = [
+ "derive_builder 0.1.0 (git+https://github.com/DelphinusLab/zkWasm-rust.git)",
+ "lazy_static",
+ "primitive-types",
+ "serde",
+ "serde_json",
+ "sha2",
+ "wasm-bindgen",
+ "zkwasm-rust-sdk",
+]
+
+[[package]]
 name = "zkwasm-rust-sdk"
 version = "0.1.0"
 source = "git+https://github.com/DelphinusLab/zkWasm-rust.git?branch=unbounded-kvpair#4d2b4a3dd6a7dc48cac10a1b7ba815b1264385fd"
@@ -4121,6 +4135,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "wasm-bindgen",
+ "zkwasm-rest-abi",
  "zkwasm-rust-sdk",
 ]
 
