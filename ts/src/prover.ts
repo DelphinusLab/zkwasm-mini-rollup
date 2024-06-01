@@ -27,9 +27,9 @@ const endpoint = "https://rpc.zkwasmhub.com:8090";
 const image_md5 = "53CB557282A36E0677FD925D17C1ADE0";
 const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
 
-export async function submit_proof(txs: Array<TxWitness>) {
+export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
-  const pub_inputs: Array<string> = merkle_init.map((x) => {return `${x}:i64`});
+  const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
   const priv_inputs: Array<string> = [];
   priv_inputs.push(`${txs.length}:i64`);
   for (const tx of txs) {
