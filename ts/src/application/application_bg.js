@@ -82,18 +82,18 @@ export function get_state(pid) {
 }
 
 /**
-*/
-export function zkmain() {
-    wasm.zkmain();
-}
-
-/**
 * @param {BigUint64Array} root
 */
 export function initialize(root) {
     const ptr0 = passArray64ToWasm0(root, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     wasm.initialize(ptr0, len0);
+}
+
+/**
+*/
+export function zkmain() {
+    wasm.zkmain();
 }
 
 function getArrayU64FromWasm0(ptr, len) {

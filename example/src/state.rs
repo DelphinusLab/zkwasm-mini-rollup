@@ -200,6 +200,8 @@ impl State {
         };
         serde_json::to_string(&(player, objs)).unwrap()
     }
+    pub fn initialize() {
+    }
 }
 
 pub struct SafeEventQueue (RefCell<EventQueue>);

@@ -15,14 +15,6 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
 };
 
 #[wasm_bindgen]
-pub fn initialize(root: Vec<u64>) {
-    unsafe {
-        let merkle = Merkle::load([root[0], root[1], root[2], root[3]]);
-        MERKLE_MAP.merkle = merkle;
-    };
-}
-
-#[wasm_bindgen]
 pub fn query_root() -> Vec<u64> {
     unsafe {
         MERKLE_MAP.merkle.root.to_vec()
@@ -86,6 +78,15 @@ macro_rules! create_zkwasm_apis {
         pub fn get_state(pid: Vec<u64>) -> String {
             $S::get_state(pid)
         }
+
+    #[wasm_bindgen]
+    pub fn initialize(root: Vec<u64>) {
+        unsafe {
+            let merkle = zkwasm_rust_sdk::Merkle::load([root[0], root[1], root[2], root[3]]);
+            MERKLE_MAP.merkle = merkle;
+            $S::initialize();
+        };
+    }
 
     #[wasm_bindgen]
         pub fn zkmain() {
