@@ -55,6 +55,7 @@ export function sign(cmd: Array<bigint>, prikey: string) {
   let pkey = PrivateKey.fromString(prikey);
   let r = pkey.r();
   let R = Point.base.mul(r);
+  console.log(cmd);
   let H = cmd[0] + (cmd[1] << 64n) + (cmd[2] << 128n) + (cmd[3] << 196n);
   let hbn = new BN(H.toString(10));
   let S = r.add(pkey.key.mul(new CurveField(hbn)));
@@ -70,8 +71,8 @@ export function sign(cmd: Array<bigint>, prikey: string) {
   return data;
 }
 
+// prikey is a string that reprents a bignumber in decimal 
 export function query(prikey: string) {
-  console.log("prikey", prikey);
   let pkey = PrivateKey.fromString(prikey);
   let pubkey = pkey.publicKey;
   const data = {
