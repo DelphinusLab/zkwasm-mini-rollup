@@ -1,7 +1,7 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
-import { test_merkle_db_service } from "./rpc.js";
+import { test_merkle_db_service } from "./test.js";
 import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
@@ -20,7 +20,7 @@ const connection = new IORedis(
 
 const TRANSACTION_NUMBER = 100;
 let transactions_witness = new Array();
-let merkle_root = [0n, 0n, 0n, 0n];
+let merkle_root = new BigUint64Array([0n, 0n, 0n, 0n]);
 
 async function install_transactions(tx: TxWitness) {
   console.log("installing transaction into rollup ...");
@@ -65,6 +65,7 @@ async function main() {
 
   test_merkle_db_service();
   // initialize merkle_root
+  application.initialize(merkle_root);
   merkle_root = application.query_root();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
@@ -92,6 +93,7 @@ async function main() {
       console.log("handle transaction");
       try {
         let signature = job.data.value;
+        console.log("data is", signature);
         let u64array = signature_to_u64array(signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
@@ -138,9 +140,7 @@ async function main() {
 
   app.post('/send', async (req, res) => {
     const value = req.body;
-
-    console.log("value is", value);
-
+    //console.log("value is", value);
     if (!value) {
       return res.status(400).send('Value is required');
     }
