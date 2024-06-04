@@ -13,11 +13,33 @@ const sigr = new LeHexBN("0x1e900bb388808fe40f0a11a149a322f576448d497040d72c7b3e
 let checksign = verify_sign(msgHash, pkx, pky, sigx, sigy, sigr);
 console.log("checking signature ...", checksign);
 
+/* The modifier mush less than eight */
+function encode_modifier(modifiers: Array<bigint>) {
+  let c = 0n;
+  for (const m of modifiers) {
+    c = (c << 8n) + m;
+  }
+  return c;
+}
+
+const CMD_INSTALL_PLAYER = 1n;
+const CMD_INSTALL_OBJECT = 2n;
+const CMD_RESTART_OBJECT = 3n;
+
+function createCommand(command: bigint, objindex: bigint) {
+  return (command << 32n) + objindex;
+}
+
+let account = "1234";
+
+
 async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
-  send_transaction([1n<<32n,0n,0n,0n], "1234");
-  send_transaction([2n<<32n,2n + (1n<<8n),0n,0n], "1234");
-  query_state([1n], "1234");
+  send_transaction([1n<<32n,0n,0n,0n], account);
+  let modifiers = encode_modifier([4n, 3n, 2n, 1n]);
+  let command = createCommand(CMD_INSTALL_OBJECT, 0n);
+  send_transaction([command, modifiers,0n,0n], account);
+  query_state([1n], account);
 
 }
 
