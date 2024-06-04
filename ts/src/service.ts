@@ -31,7 +31,7 @@ async function install_transactions(tx: TxWitness) {
     for (const t of transactions_witness) {
       console.log(t);
     }
-    await submit_proof(merkle_root, transactions_witness);
+    //await submit_proof(merkle_root, transactions_witness);
     transactions_witness = new Array(); 
     merkle_root = application.query_root();
   }
@@ -65,7 +65,7 @@ async function main() {
 
   test_merkle_db_service();
   // initialize merkle_root
-  application.initialize(merkle_root);
+  // application.initialize(merkle_root);
   merkle_root = application.query_root();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
