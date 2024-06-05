@@ -10,6 +10,10 @@ export function handle_tx(params: BigUint64Array): void;
 */
 export function get_state(pid: BigUint64Array): string;
 /**
+* @returns {string}
+*/
+export function get_config(): string;
+/**
 * @param {BigUint64Array} root
 */
 export function initialize(root: BigUint64Array): void;

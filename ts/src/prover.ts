@@ -24,7 +24,8 @@ const merkle_init = [
 
 const priv = "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da8194995a"
 const endpoint = "https://rpc.zkwasmhub.com:8090";
-const image_md5 = "53CB557282A36E0677FD925D17C1ADE0";
+//const image_md5 = "53CB557282A36E0677FD925D17C1ADE0";
+const image_md5 = "4BC2B4A217F75ED17EB757F18C5D7DD1";
 const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
 
 export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>) {

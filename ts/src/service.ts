@@ -18,9 +18,14 @@ const connection = new IORedis(
     }
 );
 
-const TRANSACTION_NUMBER = 100;
+const TRANSACTION_NUMBER = 4;
 let transactions_witness = new Array();
-let merkle_root = new BigUint64Array([0n, 0n, 0n, 0n]);
+let merkle_root = new BigUint64Array([
+    14789582351289948625n,
+    10919489180071018470n,
+    10309858136294505219n,
+    2839580074036780766n,
+  ]);
 
 async function install_transactions(tx: TxWitness) {
   console.log("installing transaction into rollup ...");
@@ -65,7 +70,7 @@ async function main() {
 
   test_merkle_db_service();
   // initialize merkle_root
-  // application.initialize(merkle_root);
+  application.initialize(merkle_root);
   merkle_root = application.query_root();
   console.log("initialize sequener queue");
   const myQueue = new Queue('sequencer', {connection});
@@ -90,14 +95,14 @@ async function main() {
       application.handle_tx(u64array);
       await install_transactions(signature);
     } else if (job.name == 'transaction') {
-      console.log("handle transaction");
+      console.log("handle transaction ...");
       try {
         let signature = job.data.value;
-        console.log("data is", signature);
         let u64array = signature_to_u64array(signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
         await install_transactions(signature);
+        console.log("done");
       } catch (error) {
         console.log("handling tx error");
         console.log(error);
@@ -133,8 +138,8 @@ async function main() {
         });
       }
     } catch (error) {
-      console.error('Error adding job to the queue:', error);
-      res.status(500).send('Failed to add job to the queue');
+      console.error('Testing signature error:', error);
+      res.status(500).send('Testing signature error');
     }
   });
 

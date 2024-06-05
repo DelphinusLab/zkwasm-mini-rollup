@@ -5,4 +5,5 @@ pub mod state;
 pub mod config;
 
 use crate::state::{Transaction, State};
-zkwasm_rest_abi::create_zkwasm_apis!(Transaction, State);
+use crate::config::Config;
+zkwasm_rest_abi::create_zkwasm_apis!(Transaction, State, Config);

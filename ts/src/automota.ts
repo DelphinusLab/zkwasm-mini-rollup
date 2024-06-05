@@ -35,7 +35,8 @@ let account = "1234";
 
 async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
-  send_transaction([1n<<32n,0n,0n,0n], account);
+  let install_command = createCommand(CMD_INSTALL_PLAYER, 0n);
+  send_transaction([install_command,0n,0n,0n], account);
   let modifiers = encode_modifier([4n, 3n, 2n, 1n]);
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
   send_transaction([command, modifiers,0n,0n], account);

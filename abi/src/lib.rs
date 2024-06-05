@@ -65,7 +65,7 @@ pub fn verify_tx_signature(inputs: Vec<u64>) {
 
 #[macro_export]
 macro_rules! create_zkwasm_apis {
-    ($T: ident, $S: ident) => {
+    ($T: ident, $S: ident, $C: ident) => {
     #[wasm_bindgen]
         pub fn handle_tx(params: Vec<u64>) {
             let user_address = [params[4], params[5], params[6], params[7]];
@@ -77,6 +77,11 @@ macro_rules! create_zkwasm_apis {
     #[wasm_bindgen]
         pub fn get_state(pid: Vec<u64>) -> String {
             $S::get_state(pid)
+        }
+
+    #[wasm_bindgen]
+        pub fn get_config() -> String {
+            $C::to_json_string()
         }
 
     #[wasm_bindgen]
