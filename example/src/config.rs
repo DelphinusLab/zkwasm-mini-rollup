@@ -4,7 +4,7 @@ use serde::Serialize;
 const ENTITY_ATTRIBUTES_SIZE:usize = 5;
 const LOCAL_ATTRIBUTES_SIZE:usize = 5;
 
-#[derive (Serialize)]
+#[derive (Serialize, Clone)]
 pub struct Config {
     entity_attributes: [&'static str; ENTITY_ATTRIBUTES_SIZE],
     local_attributes: [&'static str; LOCAL_ATTRIBUTES_SIZE],
@@ -29,6 +29,12 @@ lazy_static::lazy_static! {
             (10, [-1,-1,0,0,0], [0,0,0,0,1],  "dig"),
         ],
     };
+}
+
+impl Config {
+    pub fn to_json_string() -> String {
+        serde_json::to_string(&CONFIG.clone()).unwrap()
+    }
 }
 
 pub fn get_modifier(index: u64) -> (usize, Modifier) {

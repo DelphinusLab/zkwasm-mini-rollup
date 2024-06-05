@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export function handle_tx(a: number, b: number): void;
 export function get_state(a: number, b: number, c: number): void;
+export function get_config(a: number): void;
 export function initialize(a: number, b: number): void;
 export function zkmain(): void;
 export function query_root(a: number): void;
