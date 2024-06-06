@@ -4,7 +4,32 @@ This repo is a sample REST service in RUST which is compiled to WASM and runs in
 ![alt text](./images/mini-rest-service-rollup.png)
 
 The trustless part are the transaction handling part whose execution is proved using the ZKWASM proving service (the middle component in the graph) and the final proofs are verified onchain with settlement callbacks.
-## How to use
+
+## ABI convention
+The convention between the sequencer (implemented in typescript) and the provable application contains three parts.
+1. The transaction handlers
+2. The state initializer and querying APIs
+3. The configuration APIS
+
+Once all related interfaces are defined, we use the following macro to generate the zkmain function which is suppose to run in the ZKWASM virtual machine (more details can be find in abi/src/lib.rs). After the WASM is compiled, it exposes a set of interfaces (verify_tx_signature, handle_tx, initialize, flush_settlement, etc) for the sequencer (A sketch of the sequencer can be find in ts/service.rs).
+
+The WASM is bootstrap by implmenting ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementing of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
+```
+import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
+import initApplication, * as application from "./application/application.js";
+
+......
+// initialize the bootstrap wasm image
+await (initBootstrap as any)();
+
+// initialize the application wasm which relies on the host interfaces from bootstrap image.
+await (initApplication as any)(bootstrap);
+
+......
+
+```
+
+## Quick Start of an example application
 1. Start Redis
 ```
 sudo add-apt-repository ppa:redislabs/redis
@@ -23,9 +48,13 @@ mongod --dbpath db
 ./dbservice >>> cargo run --release
 ```
 
-4. make build
+4. Compiling the bootstrap WASM image.
 ```
 ./host >>> make build
+```
+
+5. Compiling the application WASM image.
+```
 ./example >>> make build
 ```
 

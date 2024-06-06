@@ -9,6 +9,7 @@ import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
 
+const TRANSACTION_NUMBER = 4; // transactions for each rollup
 const server_prikey = "1234567";
 
 const connection = new IORedis(
@@ -19,7 +20,6 @@ const connection = new IORedis(
     }
 );
 
-const TRANSACTION_NUMBER = 4;
 let transactions_witness = new Array();
 let merkle_root = new BigUint64Array([
     14789582351289948625n,
@@ -28,7 +28,7 @@ let merkle_root = new BigUint64Array([
     2839580074036780766n,
   ]);
 
-async function install_transactions(tx: TxWitness) {
+async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
   transactions_witness.push(tx);
   console.log("transaction installed, rollup pool length is:", transactions_witness.length); 
@@ -41,6 +41,10 @@ async function install_transactions(tx: TxWitness) {
     transactions_witness = new Array(); 
     merkle_root = application.query_root();
   }
+}
+
+async function track_error_transactions(tx: TxWitness, jobid: string | undefined) {
+  return;
 }
 
 function signature_to_u64array(value: any) {
@@ -64,16 +68,19 @@ function signature_to_u64array(value: any) {
 async function main() {
   console.log("bootstraping ...");
   await (initBootstrap as any)();
-  console.log(bootstrap);
-  console.log("initialize wasm application ...");
-  console.log(application);
+  //console.log(bootstrap);
+  console.log("loading wasm application ...");
+  //console.log(application);
   await (initApplication as any)(bootstrap);
 
+  console.log("check merkel database connection ...");
   test_merkle_db_service();
   // initialize merkle_root
+  //
+  console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
   merkle_root = application.query_root();
-  console.log("initialize sequener queue");
+  console.log("initialize sequener queue ...");
   const myQueue = new Queue('sequencer', {connection});
 
   // Automatically add a job to the queue every few seconds
@@ -86,15 +93,13 @@ async function main() {
   }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
 
 
-  console.log("start worker ...");
-
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
       let signature = sign([0n, 0n, 0n, 0n], server_prikey);
       let u64array = signature_to_u64array(signature);
       application.handle_tx(u64array);
-      await install_transactions(signature);
+      await install_transactions(signature, job.id);
     } else if (job.name == 'transaction') {
       console.log("handle transaction ...");
       try {
@@ -102,11 +107,13 @@ async function main() {
         let u64array = signature_to_u64array(signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
-        await install_transactions(signature);
+        await install_transactions(signature, job.id);
         console.log("done");
       } catch (error) {
+        let signature = job.data.value;
         console.log("handling tx error");
         console.log(error);
+        await track_error_transactions(signature, job.id);
       }
     }
   }, {connection});
