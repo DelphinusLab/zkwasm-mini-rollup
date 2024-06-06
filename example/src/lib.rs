@@ -3,6 +3,7 @@ use zkwasm_rest_abi::*;
 pub mod events;
 pub mod state;
 pub mod config;
+pub mod settlement;
 
 use crate::state::{Transaction, State};
 use crate::config::Config;
