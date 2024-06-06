@@ -1,16 +1,20 @@
-struct SettleMentInfo (Vec<WithdrawInfo>)
+use sha2::{Sha256, Digest};
+use zkwasm_rust_sdk::wasm_output;
+const DEPOSIT:u64 = 1;
 
-pub static SETTLEMENT: SettleMentInfo = SettleMentInfo(vec![])
+pub struct SettleMentInfo (Vec<WithdrawInfo>);
+
+pub static mut SETTLEMENT: SettleMentInfo = SettleMentInfo(vec![]);
 
 impl SettleMentInfo {
     pub fn append_settlement(info: WithdrawInfo) {
-        SETTLEMENT.append(info);
+        unsafe {SETTLEMENT.0.push(info)};
     }
-    pub fn flush_settlement(info: WithdrawInfo) {
-        let sinfo = SETTLEMENT;
-        let mut bytes: Vec<u8> = Vec::with_capacity(sinfo.0.length * 80);
-        for settlement in SETTLEMENT.0 {
-            settlement.to_be_bytes(bytes);
+    pub fn flush_settlement() {
+        let sinfo = unsafe {&mut SETTLEMENT};
+        let mut bytes: Vec<u8> = Vec::with_capacity(sinfo.0.len() * 80);
+        for settlement in &sinfo.0 {
+            settlement.to_be_bytes(&mut bytes);
         }
         output_tx_info(bytes.as_slice());
     }
@@ -49,8 +53,6 @@ impl WithdrawInfo {
             bytes.append(&mut self.amount[3-i].to_be_bytes().to_vec());
         }
         bytes.append(&mut self.sender.to_vec());
-        bytes.try_into().unwrap()
-
     }
 }
 
