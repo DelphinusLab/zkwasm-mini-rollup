@@ -1,10 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
-* @returns {BigUint64Array}
-*/
-export function clip(): BigUint64Array;
-/**
 * @param {BigUint64Array} params
 */
 export function handle_tx(params: BigUint64Array): void;
