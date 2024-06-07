@@ -1,6 +1,6 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import { query_state, send_transaction } from "./rpc.js";
+import { query_state, send_transaction, query_config } from "./rpc.js";
 console.log("abc");
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
@@ -41,6 +41,7 @@ async function main() {
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
   send_transaction([command, modifiers,0n,0n], account);
   query_state([1n], account);
+  query_config();
 
 }
 

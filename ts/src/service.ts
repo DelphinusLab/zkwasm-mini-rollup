@@ -9,7 +9,7 @@ import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
 
-const TRANSACTION_NUMBER = 4; // transactions for each rollup
+const TRANSACTION_NUMBER = 400000000; // transactions for each rollup
 const server_prikey = "1234567";
 
 const connection = new IORedis(
@@ -205,6 +205,18 @@ async function main() {
     }
   });
 
+  app.post('/config', async (req, res) => {
+    try {
+      let jstr = application.get_config();
+      res.status(201).send({
+        success: true,
+        data: jstr
+      });
+
+    } catch (error) {
+      res.status(500).send('Get Status Error');
+    }
+  });
 
   // Start the server
   app.listen(PORT, () => {

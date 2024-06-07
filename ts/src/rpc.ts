@@ -41,3 +41,24 @@ export function query_state(cmd: Array<bigint>, prikey: string) {
     console.error('Failed to fetch:', response.statusText);
   }
 }
+
+export function query_config() {
+  const url = 'http://localhost:3000/config';
+  let data: Array<number> = [];
+  console.log("query data", data);
+  const response = fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  if (response.ok) {
+    const jsonResponse = response.json();
+    console.log(jsonResponse);
+  } else {
+    console.log(response);
+    console.error('Failed to fetch:', response.statusText);
+  }
+}
