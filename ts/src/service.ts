@@ -7,6 +7,7 @@ import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
+import cors from "cors";
 
 const server_prikey = "1234567";
 
@@ -116,6 +117,7 @@ async function main() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(cors());
 
   app.post('/test', async (req, res) => {
     const value = req.body;
