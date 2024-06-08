@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use crate::events::restart_object_modifier;
+use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use serde::Serialize;
 use crate::config::{default_entities, default_local, get_modifier};
 use crate::events::EventQueue;
@@ -214,23 +215,33 @@ lazy_static::lazy_static! {
 pub struct Transaction {
     pub command: u64,
     pub objindex: usize,
-    pub modifiers: Vec<u64>
+    pub data: Vec<u64>
+
 }
+
+const INSTALL_PLAYER: u64 = 1;
+const INSTALL_OBJECT: u64 = 2;
+const RESTART_OBJECT: u64 = 3;
+const WITHDRAW: u64 = 4;
 
 impl Transaction {
     pub fn decode(params: [u64; 4]) -> Self {
         let command = (params[0] >> 32) & 0xff;
         let objindex = (params[0] & 0xff) as usize;
-        let mut modifiers = vec![];
-        for b in params[1].to_le_bytes() {
-            if b!=0 {
-                modifiers.push(b as u64);
+        let mut data = vec![];
+        if command == WITHDRAW {
+            data = vec![0, params[1], params[2], params[3]] // address of withdraw
+        } else if command == INSTALL_OBJECT {
+            for b in params[1].to_le_bytes() {
+                if b!=0 {
+                    data.push(b as u64);
+                }
             }
         };
         Transaction {
             command,
             objindex,
-            modifiers
+            data,
         }
     }
     pub fn install_player(&self, pid: &[u64; 4]) -> bool {
@@ -254,10 +265,10 @@ impl Transaction {
                 } else if self.objindex == player.objects.len() {
                     player.objects.push(0);
                 }
-                let mid = self.modifiers[0];
+                let mid = self.data[0];
                 let oid = player.get_obj_id(self.objindex);
                 let (delay, _)  = get_modifier(mid);
-                let object = Object::new(&oid,  self.modifiers.clone());
+                let object = Object::new(&oid,  self.data.clone());
                 object.store();
                 player.store();
                 QUEUE.0.borrow_mut().insert(&oid, pid, delay, 0);
@@ -278,16 +289,35 @@ impl Transaction {
                 } else {
                     false
                 }
-                
             }
         }
     }
 
+    pub fn withdraw(&self, pid: &[u64; 4]) -> bool {
+        let mut player = Player::get(pid);
+        match player.as_mut() {
+            None => false,
+            Some (player) => {
+                let treasure = player.local.0.last_mut().unwrap();
+                let withdraw = WithdrawInfo::new(
+                    0,0,0, [*treasure as u64, 0, 0, 0],
+                    encode_address(&self.data)
+                );
+                SettleMentInfo::append_settlement(withdraw);
+                *treasure = 0;
+                player.store();
+                true
+            }
+        }
+    }
+
+
     pub fn process(&self, pid: &[u64; 4]) -> bool {
         match self.command {
-            1 => self.install_player(pid),
-            2 => self.install_object(pid),
-            3 => self.restart_object(pid),
+            INSTALL_PLAYER => self.install_player(pid),
+            INSTALL_OBJECT => self.install_object(pid),
+            RESTART_OBJECT => self.restart_object(pid),
+            WITHDRAW => self.withdraw(pid),
             _ => { QUEUE.0.borrow_mut().tick(); true }
         }
     }

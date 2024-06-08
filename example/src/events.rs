@@ -30,13 +30,14 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
     let mut player = Player::get(owner_id).unwrap();
     let applied = apply_modifier(&mut player, &mut object, modifier);
     if applied {
-        object.store();
-        player.store();
         zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
         zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
 
         let next_index = (modifier_index + 1) % object.modifiers.len();
         let modifier_id = object.modifiers[next_index];
+        object.current_modifier_index = next_index as u64;
+        object.store();
+        player.store();
         let (delay, _) = get_modifier(modifier_id);
         Some((delay, next_index))
     } else {

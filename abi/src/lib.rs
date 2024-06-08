@@ -94,6 +94,14 @@ macro_rules! create_zkwasm_apis {
     }
 
     #[wasm_bindgen]
+    pub fn finalize() {
+        unsafe {
+            $C::flush_settlement();
+        };
+    }
+
+
+    #[wasm_bindgen]
         pub fn zkmain() {
             use zkwasm_rust_sdk::wasm_input;
             use zkwasm_rust_sdk::wasm_output;
@@ -113,6 +121,8 @@ macro_rules! create_zkwasm_apis {
                 handle_tx(params);
             }
 
+            let txdata = $C::flush_settlement();
+
             let root = merkle_ref.merkle.root;
             unsafe {
                 wasm_output(root[0]);
@@ -121,6 +131,12 @@ macro_rules! create_zkwasm_apis {
                 wasm_output(root[3]);
             }
 
+            unsafe {
+                wasm_output(root[0]);
+                wasm_output(root[1]);
+                wasm_output(root[2]);
+                wasm_output(root[3]);
+            }
         }
     }
 }

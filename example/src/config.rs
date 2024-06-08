@@ -1,3 +1,4 @@
+use crate::settlement::SettleMentInfo;
 use crate::state::Modifier;
 use crate::state::Attributes;
 use serde::Serialize;
@@ -14,7 +15,7 @@ pub fn default_entities() -> [i64; ENTITY_ATTRIBUTES_SIZE] {
     [10, 10, 10, 10, 10, 10]
 }
 pub fn default_local() -> [i64; LOCAL_ATTRIBUTES_SIZE] {
-    [10, 10, 10, 10, 10, 0, 0, 0]
+    [10, 10, 10, 10, 10, 0, 0, 10]
 }
 
 lazy_static::lazy_static! {
@@ -48,6 +49,9 @@ lazy_static::lazy_static! {
 impl Config {
     pub fn to_json_string() -> String {
         serde_json::to_string(&CONFIG.clone()).unwrap()
+    }
+    pub fn flush_settlement() -> [u64; 4] {
+        SettleMentInfo::flush_settlement()
     }
 }
 
