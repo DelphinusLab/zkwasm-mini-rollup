@@ -16,6 +16,7 @@ impl SettleMentInfo {
             settlement.to_be_bytes(&mut bytes);
         }
         zkwasm_rust_sdk::dbg!("settlement: {:?}\n", bytes);
+        sinfo.0 = vec![];
         conclude_tx_info(bytes.as_slice())
     }
 }

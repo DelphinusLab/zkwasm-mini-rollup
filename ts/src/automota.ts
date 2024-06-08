@@ -25,6 +25,7 @@ function encode_modifier(modifiers: Array<bigint>) {
 const CMD_INSTALL_PLAYER = 1n;
 const CMD_INSTALL_OBJECT = 2n;
 const CMD_RESTART_OBJECT = 3n;
+const CMD_WITHDRAW= 4n;
 
 function createCommand(command: bigint, objindex: bigint) {
   return (command << 32n) + objindex;
@@ -42,7 +43,8 @@ async function main() {
   send_transaction([command, modifiers,0n,0n], account);
   query_state([1n], account);
   query_config();
-
+  let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
+  send_transaction([command_withdraw, 0n,0n,0n], account);
 }
 
 main();

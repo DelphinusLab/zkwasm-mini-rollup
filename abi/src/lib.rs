@@ -132,10 +132,10 @@ macro_rules! create_zkwasm_apis {
             }
 
             unsafe {
-                wasm_output(root[0]);
-                wasm_output(root[1]);
-                wasm_output(root[2]);
-                wasm_output(root[3]);
+                wasm_output(txdata[0]);
+                wasm_output(txdata[1]);
+                wasm_output(txdata[2]);
+                wasm_output(txdata[3]);
             }
         }
     }

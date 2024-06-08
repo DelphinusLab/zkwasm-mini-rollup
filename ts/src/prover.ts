@@ -25,7 +25,7 @@ const merkle_init = [
 const priv = "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da8194995a"
 const endpoint = "https://rpc.zkwasmhub.com:8090";
 //const image_md5 = "53CB557282A36E0677FD925D17C1ADE0";
-const image_md5 = "4BC2B4A217F75ED17EB757F18C5D7DD1";
+const image_md5 = "1911FFE8BB7522123A4EF2D7982D6A99";
 const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
 
 export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>) {
@@ -43,7 +43,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
   };
 
   console.log(priv_inputs);
-  
+
   let proofSubmitMode = ProofSubmitMode.Manual;
   let info: ProvingParams = {
     user_address: user_addr.toLowerCase(),
@@ -53,9 +53,9 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     proof_submit_mode: proofSubmitMode, // default is manual
     //input_context_type:: ImageCurrent // default is image current
   };
-  
+
   let msgString = ZkWasmUtil.createProvingSignMessage(info);
-  
+
   let signature: string;
   try {
     signature = await ZkWasmUtil.signMessage(msgString, priv);
@@ -63,7 +63,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     console.log("error signing message", e);
     return;
   }
-  
+
   let task: WithSignature<ProvingParams> = {
     ...info,
     signature: signature,
