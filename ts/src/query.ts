@@ -17,7 +17,7 @@ console.log("checking signature ...", checksign);
 
 async function main() {
   query_state([1n], "1234");
-  query_config();
+  //query_config();
 
 }
 

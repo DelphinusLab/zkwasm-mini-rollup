@@ -48,7 +48,7 @@ fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index:
     }
 }
 
-pub fn restart_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4]) -> Option<(usize, usize)> {
+pub fn restart_object_modifier(obj_id: &[u64; 4]) -> Option<(usize, usize)> {
     let mut object = Object::get(obj_id).unwrap();
     let halted = object.is_halted();
     if halted {

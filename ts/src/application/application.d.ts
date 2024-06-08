@@ -19,6 +19,9 @@ export function get_config(): string;
 export function initialize(root: BigUint64Array): void;
 /**
 */
+export function finalize(): void;
+/**
+*/
 export function zkmain(): void;
 /**
 * @returns {BigUint64Array}

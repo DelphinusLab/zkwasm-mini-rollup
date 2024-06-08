@@ -12,7 +12,7 @@ pub struct Attributes (pub Vec<i64>);
 impl Attributes {
     pub fn apply_modifier(&mut self, m: &Attributes) -> bool {
         for (a, b) in self.0.iter().zip(m.0.iter()) {
-            if *a < *b {
+            if *a + *b < 0 {
                 return false;
             }
         }
@@ -158,6 +158,7 @@ impl Player {
     }
 
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
+        zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
         let mut id = self.player_id;
         id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
         return id
@@ -233,9 +234,7 @@ impl Transaction {
             data = vec![0, params[1], params[2], params[3]] // address of withdraw
         } else if command == INSTALL_OBJECT {
             for b in params[1].to_le_bytes() {
-                if b!=0 {
-                    data.push(b as u64);
-                }
+                data.push(b as u64);
             }
         };
         Transaction {
@@ -283,7 +282,7 @@ impl Transaction {
             None => false,
             Some (player) => {
                 let oid = player.get_obj_id(self.objindex);
-                if let Some ((delay, modifier))  = restart_object_modifier(&oid, &pid) {
+                if let Some ((delay, modifier))  = restart_object_modifier(&oid) {
                     QUEUE.0.borrow_mut().insert(&oid, pid, delay, modifier);
                     true
                 } else {
@@ -298,14 +297,19 @@ impl Transaction {
         match player.as_mut() {
             None => false,
             Some (player) => {
-                let treasure = player.local.0.last_mut().unwrap();
-                let withdraw = WithdrawInfo::new(
-                    0,0,0, [*treasure as u64, 0, 0, 0],
-                    encode_address(&self.data)
-                );
-                SettleMentInfo::append_settlement(withdraw);
-                *treasure = 0;
-                player.store();
+                if let Some(treasure) = player.local.0.last_mut() {
+                    let withdraw = WithdrawInfo::new(
+                        0,0,0, [*treasure as u64, 0, 0, 0],
+                        encode_address(&self.data)
+                        );
+                    SettleMentInfo::append_settlement(withdraw);
+                    *treasure = 0;
+                    let t = player.local.0.last().unwrap();
+                    zkwasm_rust_sdk::dbg!("treasure is {}", t);
+                    player.store();
+                } else {
+                    unreachable!();
+                }
                 true
             }
         }

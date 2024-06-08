@@ -112,6 +112,12 @@ export function initialize(root) {
 
 /**
 */
+export function finalize() {
+    wasm.finalize();
+}
+
+/**
+*/
 export function zkmain() {
     wasm.zkmain();
 }

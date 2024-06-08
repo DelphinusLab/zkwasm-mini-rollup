@@ -9,7 +9,7 @@ import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
 
-const TRANSACTION_NUMBER = 400000000; // transactions for each rollup
+const TRANSACTION_NUMBER = 20; // transactions for each rollup
 const server_prikey = "1234567";
 
 const connection = new IORedis(
@@ -31,14 +31,15 @@ let merkle_root = new BigUint64Array([
 async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
   transactions_witness.push(tx);
-  console.log("transaction installed, rollup pool length is:", transactions_witness.length); 
+  console.log("transaction installed, rollup pool length is:", transactions_witness.length);
   if (transactions_witness.length == TRANSACTION_NUMBER) {
-    console.log("rollup pool is full, generating proof:"); 
+    console.log("rollup pool is full, generating proof:");
     for (const t of transactions_witness) {
       console.log(t);
     }
+    application.finalize();
     //await submit_proof(merkle_root, transactions_witness);
-    transactions_witness = new Array(); 
+    transactions_witness = new Array();
     merkle_root = application.query_root();
   }
 }
@@ -105,6 +106,7 @@ async function main() {
       try {
         let signature = job.data.value;
         let u64array = signature_to_u64array(signature);
+        console.log("tx data", signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
         await install_transactions(signature, job.id);

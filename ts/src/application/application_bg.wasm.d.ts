@@ -6,6 +6,7 @@ export function get_state(a: number, b: number, c: number): void;
 export function get_config(a: number): void;
 export function initialize(a: number, b: number): void;
 export function zkmain(): void;
+export function finalize(): void;
 export function query_root(a: number): void;
 export function verify_tx_signature(a: number, b: number): void;
 export function test_merkle(): void;
