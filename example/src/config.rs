@@ -50,7 +50,7 @@ impl Config {
     pub fn to_json_string() -> String {
         serde_json::to_string(&CONFIG.clone()).unwrap()
     }
-    pub fn flush_settlement() -> [u64; 4] {
+    pub fn flush_settlement() -> Vec<u8> {
         SettleMentInfo::flush_settlement()
     }
 }

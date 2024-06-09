@@ -18,8 +18,9 @@ export function get_config(): string;
 */
 export function initialize(root: BigUint64Array): void;
 /**
+* @returns {Uint8Array}
 */
-export function finalize(): void;
+export function finalize(): Uint8Array;
 /**
 */
 export function zkmain(): void;
