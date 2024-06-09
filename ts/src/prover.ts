@@ -42,7 +42,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     priv_inputs.push(`0x${tx.sigr}:bytes-packed`);
   };
 
-  console.log(priv_inputs);
+  //console.log(priv_inputs);
 
   let proofSubmitMode = ProofSubmitMode.Manual;
   let info: ProvingParams = {
@@ -61,7 +61,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     signature = await ZkWasmUtil.signMessage(msgString, priv);
   } catch (e: unknown) {
     console.log("error signing message", e);
-    return;
+    throw "Signing proving message failesd";
   }
 
   let task: WithSignature<ProvingParams> = {
@@ -69,5 +69,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     signature: signature,
   };
   let response = await helper.addProvingTask(task);
+  return response.id;
+  //console.log("response is ", response);
 }
 

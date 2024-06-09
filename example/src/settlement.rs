@@ -1,5 +1,4 @@
-use sha2::{Sha256, Digest};
-const DEPOSIT:u64 = 1;
+const WITHDRAW:u64 = 1;
 
 pub struct SettleMentInfo (Vec<WithdrawInfo>);
 
@@ -9,15 +8,15 @@ impl SettleMentInfo {
     pub fn append_settlement(info: WithdrawInfo) {
         unsafe {SETTLEMENT.0.push(info)};
     }
-    pub fn flush_settlement() -> [u64; 4] {
+    pub fn flush_settlement() -> Vec<u8> {
         let sinfo = unsafe {&mut SETTLEMENT};
         let mut bytes: Vec<u8> = Vec::with_capacity(sinfo.0.len() * 80);
         for settlement in &sinfo.0 {
             settlement.to_be_bytes(&mut bytes);
         }
-        zkwasm_rust_sdk::dbg!("settlement: {:?}\n", bytes);
+        //zkwasm_rust_sdk::dbg!("settlement: {:?}\n", bytes);
         sinfo.0 = vec![];
-        conclude_tx_info(bytes.as_slice())
+        bytes
     }
 }
 
@@ -47,7 +46,7 @@ impl WithdrawInfo {
         sender: [u8; 32],
     ) -> Self {
         WithdrawInfo {
-            opinfo: (DEPOSIT as u64) + (nounce << 8),
+            opinfo: (WITHDRAW as u64) + (nounce << 8),
             account_index,
             object_index,
             amount,
@@ -66,15 +65,4 @@ impl WithdrawInfo {
     }
 }
 
-/// encode bytes into wasm output
-pub fn conclude_tx_info(data: &[u8]) -> [u64;4] { 
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let result = hasher
-        .finalize()
-        .chunks_exact(8)
-        .map(|x| {
-            u64::from_le_bytes(x.try_into().unwrap())
-        }).collect::<Vec<_>>();
-    result.try_into().unwrap()
-}
+

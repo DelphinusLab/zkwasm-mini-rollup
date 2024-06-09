@@ -1,3 +1,4 @@
+use sha2::{Sha256, Digest};
 use zkwasm_rust_sdk::jubjub::BabyJubjubPoint;
 use zkwasm_rust_sdk::jubjub::JubjubSignature;
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
@@ -63,6 +64,19 @@ pub fn verify_tx_signature(inputs: Vec<u64>) {
     sig.verify(&pk, &[inputs[0], inputs[1], inputs[2], inputs[3]]);
 }
 
+/// encode bytes into wasm output
+pub fn conclude_tx_info(data: &[u8]) -> [u64;4] {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let result = hasher
+        .finalize()
+        .chunks_exact(8)
+        .map(|x| {
+            u64::from_le_bytes(x.try_into().unwrap())
+        }).collect::<Vec<_>>();
+    result.try_into().unwrap()
+}
+
 #[macro_export]
 macro_rules! create_zkwasm_apis {
     ($T: ident, $S: ident, $C: ident) => {
@@ -94,10 +108,10 @@ macro_rules! create_zkwasm_apis {
     }
 
     #[wasm_bindgen]
-    pub fn finalize() {
+    pub fn finalize() -> Vec<u8> {
         unsafe {
-            $C::flush_settlement();
-        };
+            $C::flush_settlement()
+        }
     }
 
 
@@ -121,7 +135,8 @@ macro_rules! create_zkwasm_apis {
                 handle_tx(params);
             }
 
-            let txdata = $C::flush_settlement();
+            let bytes = $C::flush_settlement();
+            let txdata = conclude_tx_info(bytes.as_slice());
 
             let root = merkle_ref.merkle.root;
             unsafe {

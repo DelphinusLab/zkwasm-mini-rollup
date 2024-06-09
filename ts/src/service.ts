@@ -9,7 +9,7 @@ import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
 
-const TRANSACTION_NUMBER = 20; // transactions for each rollup
+const TRANSACTION_NUMBER = 10; // transactions for each rollup
 const server_prikey = "1234567";
 
 const connection = new IORedis(
@@ -37,8 +37,10 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
     for (const t of transactions_witness) {
       console.log(t);
     }
-    application.finalize();
-    //await submit_proof(merkle_root, transactions_witness);
+    let txdata = application.finalize();
+    //let task_id = await submit_proof(merkle_root, transactions_witness);
+    //console.log("proving task submitted at:", task_id);
+    console.log("txdata is:", txdata);
     transactions_witness = new Array();
     merkle_root = application.query_root();
   }

@@ -16,7 +16,8 @@ let checksign = verify_sign(msgHash, pkx, pky, sigx, sigy, sigr);
 console.log("checking signature ...", checksign);
 
 async function main() {
-  query_state([1n], "1234");
+  //query_state([1n], "1234");
+  query_state([1n], "24156");
   //query_config();
 
 }
