@@ -3,7 +3,8 @@ import {
   WithSignature,
   ZkWasmUtil,
   ProofSubmitMode,
-  ZkWasmServiceHelper
+  ZkWasmServiceHelper,
+  InputContextType,
 } from "zkwasm-service-helper";
 
 export interface TxWitness {
@@ -28,7 +29,7 @@ const endpoint = "https://rpc.zkwasmhub.com:8090";
 const image_md5 = "1911FFE8BB7522123A4EF2D7982D6A99";
 const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
 
-export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>) {
+export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
   const priv_inputs: Array<string> = [];
@@ -51,7 +52,15 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
     public_inputs: pub_inputs,
     private_inputs: priv_inputs,
     proof_submit_mode: proofSubmitMode, // default is manual
-    //input_context_type:: ImageCurrent // default is image current
+    //input_context_type: InputContextType.Custom// default is image current
+  };
+
+  let tc = InputContextType.Custom;
+
+  let info_context =  { ...info,
+    input_context: txdata,
+    input_context_md5: ZkWasmUtil.convertToMd5(txdata),
+    input_context_type: tc,
   };
 
   let msgString = ZkWasmUtil.createProvingSignMessage(info);
@@ -65,7 +74,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
   }
 
   let task: WithSignature<ProvingParams> = {
-    ...info,
+    ...info_context,
     signature: signature,
   };
   let response = await helper.addProvingTask(task);

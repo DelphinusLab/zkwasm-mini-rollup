@@ -12,18 +12,19 @@ pub struct Config {
     modifiers: Vec<(usize, [i64; ENTITY_ATTRIBUTES_SIZE], [i64; LOCAL_ATTRIBUTES_SIZE], &'static str)>
 }
 pub fn default_entities() -> [i64; ENTITY_ATTRIBUTES_SIZE] {
-    [10, 10, 10, 10, 10, 10]
+    [0, 0, 0, 0, 0, 0]
 }
+
 pub fn default_local() -> [i64; LOCAL_ATTRIBUTES_SIZE] {
-    [10, 10, 10, 10, 10, 0, 0, 10]
+    [10, 10, 0, 0, 0, 0, 0, 0]
 }
 
 lazy_static::lazy_static! {
     pub static ref CONFIG: Config = Config {
-        entity_attributes: ["hp", "mp", "stamina", "luck", "power", "AB"],
-        local_attributes: ["food", "resource", "mineral", "water", "treasure", "D", "E", "F"],
+        entity_attributes: ["Energy", "Strength", "Agility", "Intelligence","Endurance","Adaptability"],
+        local_attributes: ["Engery Crystal", "Instellar Mineral", "Biomass", "Quantum Foam", "Necrodermis", "Alien Floral", "Spice Melange", "Treasure"],
         modifiers: vec![
-            (2,[0,0,0,0,0,0],[-1,-1,1,0,0,0,0,0,],"1"),
+            (2,[0,0,0,0,0,0],[-1,-1,4,0,0,0,0,0,],"A1"),
             (3,[0,0,0,0,0,0],[3,0,-1,0,0,0,0,0,],"2"),
             (2,[0,0,0,0,0,0],[0,3,-1,0,0,0,0,0],"3"),
             (2,[6,0,0,0,0,0],[-1,-2,-2,0,0,0,0,0],"4"),
