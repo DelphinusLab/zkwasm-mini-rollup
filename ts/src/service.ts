@@ -38,11 +38,15 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       console.log(t);
     }
     let txdata = application.finalize();
-    //let task_id = await submit_proof(merkle_root, transactions_witness);
-    //console.log("proving task submitted at:", task_id);
     console.log("txdata is:", txdata);
+    try {
+    //let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
+    //console.log("proving task submitted at:", task_id);
     transactions_witness = new Array();
     merkle_root = application.query_root();
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
 
