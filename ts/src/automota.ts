@@ -1,7 +1,6 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import { query_state, send_transaction, query_config } from "./rpc.js";
-console.log("abc");
+import { ZKWasmAppRpc } from "./rpc.js";
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
 const pkx = new LeHexBN("0x7137da164bacaa9332b307e25c1abd906c5c240dcb27e520b84522a1674aab01");
@@ -33,18 +32,20 @@ function createCommand(command: bigint, objindex: bigint) {
 
 let account = "1234";
 
+const rpc = new ZKWasmAppRpc("http://localhost:3000");
+
 
 async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
   let install_command = createCommand(CMD_INSTALL_PLAYER, 0n);
-  send_transaction([install_command,0n,0n,0n], account);
+  rpc.send_transaction([install_command,0n,0n,0n], account);
   let modifiers = encode_modifier([4n, 3n, 2n, 1n]);
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
-  send_transaction([command, modifiers,0n,0n], account);
-  query_state([1n], account);
-  query_config();
+  rpc.send_transaction([command, modifiers,0n,0n], account);
+  rpc.query_state([1n], account);
+  rpc.query_config();
   let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
-  send_transaction([command_withdraw, 0n,0n,0n], account);
+  rpc.send_transaction([command_withdraw, 0n,0n,0n], account);
 }
 
 main();

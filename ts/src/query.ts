@@ -1,8 +1,5 @@
-//import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
-import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
-import initApplication, * as application from "./application/application.js";
 import { verify_sign, LeHexBN } from "./sign.js";
-import { query_state, query_config, send_transaction } from "./rpc.js";
+import { ZKWasmAppRpc } from "./rpc.js";
 console.log("abc");
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
@@ -16,9 +13,9 @@ let checksign = verify_sign(msgHash, pkx, pky, sigx, sigy, sigr);
 console.log("checking signature ...", checksign);
 
 async function main() {
-  //query_state([1n], "1234");
-  query_state([1n], "24156");
-  //query_config();
+  const rpc = new ZKWasmAppRpc("http://101.36.120.170:20170");
+  rpc.query_config();
+  rpc.query_state([1n], "24156");
 
 }
 
