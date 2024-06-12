@@ -57,13 +57,16 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
 
   let tc = InputContextType.Custom;
 
+  ZkWasmUtil.validateContextBytes(txdata);
+  let bytesFile = await ZkWasmUtil.bytesToTempFile(txdata);
+
   let info_context =  { ...info,
-    input_context: txdata,
+    input_context: bytesFile,
     input_context_md5: ZkWasmUtil.convertToMd5(txdata),
     input_context_type: tc,
   };
 
-  let msgString = ZkWasmUtil.createProvingSignMessage(info);
+  let msgString = ZkWasmUtil.createProvingSignMessage(info_context);
 
   let signature: string;
   try {
