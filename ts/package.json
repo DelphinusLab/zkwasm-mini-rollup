@@ -21,6 +21,7 @@
   },
   "scripts": {
     "server": "npx tsx src/service.ts",
+    "build": "npx tsc",
     "test": "jest"
   },
   "devDependencies": {
