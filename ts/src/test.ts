@@ -1,8 +1,17 @@
 import fetch from 'sync-fetch';
 import { LeHexBN } from "./sign.js";
-export function test_merkle_db_service() {
-  const url = 'http://127.0.0.1:3030';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Load environment variables from .env file
+//
+let url = 'http://127.0.0.1:3030';
+if (process.env.MERKLE_SERVER) {
+  url = process.env.MERKLE_SERVER;
+}
+
+export function test_merkle_db_service() {
   const requestData = {
     jsonrpc: '2.0',
     method: 'get_leaf',
