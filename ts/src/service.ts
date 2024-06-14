@@ -10,10 +10,21 @@ import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
 import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
 
+const args = process.argv.slice(2);
+
+const host = (() => {
+  if (args.length > 0) {
+    return args[0];
+  } else {
+    return 'localhost'
+  }
+})();
+
+console.log("redis server:", host);
 
 const connection = new IORedis(
     {
-        host: 'localhost',  // Your Redis server host
+        host: host,  // Your Redis server host
         port: 6379,        // Your Redis server port
         maxRetriesPerRequest: null  // Important: set this to null
     }

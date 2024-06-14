@@ -1,29 +1,30 @@
 {
   "type": "module",
   "dependencies": {
+    "@types/bn.js": "^5.1.5",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.2",
     "@types/node-fetch": "^2.6.11",
+    "@types/sha256": "^0.2.2",
+    "@types/sync-fetch": "^0.4.3",
     "bullmq": "^5.7.9",
+    "cors": "^2.8.5",
     "delphinus-curves": "git+https://github.com/DelphinusLab/delphinus-curves.git#yyu/hybridPackage",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "ioredis": "^5.4.1",
     "node-fetch": "^3.3.2",
     "sync-fetch": "^0.5.2",
-    "@types/bn.js": "^5.1.5",
-    "@types/express": "^4.17.21",
-    "@types/sha256": "^0.2.2",
-    "@types/sync-fetch": "^0.4.3",
-    "@types/cors": "^2.8.17",
     "ts-node": "^10.9.2",
-    "zkwasm-service-cli": "git+https://github.com/DelphinusLab/zkWasm-service-cli.git",
-    "zkwasm-service-helper": "git+https://github.com/DelphinusLab/zkWasm-service-helper.git",
     "typescript": "^5.4.5",
-    "cors": "^2.8.5"
+    "zkwasm-service-cli": "git+https://github.com/DelphinusLab/zkWasm-service-cli.git",
+    "zkwasm-service-helper": "git+https://github.com/DelphinusLab/zkWasm-service-helper.git"
   },
   "scripts": {
-    "server": "npx tsx src/service.ts",
+    "server": "node src/service.js",
+    "docker-server": "node src/service.js redis",
     "build": "npx tsc",
     "test": "jest"
-  },
-  "devDependencies": {
   }
 }

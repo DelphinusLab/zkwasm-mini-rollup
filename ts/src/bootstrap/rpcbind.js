@@ -1,5 +1,16 @@
 import fetch from 'sync-fetch';
-const url = 'http://127.0.0.1:3030';
+let url = 'http://127.0.0.1:3030';
+
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Load environment variables from .env file
+//
+if (process.env.MERKLE_SERVER) {
+  url = process.env.MERKLE_SERVER;
+}
+
+console.log("rpc bind merkle server:", url);
 
 function hash2array(hash) {
   const hasharray = [];
