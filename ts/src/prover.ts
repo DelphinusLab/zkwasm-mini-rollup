@@ -7,6 +7,13 @@ import {
   InputContextType,
 } from "zkwasm-service-helper";
 
+import {
+  priv,
+  endpoint,
+  image_md5,
+  user_addr
+} from "./config.js";
+
 export interface TxWitness {
   msg: string,
   pkx: string,
@@ -15,19 +22,6 @@ export interface TxWitness {
   sigy: string,
   sigr: string,
 }
-
-const merkle_init = [
-    14789582351289948625n,
-    10919489180071018470n,
-    10309858136294505219n,
-    2839580074036780766n,
-]
-
-const priv = "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da8194995a"
-const endpoint = "https://rpc.zkwasmhub.com:8090";
-//const image_md5 = "53CB557282A36E0677FD925D17C1ADE0";
-const image_md5 = "1911FFE8BB7522123A4EF2D7982D6A99";
-const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
 
 export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");

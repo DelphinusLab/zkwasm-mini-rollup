@@ -8,9 +8,8 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submit_proof, TxWitness } from "./prover.js";
 import cors from "cors";
+import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
 
-const TRANSACTION_NUMBER = 10; // transactions for each rollup
-const server_prikey = "1234567";
 
 const connection = new IORedis(
     {
@@ -103,7 +102,7 @@ async function main() {
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
-      let signature = sign([0n, 0n, 0n, 0n], server_prikey);
+      let signature = sign([0n, 0n, 0n, 0n], SERVER_PRI_KEY);
       let u64array = signature_to_u64array(signature);
       application.handle_tx(u64array);
       await install_transactions(signature, job.id);
