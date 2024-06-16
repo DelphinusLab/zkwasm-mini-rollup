@@ -1,1 +1,1 @@
-docker build --file ZKWasmService.docker -t zkwasm-server . --network=host
+docker build --file service.docker -t zkwasm-server . --network=host
