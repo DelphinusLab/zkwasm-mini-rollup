@@ -1,17 +1,14 @@
 services:
     redis:
         image: redis:latest  # Use the latest Redis image from Docker Hub
-        container_name: zkwasm-redis # Name the container
 
     mongodb:
         image: mongo:latest  # Use the latest MongoDB image from Docker Hub
-        container_name: zkwasm-mongo # Name the container
         volumes:
             - mongo-data:/data/db  # Mount volume for MongoDB data persistence
 
     zkwasmserver:
         image: zkwasm-server
-        container_name: zkwasm-server
         ports:
             - "8085:3000"
         environment:
