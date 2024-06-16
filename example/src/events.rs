@@ -84,10 +84,8 @@ impl EventQueue {
     }
     pub fn tick(&mut self) {
         self.dump();
-        if self.list.is_empty() {()}
-        else {
-            let head = self.list.front_mut().unwrap();
-            if head.delta == 1 {
+        while let Some(head) = self.list.front_mut() {
+            if head.delta == 0 {
                 let obj_id = head.object;
                 let owner_id = head.owner;
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index);
@@ -97,6 +95,7 @@ impl EventQueue {
                 }
             } else {
                 head.delta -= 1;
+                break;
             }
         }
     }
