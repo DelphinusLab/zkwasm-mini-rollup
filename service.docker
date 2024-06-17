@@ -32,8 +32,8 @@ RUN cargo build --release
 # Set the working directory inside the container
 WORKDIR /usr/src/zkwasm-typescript-mini-server
 
-COPY ./test-server/ts ./ts
-COPY ./test-server/start.sh ./start.sh
+COPY ./ts ./ts
+COPY ./start.sh ./start.sh
 
 #WORKDIR /usr/src/ts
 #ENV MERKLE_SERVER=zkwasm-server:3030
