@@ -26,6 +26,10 @@ const connection = new IORedis(
     {
         host: host,  // Your Redis server host
         port: 6379,        // Your Redis server port
+        reconnectOnError: (err) => {
+          console.log("reconnect on error", err);
+          return true;
+        },
         maxRetriesPerRequest: null  // Important: set this to null
     }
 );
@@ -50,8 +54,8 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
     try {
-    let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
-    console.log("proving task submitted at:", task_id);
+    //let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
+    //console.log("proving task submitted at:", task_id);
     transactions_witness = new Array();
     merkle_root = application.query_root();
     } catch (e) {
