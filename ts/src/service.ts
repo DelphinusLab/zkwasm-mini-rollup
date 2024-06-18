@@ -34,6 +34,10 @@ const connection = new IORedis(
     }
 );
 
+connection.on('end', () => {
+  console.log("redis disconnected unexpected ...");
+});
+
 let transactions_witness = new Array();
 let merkle_root = new BigUint64Array([
     14789582351289948625n,

@@ -4012,7 +4012,7 @@ dependencies = [
 [[package]]
 name = "zkwasm-host-circuits"
 version = "0.1.0"
-source = "git+https://github.com/DelphinusLab/zkWasm-host-circuits.git?branch=xgao/dynamic-db-uri#f42fc456227174bca966169f91bd899de5d0d8db"
+source = "git+https://github.com/DelphinusLab/zkWasm-host-circuits.git?branch=xgao/dynamic-db-uri#108bee69fcbe931d1c92fa18cc9b045292bda1b1"
 dependencies = [
  "ark-std",
  "cfg-if 1.0.0",
