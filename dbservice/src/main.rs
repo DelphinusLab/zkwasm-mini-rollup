@@ -70,13 +70,10 @@ async fn get_leaf(Params(request): Params<GetLeafRequest>) -> Result<[u8; 32], E
     .await
     .map_err(|_| Error::INTERNAL_ERROR)?;
     leaf.map(|l| {
-        println!("get leaf {:?}", l.data);
         l.data.unwrap_or([0; 32])
     })
 }
 async fn update_record(Params(request): Params<UpdateRecordRequest>) -> Result<(), Error> {
-    println!("update reacord with hash {:?}...", request.hash);
-    println!("update reacord with data {:?}...", request.data);
     let _ = actix_web::web::block(move || {
         let mut mongo_datahash = MongoDataHash::construct([0; 32], unsafe { DB.clone() });
         mongo_datahash.update_record({
@@ -100,7 +97,6 @@ async fn update_record(Params(request): Params<UpdateRecordRequest>) -> Result<(
 }
 
 async fn get_record(Params(request): Params<GetRecordRequest>) -> Result<Vec<String>, Error> {
-    println!("get reacord with hash {:?}...", request.hash);
     let datahashrecord = actix_web::web::block(move || {
         let mongo_datahash = MongoDataHash::construct([0; 32], unsafe { DB.clone() });
         mongo_datahash.get_record(&request.hash).unwrap()
@@ -115,7 +111,6 @@ async fn get_record(Params(request): Params<GetRecordRequest>) -> Result<Vec<Str
             .map(|x| u64::from_le_bytes(x.try_into().unwrap()).to_string())
             .collect::<Vec<String>>()
     });
-    println!("get reacord with data {:?}...", data);
     Ok(data)
 }
 
