@@ -13,9 +13,10 @@ let checksign = verify_sign(msgHash, pkx, pky, sigx, sigy, sigr);
 console.log("checking signature ...", checksign);
 
 async function main() {
-  const rpc = new ZKWasmAppRpc("http://101.36.120.170:20157");
+  //const rpc = new ZKWasmAppRpc("http://101.36.120.170:20157");
+  const rpc = new ZKWasmAppRpc("http://localhost:3000");
   rpc.query_config();
-  rpc.query_state([1n], "24157");
+  rpc.query_state([1n], "1234");
 
 }
 

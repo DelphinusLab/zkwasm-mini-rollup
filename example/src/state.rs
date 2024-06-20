@@ -35,7 +35,7 @@ impl Attributes {
 #[derive (Debug, Serialize)]
 pub struct Object {
     pub object_id: [u64; 4],
-    pub current_modifier_index: u64, // running << 63 + modifier index
+    pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
 }
@@ -61,28 +61,36 @@ impl Object {
     pub fn new(object_id: &[u64; 4], modifiers: Vec<u64>) -> Self {
         Self {
             object_id: object_id.clone(),
-            current_modifier_index: 0,
+            modifier_info: 0,
             modifiers,
             entity: Attributes::default_entities()
         }
     }
     pub fn halt(&mut self) {
-        self.current_modifier_index |= 1 << 63;
+        self.modifier_info |= 1 << 63;
     }
 
     pub fn is_halted(&mut self) -> bool {
-        (self.current_modifier_index >> 63) == 1
+        (self.modifier_info >> 63) == 1
     }
 
-    pub fn restart(&mut self) {
-        self.current_modifier_index = self.current_modifier_index & 0xffff
+    pub fn get_modifier_index(&self) -> u64 {
+        return (self.modifier_info >> 48) & 0x7f
+    }
+
+    pub fn start_new_modifier(&mut self, modifier_index: usize, counter: u64) {
+        self.modifier_info = ((modifier_index as u64) << 56) | counter;
+    }
+
+    pub fn restart(&mut self, counter: u64) {
+        self.modifier_info = (self.modifier_info & 0x7fffffffffffffff) + counter
     }
 
     pub fn store(&self) {
         let oid = self.object_id;
         zkwasm_rust_sdk::dbg!("store object {:?}\n", oid);
         let mut data = Vec::with_capacity(3 + self.entity.0.len() + self.modifiers.len() + 2);
-        data.push(self.current_modifier_index);
+        data.push(self.modifier_info);
         data.push(self.modifiers.len() as u64);
         for c in self.modifiers.iter() {
             data.push(*c as u64);
@@ -108,14 +116,14 @@ impl Object {
         if data.is_empty() {
             None
         } else {
-            let current_modifier_index = data[0].clone();
+            let modifier_info = data[0].clone();
             let entity_size = data[1].clone();
             let (_, rest) = data.split_at(2);
             let (modifiers, entity) = rest.split_at(entity_size as usize);
             let entity = entity.into_iter().skip(1).map(|x| *x as i64).collect::<Vec<_>>();
             let p = Object {
                 object_id: object_id.clone(),
-                current_modifier_index,
+                modifier_info,
                 modifiers: modifiers.to_vec(),
                 entity: Attributes (entity)
             };
@@ -133,6 +141,11 @@ pub struct Player {
 }
 
 impl Player {
+    pub fn generate_obj_id(pid: &[u64;4], index: usize) -> [u64; 4] {
+        let mut id = pid.clone();
+        id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
+        id
+    }
     pub fn store(&self) {
         zkwasm_rust_sdk::dbg!("store player\n");
         let mut data = Vec::with_capacity(1 + self.objects.len() + self.local.0.len() + 2);
@@ -200,7 +213,8 @@ impl State {
             let obj = Object::get(&oid).unwrap();
             objs.push(obj);
         };
-        serde_json::to_string(&(player, objs)).unwrap()
+        let counter = QUEUE.0.borrow().counter;
+        serde_json::to_string(&(player, objs, counter)).unwrap()
     }
     pub fn initialize() {
     }
@@ -270,20 +284,20 @@ impl Transaction {
                 let object = Object::new(&oid,  self.data.clone());
                 object.store();
                 player.store();
-                QUEUE.0.borrow_mut().insert(&oid, pid, delay, 0);
+                QUEUE.0.borrow_mut().insert(self.objindex, pid, delay, 0);
                 true
             }
         }
     }
 
-    pub fn restart_object(&self, pid: &[u64; 4]) -> bool {
+    pub fn restart_object(&self, pid: &[u64; 4], counter: u64) -> bool {
         let mut player = Player::get(pid);
         match player.as_mut() {
             None => false,
             Some (player) => {
                 let oid = player.get_obj_id(self.objindex);
-                if let Some ((delay, modifier))  = restart_object_modifier(&oid) {
-                    QUEUE.0.borrow_mut().insert(&oid, pid, delay, modifier);
+                if let Some ((delay, modifier))  = restart_object_modifier(&oid, counter) {
+                    QUEUE.0.borrow_mut().insert(self.objindex, pid, delay, modifier);
                     true
                 } else {
                     false
@@ -320,7 +334,7 @@ impl Transaction {
         match self.command {
             INSTALL_PLAYER => self.install_player(pid),
             INSTALL_OBJECT => self.install_object(pid),
-            RESTART_OBJECT => self.restart_object(pid),
+            RESTART_OBJECT => self.restart_object(pid, QUEUE.0.borrow().counter),
             WITHDRAW => self.withdraw(pid),
             _ => { QUEUE.0.borrow_mut().tick(); true }
         }

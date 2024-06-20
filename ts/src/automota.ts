@@ -39,7 +39,7 @@ async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
   let install_command = createCommand(CMD_INSTALL_PLAYER, 0n);
   rpc.send_transaction([install_command,0n,0n,0n], account);
-  let modifiers = encode_modifier([4n, 3n, 2n, 1n]);
+  let modifiers = encode_modifier([2n, 1n, 0n, 0n, 2n, 1n, 0n, 0n]);
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
   rpc.send_transaction([command, modifiers,0n,0n], account);
   rpc.query_state([1n], account);

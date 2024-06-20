@@ -72,7 +72,7 @@ pub fn conclude_tx_info(data: &[u8]) -> [u64;4] {
         .finalize()
         .chunks_exact(8)
         .map(|x| {
-            u64::from_le_bytes(x.try_into().unwrap())
+            u64::from_be_bytes(x.try_into().unwrap())
         }).collect::<Vec<_>>();
     result.try_into().unwrap()
 }
