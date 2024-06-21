@@ -1,3 +1,5 @@
+use crate::state::State;
+
 const WITHDRAW:u64 = 1;
 
 pub struct SettleMentInfo (Vec<WithdrawInfo>);
@@ -16,6 +18,7 @@ impl SettleMentInfo {
         }
         //zkwasm_rust_sdk::dbg!("settlement: {:?}\n", bytes);
         sinfo.0 = vec![];
+        State::store();
         bytes
     }
 }

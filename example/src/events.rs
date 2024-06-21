@@ -104,17 +104,17 @@ impl EventQueue {
         let kvpair = unsafe {&mut MERKLE_MAP};
         kvpair.set(&[0,0,0,0], v.as_slice());
     }
-    pub fn fetch() -> Self {
+    pub fn fetch(&mut self) {
         let kvpair = unsafe {&mut MERKLE_MAP};
         let mut data =kvpair.get(&[0, 0, 0, 0]);
-        let counter = data.pop().unwrap();
-        let mut list = LinkedList::new();
-        while !data.is_empty() {
-            list.push_back(Event::fetch(&mut data))
-        }
-        EventQueue {
-            counter,
-            list
+        if !data.is_empty() {
+            let counter = data.pop().unwrap();
+            let mut list = LinkedList::new();
+            while !data.is_empty() {
+                list.push_back(Event::fetch(&mut data))
+            }
+            self.counter = counter;
+            self.list = list;
         }
     }
     pub fn dump(&self) {

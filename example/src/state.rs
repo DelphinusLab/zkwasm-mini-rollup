@@ -216,7 +216,11 @@ impl State {
         let counter = QUEUE.0.borrow().counter;
         serde_json::to_string(&(player, objs, counter)).unwrap()
     }
+    pub fn store() {
+        QUEUE.0.borrow_mut().store();
+    }
     pub fn initialize() {
+        QUEUE.0.borrow_mut().fetch();
     }
 }
 
@@ -281,9 +285,11 @@ impl Transaction {
                 let mid = self.data[0];
                 let oid = player.get_obj_id(self.objindex);
                 let (delay, _)  = get_modifier(mid);
-                let object = Object::new(&oid,  self.data.clone());
+                let mut object = Object::new(&oid,  self.data.clone());
+                object.start_new_modifier(0, QUEUE.0.borrow().counter);
                 object.store();
                 player.store();
+
                 QUEUE.0.borrow_mut().insert(self.objindex, pid, delay, 0);
                 true
             }
