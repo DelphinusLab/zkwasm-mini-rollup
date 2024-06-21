@@ -58,10 +58,12 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
     try {
-    //let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
-    //console.log("proving task submitted at:", task_id);
-    transactions_witness = new Array();
-    merkle_root = application.query_root();
+      let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
+      console.log("proving task submitted at:", task_id);
+      transactions_witness = new Array();
+      merkle_root = application.query_root();
+      console.log("merkle root is:", merkle_root);
+      application.initialize(merkle_root);
     } catch (e) {
       console.log(e);
     }
@@ -121,10 +123,15 @@ async function main() {
   const worker = new Worker('sequencer', async job => {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
-      let signature = sign([0n, 0n, 0n, 0n], SERVER_PRI_KEY);
-      let u64array = signature_to_u64array(signature);
-      application.handle_tx(u64array);
-      await install_transactions(signature, job.id);
+      try {
+          let signature = sign([0n, 0n, 0n, 0n], SERVER_PRI_KEY);
+          let u64array = signature_to_u64array(signature);
+          application.handle_tx(u64array);
+          await install_transactions(signature, job.id);
+      } catch (error) {
+        console.log("handling auto error", error);
+
+      }
     } else if (job.name == 'transaction') {
       console.log("handle transaction ...");
       try {

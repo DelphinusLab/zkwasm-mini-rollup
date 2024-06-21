@@ -2,10 +2,12 @@ use std::collections::LinkedList;
 
 use zkwasm_rest_abi::MERKLE_MAP;
 
-use crate::{config::get_modifier, state::{Modifier, Object, Player}};
+use crate::{
+    config::get_modifier,
+    state::{Modifier, Object, Player},
+};
 
-
-#[derive (Clone)]
+#[derive(Clone)]
 pub struct Event {
     pub owner: [u64; 4],
     pub object_index: usize,
@@ -19,23 +21,35 @@ impl Event {
         buf.push(self.owner[1]);
         buf.push(self.owner[2]);
         buf.push(self.owner[3]);
-        buf.push(((self.object_index as u64) << 48) | ((self.modifier_index as u64) << 32) | self.delta as u64);
+        buf.push(
+            ((self.object_index as u64) << 48)
+                | ((self.modifier_index as u64) << 32)
+                | self.delta as u64,
+        );
+        zkwasm_rust_sdk::dbg!("compact {:?}", buf);
     }
     fn fetch(buf: &mut Vec<u64>) -> Event {
-        let owner = buf.drain(0..4).collect::<Vec<_>>();
+        zkwasm_rust_sdk::dbg!("fetch{:?}", buf);
         let f = buf.pop().unwrap();
+        let mut owner = [
+            buf.pop().unwrap(),
+            buf.pop().unwrap(),
+            buf.pop().unwrap(),
+            buf.pop().unwrap(),
+        ];
+        owner.reverse();
         Event {
-            owner: owner.try_into().unwrap(),
+            owner,
             object_index: (f >> 48) as usize,
             delta: (f & 0xffffffff) as usize,
-            modifier_index: ((f >> 32) & 0xffff) as usize,
+            modifier_index: ((f >> 48) & 0x7f) as usize,
         }
     }
 }
 
 pub struct EventQueue {
     pub counter: u64,
-    pub list: std::collections::LinkedList<Event>
+    pub list: std::collections::LinkedList<Event>,
 }
 
 pub fn apply_modifier(player: &mut Player, object: &mut Object, modifier: Modifier) -> bool {
@@ -47,14 +61,19 @@ pub fn apply_modifier(player: &mut Player, object: &mut Object, modifier: Modifi
     }
 }
 
-fn apply_object_modifier(obj_id: &[u64; 4], owner_id: &[u64; 4], modifier_index: usize, counter: u64) -> Option<(usize, usize)> {
+fn apply_object_modifier(
+    obj_id: &[u64; 4],
+    owner_id: &[u64; 4],
+    modifier_index: usize,
+    counter: u64,
+) -> Option<(usize, usize)> {
     let mut object = Object::get(obj_id).unwrap();
     let (_, modifier) = get_modifier(object.modifiers[modifier_index]);
     let mut player = Player::get(owner_id).unwrap();
     let applied = apply_modifier(&mut player, &mut object, modifier);
     if applied {
-        zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
-        zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
+        //zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
+        //zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
         let next_index = (modifier_index + 1) % object.modifiers.len();
         let modifier_id = object.modifiers[next_index];
         object.start_new_modifier(next_index, counter);
@@ -86,27 +105,28 @@ pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64) -> Option<(usize
     }
 }
 
-
-
 impl EventQueue {
     pub fn new() -> Self {
         EventQueue {
             counter: 0,
-            list: LinkedList::new()
+            list: LinkedList::new(),
         }
     }
     pub fn store(&self) {
         let n = self.list.len();
-        let mut v = Vec::with_capacity(n * 5);
+        let mut v = Vec::with_capacity(n * 5 + 1);
         for e in self.list.iter() {
             e.compact(&mut v);
         }
-        let kvpair = unsafe {&mut MERKLE_MAP};
-        kvpair.set(&[0,0,0,0], v.as_slice());
+        v.push(self.counter);
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        kvpair.set(&[0, 0, 0, 0], v.as_slice());
+        let root = kvpair.merkle.root.clone();
+        zkwasm_rust_sdk::dbg!("root after store: {:?}\n", root);
     }
     pub fn fetch(&mut self) {
-        let kvpair = unsafe {&mut MERKLE_MAP};
-        let mut data =kvpair.get(&[0, 0, 0, 0]);
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        let mut data = kvpair.get(&[0, 0, 0, 0]);
         if !data.is_empty() {
             let counter = data.pop().unwrap();
             let mut list = LinkedList::new();
@@ -123,7 +143,7 @@ impl EventQueue {
             let delta = m.delta;
             let obj = m.object_index;
             let midx = m.modifier_index;
-            zkwasm_rust_sdk::dbg!("[{}] - {:?} - {}\n",  delta, obj, midx);
+            zkwasm_rust_sdk::dbg!("[{}] - {:?} - {}\n", delta, obj, midx);
         }
         zkwasm_rust_sdk::dbg!("=-=-= end =-=-=\n");
     }
@@ -137,7 +157,7 @@ impl EventQueue {
                 let obj_id = Player::generate_obj_id(&owner_id, objindex);
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index, counter);
                 self.list.pop_front();
-                if let Some ((delta, modifier)) = m {
+                if let Some((delta, modifier)) = m {
                     self.insert(objindex, &owner_id, delta, modifier);
                 }
             } else {
@@ -148,7 +168,13 @@ impl EventQueue {
         self.counter += 1;
     }
 
-    pub fn insert(&mut self, object_index: usize, owner: &[u64; 4], delta: usize, modifier_index: usize) {
+    pub fn insert(
+        &mut self,
+        object_index: usize,
+        owner: &[u64; 4],
+        delta: usize,
+        modifier_index: usize,
+    ) {
         let mut delta = delta;
         let mut list = LinkedList::new();
         let mut tail = self.list.pop_front();
@@ -168,8 +194,8 @@ impl EventQueue {
             Some(t) => {
                 t.delta = t.delta - delta;
                 list.push_back(t.clone());
-            },
-            None => ()
+            }
+            None => (),
         };
         list.append(&mut self.list);
         self.list = list;

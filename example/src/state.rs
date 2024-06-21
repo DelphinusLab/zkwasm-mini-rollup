@@ -1,13 +1,13 @@
-use std::cell::RefCell;
-use crate::events::restart_object_modifier;
-use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
-use serde::Serialize;
 use crate::config::{default_entities, default_local, get_modifier};
+use crate::events::restart_object_modifier;
 use crate::events::EventQueue;
+use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use crate::MERKLE_MAP;
+use serde::Serialize;
+use std::cell::RefCell;
 
-#[derive (Clone, Debug, Serialize)]
-pub struct Attributes (pub Vec<i64>);
+#[derive(Clone, Debug, Serialize)]
+pub struct Attributes(pub Vec<i64>);
 
 impl Attributes {
     pub fn apply_modifier(&mut self, m: &Attributes) -> bool {
@@ -25,14 +25,14 @@ impl Attributes {
 
 impl Attributes {
     fn default_entities() -> Self {
-        Attributes (default_entities().to_vec())
+        Attributes(default_entities().to_vec())
     }
     fn default_local() -> Self {
-        Attributes (default_local().to_vec())
+        Attributes(default_local().to_vec())
     }
 }
 
-#[derive (Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Object {
     pub object_id: [u64; 4],
     pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
@@ -40,7 +40,7 @@ pub struct Object {
     pub entity: Attributes,
 }
 
-#[derive (Clone)]
+#[derive(Clone)]
 pub struct Modifier {
     pub entity: Attributes,
     pub local: Attributes,
@@ -52,7 +52,7 @@ impl Modifier {
         Modifier {
             entity: Attributes::default_entities(),
             local: Attributes::default_local(),
-            global: Attributes (vec![]),
+            global: Attributes(vec![]),
         }
     }
 }
@@ -63,7 +63,7 @@ impl Object {
             object_id: object_id.clone(),
             modifier_info: 0,
             modifiers,
-            entity: Attributes::default_entities()
+            entity: Attributes::default_entities(),
         }
     }
     pub fn halt(&mut self) {
@@ -75,7 +75,7 @@ impl Object {
     }
 
     pub fn get_modifier_index(&self) -> u64 {
-        return (self.modifier_info >> 48) & 0x7f
+        return (self.modifier_info >> 48) & 0x7f;
     }
 
     pub fn start_new_modifier(&mut self, modifier_index: usize, counter: u64) {
@@ -100,7 +100,7 @@ impl Object {
             data.push(*c as u64);
         }
 
-        let kvpair = unsafe {&mut MERKLE_MAP};
+        let kvpair = unsafe { &mut MERKLE_MAP };
         kvpair.set(&self.object_id, data.as_slice());
         zkwasm_rust_sdk::dbg!("end store object\n");
     }
@@ -109,10 +109,10 @@ impl Object {
     }
 
     pub fn get(object_id: &[u64; 4]) -> Option<Self> {
-        let kvpair = unsafe {&mut MERKLE_MAP};
-        zkwasm_rust_sdk::dbg!("get object with oid {:?}\n", object_id);
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        //zkwasm_rust_sdk::dbg!("get object with oid {:?}\n", object_id);
         let data = kvpair.get(&object_id);
-        zkwasm_rust_sdk::dbg!("get object with {:?}\n", data);
+        //zkwasm_rust_sdk::dbg!("get object with {:?}\n", data);
         if data.is_empty() {
             None
         } else {
@@ -120,20 +120,23 @@ impl Object {
             let entity_size = data[1].clone();
             let (_, rest) = data.split_at(2);
             let (modifiers, entity) = rest.split_at(entity_size as usize);
-            let entity = entity.into_iter().skip(1).map(|x| *x as i64).collect::<Vec<_>>();
+            let entity = entity
+                .into_iter()
+                .skip(1)
+                .map(|x| *x as i64)
+                .collect::<Vec<_>>();
             let p = Object {
                 object_id: object_id.clone(),
                 modifier_info,
                 modifiers: modifiers.to_vec(),
-                entity: Attributes (entity)
+                entity: Attributes(entity),
             };
-            Some (p)
+            Some(p)
         }
     }
-
 }
 
-#[derive (Debug, Serialize)]
+#[derive(Debug, Serialize)]
 pub struct Player {
     pub player_id: [u64; 4],
     pub objects: Vec<u64>,
@@ -141,7 +144,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn generate_obj_id(pid: &[u64;4], index: usize) -> [u64; 4] {
+    pub fn generate_obj_id(pid: &[u64; 4], index: usize) -> [u64; 4] {
         let mut id = pid.clone();
         id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
         id
@@ -158,7 +161,7 @@ impl Player {
             data.push(*c as u64);
         }
 
-        let kvpair = unsafe {&mut MERKLE_MAP};
+        let kvpair = unsafe { &mut MERKLE_MAP };
         kvpair.set(&self.player_id, data.as_slice());
         zkwasm_rust_sdk::dbg!("end store player\n");
     }
@@ -166,7 +169,7 @@ impl Player {
         Self {
             player_id: player_id.clone(),
             objects: vec![],
-            local: Attributes::default_local()
+            local: Attributes::default_local(),
         }
     }
 
@@ -174,14 +177,14 @@ impl Player {
         zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
         let mut id = self.player_id;
         id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
-        return id
+        return id;
     }
 
     pub fn apply_modifier(&mut self, m: &Modifier) -> bool {
         self.local.apply_modifier(&m.local)
     }
     pub fn get(player_id: &[u64; 4]) -> Option<Self> {
-        let kvpair = unsafe {&mut MERKLE_MAP};
+        let kvpair = unsafe { &mut MERKLE_MAP };
         let data = kvpair.get(&player_id);
         if data.is_empty() {
             None
@@ -189,13 +192,17 @@ impl Player {
             let objects_size = data[0].clone();
             let (_, rest) = data.split_at(1);
             let (objects, local) = rest.split_at(objects_size as usize);
-            let local = local.into_iter().skip(1).map(|x| *x as i64).collect::<Vec<_>>();
+            let local = local
+                .into_iter()
+                .skip(1)
+                .map(|x| *x as i64)
+                .collect::<Vec<_>>();
             let p = Player {
                 player_id: player_id.clone(),
                 objects: objects.to_vec(),
-                local: Attributes (local)
+                local: Attributes(local),
             };
-            Some (p)
+            Some(p)
         }
     }
 }
@@ -212,7 +219,7 @@ impl State {
             let oid = player.get_obj_id(index);
             let obj = Object::get(&oid).unwrap();
             objs.push(obj);
-        };
+        }
         let counter = QUEUE.0.borrow().counter;
         serde_json::to_string(&(player, objs, counter)).unwrap()
     }
@@ -224,7 +231,7 @@ impl State {
     }
 }
 
-pub struct SafeEventQueue (RefCell<EventQueue>);
+pub struct SafeEventQueue(RefCell<EventQueue>);
 unsafe impl Sync for SafeEventQueue {}
 
 lazy_static::lazy_static! {
@@ -234,8 +241,7 @@ lazy_static::lazy_static! {
 pub struct Transaction {
     pub command: u64,
     pub objindex: usize,
-    pub data: Vec<u64>
-
+    pub data: Vec<u64>,
 }
 
 const INSTALL_PLAYER: u64 = 1;
@@ -276,16 +282,16 @@ impl Transaction {
         let mut player = Player::get(pid);
         match player.as_mut() {
             None => false,
-            Some (player) => {
+            Some(player) => {
                 if self.objindex > player.objects.len() {
-                    return false
+                    return false;
                 } else if self.objindex == player.objects.len() {
                     player.objects.push(0);
                 }
                 let mid = self.data[0];
                 let oid = player.get_obj_id(self.objindex);
-                let (delay, _)  = get_modifier(mid);
-                let mut object = Object::new(&oid,  self.data.clone());
+                let (delay, _) = get_modifier(mid);
+                let mut object = Object::new(&oid, self.data.clone());
                 object.start_new_modifier(0, QUEUE.0.borrow().counter);
                 object.store();
                 player.store();
@@ -300,10 +306,13 @@ impl Transaction {
         let mut player = Player::get(pid);
         match player.as_mut() {
             None => false,
-            Some (player) => {
+            Some(player) => {
                 let oid = player.get_obj_id(self.objindex);
-                if let Some ((delay, modifier))  = restart_object_modifier(&oid, counter) {
-                    QUEUE.0.borrow_mut().insert(self.objindex, pid, delay, modifier);
+                if let Some((delay, modifier)) = restart_object_modifier(&oid, counter) {
+                    QUEUE
+                        .0
+                        .borrow_mut()
+                        .insert(self.objindex, pid, delay, modifier);
                     true
                 } else {
                     false
@@ -316,12 +325,15 @@ impl Transaction {
         let mut player = Player::get(pid);
         match player.as_mut() {
             None => false,
-            Some (player) => {
+            Some(player) => {
                 if let Some(treasure) = player.local.0.last_mut() {
                     let withdraw = WithdrawInfo::new(
-                        0,0,0, [*treasure as u64, 0, 0, 0],
-                        encode_address(&self.data)
-                        );
+                        0,
+                        0,
+                        0,
+                        [*treasure as u64, 0, 0, 0],
+                        encode_address(&self.data),
+                    );
                     SettleMentInfo::append_settlement(withdraw);
                     *treasure = 0;
                     let t = player.local.0.last().unwrap();
@@ -335,15 +347,20 @@ impl Transaction {
         }
     }
 
-
     pub fn process(&self, pid: &[u64; 4]) -> bool {
-        match self.command {
+        let b = match self.command {
             INSTALL_PLAYER => self.install_player(pid),
             INSTALL_OBJECT => self.install_object(pid),
             RESTART_OBJECT => self.restart_object(pid, QUEUE.0.borrow().counter),
             WITHDRAW => self.withdraw(pid),
-            _ => { QUEUE.0.borrow_mut().tick(); true }
-        }
+            _ => {
+                QUEUE.0.borrow_mut().tick();
+                true
+            }
+        };
+        let kvpair = unsafe { &mut MERKLE_MAP.merkle.root };
+        zkwasm_rust_sdk::dbg!("root after process {:?}\n", kvpair);
+        b
     }
 
     pub fn automaton() {

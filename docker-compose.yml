@@ -13,8 +13,12 @@ services:
             - "8085:3000"
         environment:
             - URI=mongodb://mongodb:27017
+        networks:
+            - my-network
 
 volumes:
     mongo-data:  # Declare the volume for MongoDB
-                                                                                                                    ~
 
+networks:
+    my-network:
+        driver: bridge

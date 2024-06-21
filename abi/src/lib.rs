@@ -18,6 +18,9 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
 #[wasm_bindgen]
 pub fn query_root() -> Vec<u64> {
     unsafe {
+        let root = 
+            MERKLE_MAP.merkle.root.clone();
+        zkwasm_rust_sdk::dbg!("query root: {:?}\n",  root);
         MERKLE_MAP.merkle.root.to_vec()
     }
 }

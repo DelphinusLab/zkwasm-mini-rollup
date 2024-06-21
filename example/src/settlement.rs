@@ -1,17 +1,17 @@
 use crate::state::State;
 
-const WITHDRAW:u64 = 1;
+const WITHDRAW: u64 = 1;
 
-pub struct SettleMentInfo (Vec<WithdrawInfo>);
+pub struct SettleMentInfo(Vec<WithdrawInfo>);
 
 pub static mut SETTLEMENT: SettleMentInfo = SettleMentInfo(vec![]);
 
 impl SettleMentInfo {
     pub fn append_settlement(info: WithdrawInfo) {
-        unsafe {SETTLEMENT.0.push(info)};
+        unsafe { SETTLEMENT.0.push(info) };
     }
     pub fn flush_settlement() -> Vec<u8> {
-        let sinfo = unsafe {&mut SETTLEMENT};
+        let sinfo = unsafe { &mut SETTLEMENT };
         let mut bytes: Vec<u8> = Vec::with_capacity(sinfo.0.len() * 80);
         for settlement in &sinfo.0 {
             settlement.to_be_bytes(&mut bytes);
@@ -37,7 +37,6 @@ pub fn encode_address(v: &Vec<u64>) -> [u8; 32] {
         bytes.append(&mut v[i].to_le_bytes().to_vec());
     }
     bytes.try_into().unwrap()
-
 }
 
 impl WithdrawInfo {
@@ -62,10 +61,8 @@ impl WithdrawInfo {
         bytes.append(&mut self.account_index.to_be_bytes().to_vec());
         bytes.append(&mut self.object_index.to_be_bytes().to_vec());
         for i in 0..4 {
-            bytes.append(&mut self.amount[3-i].to_be_bytes().to_vec());
+            bytes.append(&mut self.amount[3 - i].to_be_bytes().to_vec());
         }
         bytes.append(&mut self.sender.to_vec());
     }
 }
-
-
