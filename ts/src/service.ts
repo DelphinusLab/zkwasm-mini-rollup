@@ -103,7 +103,8 @@ async function main() {
 
   console.log("check merkel database connection ...");
   test_merkle_db_service();
-  // initialize merkle_root based on the latest task
+  /*
+  //initialize merkle_root based on the latest task
   let task = await get_latest_proof();
   console.log("latest task", task?.instances);
   if (task) {
@@ -116,6 +117,7 @@ async function main() {
     ]);
     console.log("updated merkle root", merkle_root);
   }
+  */
   console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
   merkle_root = application.query_root();
