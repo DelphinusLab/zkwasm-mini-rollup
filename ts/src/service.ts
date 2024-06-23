@@ -6,9 +6,10 @@ import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
-import { submit_proof, TxWitness } from "./prover.js";
+import { submit_proof, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
+import { ZkWasmUtil } from "zkwasm-service-helper";
 
 const args = process.argv.slice(2);
 
@@ -102,8 +103,19 @@ async function main() {
 
   console.log("check merkel database connection ...");
   test_merkle_db_service();
-  // initialize merkle_root
-  //
+  // initialize merkle_root based on the latest task
+  let task = await get_latest_proof();
+  console.log("latest task", task?.instances);
+  if (task) {
+    const instances = ZkWasmUtil.bytesToBN(task?.instances);
+    merkle_root = new BigUint64Array([
+      BigInt(instances[4].toString()),
+      BigInt(instances[5].toString()),
+      BigInt(instances[6].toString()),
+      BigInt(instances[7].toString()),
+    ]);
+    console.log("updated merkle root", merkle_root);
+  }
   console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
   merkle_root = application.query_root();

@@ -75,7 +75,7 @@ impl Object {
     }
 
     pub fn get_modifier_index(&self) -> u64 {
-        return (self.modifier_info >> 48) & 0x7f;
+        return (self.modifier_info >> 56) & 0x7f;
     }
 
     pub fn start_new_modifier(&mut self, modifier_index: usize, counter: u64) {

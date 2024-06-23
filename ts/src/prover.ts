@@ -5,6 +5,7 @@ import {
   ProofSubmitMode,
   ZkWasmServiceHelper,
   InputContextType,
+  Task,
 } from "zkwasm-service-helper";
 
 import {
@@ -39,7 +40,7 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
 
   //console.log(priv_inputs);
 
-  let proofSubmitMode = ProofSubmitMode.Manual;
+  let proofSubmitMode = ProofSubmitMode.Manual; // Auto
   let info: ProvingParams = {
     user_address: user_addr.toLowerCase(),
     md5: image_md5,
@@ -78,4 +79,22 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
   return response.id;
   //console.log("response is ", response);
 }
+
+export async function get_latest_proof(): Promise<Task | null> {
+  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  let query = {
+    md5: image_md5,
+    user_address: null,
+    id: null,
+    tasktype: "Prove",
+    taskstatus: "Done",
+  };
+  let tasks = await helper.loadTasks(query);
+  if (tasks.data.length == 0) {
+    return null
+  } else {
+    return tasks.data[0];
+  }
+}
+
 
