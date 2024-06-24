@@ -302,13 +302,14 @@ impl Transaction {
         }
     }
 
-    pub fn restart_object(&self, pid: &[u64; 4], counter: u64) -> bool {
+    pub fn restart_object(&self, pid: &[u64; 4]) -> bool {
         let mut player = Player::get(pid);
         match player.as_mut() {
             None => false,
             Some(player) => {
                 let oid = player.get_obj_id(self.objindex);
-                if let Some((delay, modifier)) = restart_object_modifier(&oid, counter) {
+                let counter = QUEUE.0.borrow().counter;
+                if let Some((delay, modifier)) = restart_object_modifier(&oid, /*QUEUE.0.borrow().*/counter) {
                     QUEUE
                         .0
                         .borrow_mut()
@@ -351,7 +352,7 @@ impl Transaction {
         let b = match self.command {
             INSTALL_PLAYER => self.install_player(pid),
             INSTALL_OBJECT => self.install_object(pid),
-            RESTART_OBJECT => self.restart_object(pid, QUEUE.0.borrow().counter),
+            RESTART_OBJECT => self.restart_object(pid),
             WITHDRAW => self.withdraw(pid),
             _ => {
                 QUEUE.0.borrow_mut().tick();
