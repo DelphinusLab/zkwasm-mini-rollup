@@ -83,7 +83,7 @@ impl Object {
     }
 
     pub fn restart(&mut self, counter: u64) {
-        self.modifier_info = (self.modifier_info & 0x7fffffffffffffff) + counter
+        self.modifier_info = (self.modifier_info & 0x7F00000000000000) + counter
     }
 
     pub fn store(&self) {
