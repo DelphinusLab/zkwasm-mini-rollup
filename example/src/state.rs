@@ -134,6 +134,12 @@ impl Object {
             Some(p)
         }
     }
+
+    pub fn reset_modifier(&mut self, modifiers: Vec<u64>) {
+        self.modifiers = modifiers;
+        let self_modifiers = &self.modifiers;
+        zkwasm_rust_sdk::dbg!("reset modifier: self_modifiers: {:?}\n", self_modifiers);
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -256,7 +262,7 @@ impl Transaction {
         let mut data = vec![];
         if command == WITHDRAW {
             data = vec![0, params[1], params[2], params[3]] // address of withdraw
-        } else if command == INSTALL_OBJECT {
+        } else if command == INSTALL_OBJECT || command == RESTART_OBJECT {
             for b in params[1].to_le_bytes() {
                 data.push(b as u64);
             }
@@ -309,7 +315,8 @@ impl Transaction {
             Some(player) => {
                 let oid = player.get_obj_id(self.objindex);
                 let counter = QUEUE.0.borrow().counter;
-                if let Some((delay, modifier)) = restart_object_modifier(&oid, /*QUEUE.0.borrow().*/counter) {
+                let data = &self.data;
+                if let Some((delay, modifier)) = restart_object_modifier(&oid, /*QUEUE.0.borrow().*/counter, data) {
                     QUEUE
                         .0
                         .borrow_mut()

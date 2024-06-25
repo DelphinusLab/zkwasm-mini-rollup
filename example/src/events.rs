@@ -89,10 +89,13 @@ fn apply_object_modifier(
     }
 }
 
-pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64) -> Option<(usize, usize)> {
+pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64, data: &Vec<u64>) -> Option<(usize, usize)> {
     let mut object = Object::get(obj_id).unwrap();
     let halted = object.is_halted();
     if halted {
+        // modifier object with new modifiers
+        object.reset_modifier(data.clone());
+
         let modifier_index = object.get_modifier_index();
         let (delay, _) = get_modifier(object.modifiers[modifier_index as usize]);
         object.restart(counter);
