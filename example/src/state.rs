@@ -3,8 +3,16 @@ use crate::events::restart_object_modifier;
 use crate::events::EventQueue;
 use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use crate::MERKLE_MAP;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use std::cell::RefCell;
+
+// Custom serializer for `u64` as a string.
+fn serialize_as_string<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&value.to_string())
+    }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Attributes(pub Vec<i64>);
@@ -35,6 +43,7 @@ impl Attributes {
 #[derive(Debug, Serialize)]
 pub struct Object {
     pub object_id: [u64; 4],
+    #[serde(serialize_with="serialize_as_string")]
     pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
