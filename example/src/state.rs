@@ -153,6 +153,7 @@ impl Object {
 
 #[derive(Debug, Serialize)]
 pub struct Player {
+    #[serde(skip_serializing)]
     pub player_id: [u64; 4],
     pub objects: Vec<u64>,
     pub local: Attributes,
