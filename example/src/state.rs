@@ -3,11 +3,23 @@ use crate::events::restart_object_modifier;
 use crate::events::EventQueue;
 use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use crate::MERKLE_MAP;
-use serde::{Serialize, Serializer};
+use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::cell::RefCell;
 
+// Custom serializer for `[u64; 4]` as a [String; 4].
+fn serialize_u64_array_as_string<S>(value: &[u64; 4], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(value.len()))?;
+        for e in value.iter() {
+            seq.serialize_element(&e.to_string())?;
+        }
+        seq.end()
+    }
+
 // Custom serializer for `u64` as a string.
-fn serialize_as_string<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_u64_as_string<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -42,8 +54,9 @@ impl Attributes {
 
 #[derive(Debug, Serialize)]
 pub struct Object {
+    #[serde(serialize_with="serialize_u64_array_as_string")]
     pub object_id: [u64; 4],
-    #[serde(serialize_with="serialize_as_string")]
+    #[serde(serialize_with="serialize_u64_as_string")]
     pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
