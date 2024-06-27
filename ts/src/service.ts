@@ -10,6 +10,15 @@ import { submit_proof, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+let deploymode = false;
+if (process.env.DEPLOY) {
+  deploymode = true;
+}
 
 const args = process.argv.slice(2);
 
@@ -59,8 +68,10 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
     try {
-      //let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
-      //console.log("proving task submitted at:", task_id);
+      if (deploymode) {
+          let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
+          console.log("proving task submitted at:", task_id);
+      }
       transactions_witness = new Array();
       merkle_root = application.query_root();
       console.log("merkle root is:", merkle_root);
@@ -103,21 +114,21 @@ async function main() {
 
   console.log("check merkel database connection ...");
   test_merkle_db_service();
-  /*
   //initialize merkle_root based on the latest task
-  let task = await get_latest_proof();
-  console.log("latest task", task?.instances);
-  if (task) {
-    const instances = ZkWasmUtil.bytesToBN(task?.instances);
-    merkle_root = new BigUint64Array([
-      BigInt(instances[4].toString()),
-      BigInt(instances[5].toString()),
-      BigInt(instances[6].toString()),
-      BigInt(instances[7].toString()),
-    ]);
-    console.log("updated merkle root", merkle_root);
+  if (deploymode) {
+    let task = await get_latest_proof();
+    console.log("latest task", task?.instances);
+    if (task) {
+      const instances = ZkWasmUtil.bytesToBN(task?.instances);
+      merkle_root = new BigUint64Array([
+        BigInt(instances[4].toString()),
+        BigInt(instances[5].toString()),
+        BigInt(instances[6].toString()),
+        BigInt(instances[7].toString()),
+      ]);
+      console.log("updated merkle root", merkle_root);
+    }
   }
-  */
   console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
   merkle_root = application.query_root();
