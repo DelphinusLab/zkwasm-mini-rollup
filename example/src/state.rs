@@ -159,7 +159,6 @@ impl Object {
 
     pub fn reset_modifier(&mut self, modifiers: Vec<u64>) {
         self.modifiers = modifiers;
-        let self_modifiers = &self.modifiers;
     }
 
     pub fn reset_modifier_index(&mut self, counter:u64) {
