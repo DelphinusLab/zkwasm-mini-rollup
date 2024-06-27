@@ -93,7 +93,7 @@ pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64, data: &Vec<u64>)
     let mut object = Object::get(obj_id).unwrap();
     let halted = object.is_halted();
     if halted {
-        // modifier object with new modifiers
+        // modify object with new modifiers
         object.reset_modifier(data.clone());
 
         let modifier_index = object.get_modifier_index();
@@ -104,7 +104,13 @@ pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64, data: &Vec<u64>)
         Some((delay, modifier_index as usize))
     } else {
         zkwasm_rust_sdk::dbg!("restart modifier failed\n");
-        None
+
+        // modify object's modifier index to 7
+        object.reset_modifier_index(counter);
+
+        let modifier_index = object.get_modifier_index();
+        let (delay, _) = get_modifier(object.modifiers[modifier_index as usize]);
+        Some((delay, modifier_index as usize))
     }
 }
 

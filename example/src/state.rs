@@ -160,7 +160,10 @@ impl Object {
     pub fn reset_modifier(&mut self, modifiers: Vec<u64>) {
         self.modifiers = modifiers;
         let self_modifiers = &self.modifiers;
-        zkwasm_rust_sdk::dbg!("reset modifier: self_modifiers: {:?}\n", self_modifiers);
+    }
+
+    pub fn reset_modifier_index(&mut self, counter:u64) {
+        self.modifier_info = (self.modifier_info | 0x0700000000000000) + counter
     }
 }
 
