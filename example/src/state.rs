@@ -89,23 +89,23 @@ impl Object {
         }
     }
     pub fn halt(&mut self) {
-        self.modifier_info |= 1 << 63;
+        self.modifier_info = (self.modifier_info & 0xFFFFFFFFFFFFFF) | 1 << 56;
     }
 
     pub fn is_halted(&mut self) -> bool {
-        (self.modifier_info >> 63) == 1
+        (self.modifier_info >> 56) == 1
     }
 
     pub fn get_modifier_index(&self) -> u64 {
-        return (self.modifier_info >> 56) & 0x7f;
+        return (self.modifier_info >> 48) & 0x7f;
     }
 
     pub fn start_new_modifier(&mut self, modifier_index: usize, counter: u64) {
-        self.modifier_info = ((modifier_index as u64) << 56) | counter;
+        self.modifier_info = ((modifier_index as u64) << 48) | counter;
     }
 
     pub fn restart(&mut self, counter: u64) {
-        self.modifier_info = (self.modifier_info & 0x7F00000000000000) + counter
+        self.modifier_info = (self.modifier_info & 0xFF000000000000) + counter;
     }
 
     pub fn store(&self) {
@@ -161,8 +161,8 @@ impl Object {
         self.modifiers = modifiers;
     }
 
-    pub fn reset_modifier_index(&mut self, counter:u64) {
-        self.modifier_info = (self.modifier_info | 0x0700000000000000) + counter
+    pub fn reset_halt_bit_to_restart(&mut self) {
+        self.modifier_info = (self.modifier_info & 0xFFFFFFFFFFFFFF) | 1 << 57;
     }
 }
 
