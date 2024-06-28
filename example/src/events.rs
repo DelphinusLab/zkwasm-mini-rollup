@@ -74,9 +74,11 @@ fn apply_object_modifier(
     // Check if the most Significant 8 Bits of modifier_info is restart
     if object.modifier_info >> 56 == 2 {
         let next_index = (7usize + 1) % object.modifiers.len();
+        let modifier_id = object.modifiers[next_index];
         object.start_new_modifier(next_index, counter);
         object.store();
         player.store();
+        let (delay, _) = get_modifier(modifier_id);
         Some((delay, next_index))
     } else {
         let applied = apply_modifier(&mut player, &mut object, modifier);
