@@ -3,8 +3,28 @@ use crate::events::restart_object_modifier;
 use crate::events::EventQueue;
 use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use crate::MERKLE_MAP;
-use serde::Serialize;
+use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::cell::RefCell;
+
+// Custom serializer for `[u64; 4]` as a [String; 4].
+fn serialize_u64_array_as_string<S>(value: &[u64; 4], serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(value.len()))?;
+        for e in value.iter() {
+            seq.serialize_element(&e.to_string())?;
+        }
+        seq.end()
+    }
+
+// Custom serializer for `u64` as a string.
+fn serialize_u64_as_string<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&value.to_string())
+    }
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Attributes(pub Vec<i64>);
@@ -34,7 +54,9 @@ impl Attributes {
 
 #[derive(Debug, Serialize)]
 pub struct Object {
+    #[serde(serialize_with="serialize_u64_array_as_string")]
     pub object_id: [u64; 4],
+    #[serde(serialize_with="serialize_u64_as_string")]
     pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
@@ -67,23 +89,23 @@ impl Object {
         }
     }
     pub fn halt(&mut self) {
-        self.modifier_info |= 1 << 63;
+        self.modifier_info = (self.modifier_info & 0xFFFFFFFFFFFFFF) | 1 << 56;
     }
 
     pub fn is_halted(&mut self) -> bool {
-        (self.modifier_info >> 63) == 1
+        (self.modifier_info >> 56) == 1
     }
 
     pub fn get_modifier_index(&self) -> u64 {
-        return (self.modifier_info >> 56) & 0x7f;
+        return (self.modifier_info >> 48) & 0x7f;
     }
 
     pub fn start_new_modifier(&mut self, modifier_index: usize, counter: u64) {
-        self.modifier_info = ((modifier_index as u64) << 56) | counter;
+        self.modifier_info = ((modifier_index as u64) << 48) | counter;
     }
 
     pub fn restart(&mut self, counter: u64) {
-        self.modifier_info = (self.modifier_info & 0x7F00000000000000) + counter
+        self.modifier_info = (self.modifier_info & 0xFF000000000000) + counter;
     }
 
     pub fn store(&self) {
@@ -134,10 +156,19 @@ impl Object {
             Some(p)
         }
     }
+
+    pub fn reset_modifier(&mut self, modifiers: Vec<u64>) {
+        self.modifiers = modifiers;
+    }
+
+    pub fn reset_halt_bit_to_restart(&mut self) {
+        self.modifier_info = (self.modifier_info & 0xFFFFFFFFFFFFFF) | 1 << 57;
+    }
 }
 
 #[derive(Debug, Serialize)]
 pub struct Player {
+    #[serde(skip_serializing)]
     pub player_id: [u64; 4],
     pub objects: Vec<u64>,
     pub local: Attributes,
@@ -256,7 +287,7 @@ impl Transaction {
         let mut data = vec![];
         if command == WITHDRAW {
             data = vec![0, params[1], params[2], params[3]] // address of withdraw
-        } else if command == INSTALL_OBJECT {
+        } else if command == INSTALL_OBJECT || command == RESTART_OBJECT {
             for b in params[1].to_le_bytes() {
                 data.push(b as u64);
             }
@@ -309,7 +340,8 @@ impl Transaction {
             Some(player) => {
                 let oid = player.get_obj_id(self.objindex);
                 let counter = QUEUE.0.borrow().counter;
-                if let Some((delay, modifier)) = restart_object_modifier(&oid, /*QUEUE.0.borrow().*/counter) {
+                let data = &self.data;
+                if let Some((delay, modifier)) = restart_object_modifier(&oid, /*QUEUE.0.borrow().*/counter, data) {
                     QUEUE
                         .0
                         .borrow_mut()

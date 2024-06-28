@@ -70,29 +70,42 @@ fn apply_object_modifier(
     let mut object = Object::get(obj_id).unwrap();
     let (_, modifier) = get_modifier(object.modifiers[modifier_index]);
     let mut player = Player::get(owner_id).unwrap();
-    let applied = apply_modifier(&mut player, &mut object, modifier);
-    if applied {
-        //zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
-        //zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
-        let next_index = (modifier_index + 1) % object.modifiers.len();
-        let modifier_id = object.modifiers[next_index];
+
+    // Check if the most Significant 8 Bits of modifier_info is restart
+    if object.modifier_info >> 56 == 2 {
+        let next_index = (7usize + 1) % object.modifiers.len();
         object.start_new_modifier(next_index, counter);
         object.store();
         player.store();
-        let (delay, _) = get_modifier(modifier_id);
         Some((delay, next_index))
     } else {
-        object.halt();
-        object.store();
-        zkwasm_rust_sdk::dbg!("apply modifier failed\n");
-        None
+        let applied = apply_modifier(&mut player, &mut object, modifier);
+        if applied {
+            //zkwasm_rust_sdk::dbg!("object after: {:?}\n", object);
+            //zkwasm_rust_sdk::dbg!("player after: {:?}\n", player);
+            let next_index = (modifier_index + 1) % object.modifiers.len();
+            let modifier_id = object.modifiers[next_index];
+            object.start_new_modifier(next_index, counter);
+            object.store();
+            player.store();
+            let (delay, _) = get_modifier(modifier_id);
+            Some((delay, next_index))
+        } else {
+            object.halt();
+            object.store();
+            zkwasm_rust_sdk::dbg!("apply modifier failed\n");
+            None
+        }
     }
 }
 
-pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64) -> Option<(usize, usize)> {
+pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64, data: &Vec<u64>) -> Option<(usize, usize)> {
     let mut object = Object::get(obj_id).unwrap();
     let halted = object.is_halted();
     if halted {
+        // modify object with new modifiers
+        object.reset_modifier(data.clone());
+
         let modifier_index = object.get_modifier_index();
         let (delay, _) = get_modifier(object.modifiers[modifier_index as usize]);
         object.restart(counter);
@@ -100,7 +113,10 @@ pub fn restart_object_modifier(obj_id: &[u64; 4], counter: u64) -> Option<(usize
         zkwasm_rust_sdk::dbg!("object restarted\n");
         Some((delay, modifier_index as usize))
     } else {
-        zkwasm_rust_sdk::dbg!("restart modifier failed\n");
+        zkwasm_rust_sdk::dbg!("restart modifier failed, start reset modifier index... \n");
+        object.reset_halt_bit_to_restart();
+        object.store();
+
         None
     }
 }
