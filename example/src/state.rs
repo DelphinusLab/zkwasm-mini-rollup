@@ -57,7 +57,7 @@ pub struct Object {
     #[serde(serialize_with="serialize_u64_array_as_string")]
     pub object_id: [u64; 4],
     #[serde(serialize_with="serialize_u64_as_string")]
-    pub modifier_info: u64, // running << 63 + (modifier index << 32) + counter
+    pub modifier_info: u64, // running << 56 + (modifier index << 48) + counter
     pub modifiers: Vec<u64>,
     pub entity: Attributes,
 }
@@ -105,7 +105,7 @@ impl Object {
     }
 
     pub fn restart(&mut self, counter: u64) {
-        self.modifier_info = (self.modifier_info & 0xFF000000000000) + counter;
+        self.modifier_info = (0u64 << 48) + counter;
     }
 
     pub fn store(&self) {
