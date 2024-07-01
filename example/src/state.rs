@@ -242,9 +242,7 @@ pub struct State {}
 
 impl State {
     pub fn get_state(pid: Vec<u64>) -> String {
-        zkwasm_rust_sdk::dbg!("get state {:?}", pid);
         let player = Player::get(&pid.try_into().unwrap()).unwrap();
-        zkwasm_rust_sdk::dbg!("get state {:?}", player);
         let mut objs = vec![];
         for (index, _) in player.objects.iter().enumerate() {
             let oid = player.get_obj_id(index);

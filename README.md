@@ -82,7 +82,7 @@ All the transactions are recorded in the **transactions_witness** pool in *servi
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
         // if no execption is caught by now, record the transaction witness
-        await install_transactions(value); 
+        await install_transactions(value);
       } catch (error) {
         console.log("handling tx error");
         console.log(error);
@@ -96,13 +96,62 @@ async function install_transactions(tx: TxWitness) {
   transactions_witness.push(tx);
   if (transactions_witness.length == TRANSACTION_NUMBER) {
     // rollup pool is full, generating proof.
-    await submit_proof(transactions_witness); 
+    await submit_proof(transactions_witness);
     // You can insert DA related stuff here
     // reset the transaction pool here
-    transactions_witness = new Array(); 
+    transactions_witness = new Array();
   }
 }
 ```
 
 In the above code segment, we will invoke the ZKWASM cloud service (www.zkwasmhub.com) to generate the ZKWASM proof with **transactions_witness**. Please refer to the ZKWASM typescript service helper https://github.com/DelphinusLab/zkWasm-service-helper for more information.
 
+## Rollup Monitor
+Once the proof have been created, we can use the proof and its related transaction calldata to trigger the settlement by calling the settlement contract in our target blockchain. The settlement protocol can be designed in different ways. Here we provid a basic protocol.
+
+1. The settlement contract stores a merkle root
+2. The settlement contract provides a verify API
+
+```
+function verify(
+  bytes calldata tx_data,
+  uint256[] calldata proof,
+  uint256[] calldata verify_instance,
+  uint256[] calldata aux,
+  uint256[][] calldata instances,
+) public {
+
+  // Saninty Check
+
+  uint256 sha_pack = uint256(sha256(tx_data));
+  require(
+      sha_pack ==
+          (instances[0][8] << 192) +
+              (instances[0][9] << 128) +
+              (instances[0][10] << 64) +
+              instances[0][11],
+      "Inconstant: Sha data inconsistant"
+  );
+
+  require(
+      merkle_root ==
+          (instances[0][0] << 192) +
+              (instances[0][1] << 128) +
+              (instances[0][2] << 64) +
+              instances[0][3],
+      "Inconstant: Merkle root dismatch"
+  );
+
+  // Verify Proof
+
+  verifier.verify(proof, verify_instance, aux, instances);
+
+  // Perform settlement
+  .....
+}
+```
+
+We see that the verify instances contains the data of the merkle root before and after the execution. Thus the proof can only be settled on chain if the merkel root of the proof instances is equal to the merkle root in the contract. Thank means the proofs are settled in an order implied by the merkle root before and after the execution.
+
+We thus introduce a rollup monitor to settle the proofs based on the merkle root in the contract.
+![alt text](./images/monitor-architecture.png)

@@ -11,13 +11,20 @@ import cors from "cors";
 import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
+import mongoose from 'mongoose';
 
 // Load environment variables from .env file
 dotenv.config();
 
 let deploymode = false;
+let mongodbUri = "localhost";
+
 if (process.env.DEPLOY) {
   deploymode = true;
+}
+
+if (process.env.URI) {
+  mongodbUri = "mongodb:27017";
 }
 
 const args = process.argv.slice(2);
@@ -29,6 +36,51 @@ const host = (() => {
     return 'localhost'
   }
 })();
+
+mongoose.connect(`mongodb://${mongodbUri}/job-tracker`, {
+    //useNewUrlParser: true,
+    //useUnifiedTopology: true,
+});
+
+const db = mongoose.connection;
+
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', () => {
+    console.log('Connected to MongoDB');
+});
+
+const jobSchema = new mongoose.Schema({
+    jobId: {
+          type: String,
+          required: true,
+          unique: true,
+    },
+    message: {
+          type: String,
+    },
+
+    result: {
+          type: String,
+          enum: ['succeed', 'failed'],
+          default: 'pending',
+    },
+});
+
+const bundleSchema = new mongoose.Schema({
+    merkleRoot: {
+          type: Array<bigint>(4),
+          required: true,
+          unique: true,
+    },
+    taskId: {
+          type: String,
+          default: '',
+    },
+});
+
+const modelJob = mongoose.model('Job', jobSchema);
+const modelBundle = mongoose.model('Bundle', bundleSchema);
+
 
 console.log("redis server:", host);
 
@@ -71,6 +123,13 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       if (deploymode) {
           let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
           console.log("proving task submitted at:", task_id);
+          console.log("tracking task in db ...");
+          const bundleRecord = new modelBundle({
+              merkleRoot: merkle_root,
+              taskId: task_id,
+            });
+          await bundleRecord.save();
+          console.log("task recorded");
       }
       transactions_witness = new Array();
       merkle_root = application.query_root();
@@ -165,12 +224,17 @@ async function main() {
         console.log("tx data", signature);
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
+        const jobRecord = new modelJob({
+              jobId: signature.sigx,
+              message: signature.message,
+              result: "succeed",
+            });
+        await jobRecord.save();
         await install_transactions(signature, job.id);
         console.log("done");
       } catch (error) {
         let signature = job.data.value;
         console.log("handling tx error");
-        console.log(error);
         await track_error_transactions(signature, job.id);
       }
     }
@@ -260,6 +324,18 @@ async function main() {
 
     } catch (error) {
       res.status(500).send('Get Status Error');
+    }
+  });
+
+  app.get('/job/:id', async (req, res) => {
+    try {
+      const job = await modelJob.findById(req.params.id);
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+      res.json(job);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
     }
   });
 

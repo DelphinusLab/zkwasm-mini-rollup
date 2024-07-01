@@ -8,6 +8,7 @@
     "@types/node-fetch": "^2.6.11",
     "@types/sha256": "^0.2.2",
     "@types/sync-fetch": "^0.4.3",
+    "mongoose": "^8.4.4",
     "bullmq": "^5.7.9",
     "cors": "^2.8.5",
     "delphinus-curves": "git+https://github.com/DelphinusLab/delphinus-curves.git#yyu/hybridPackage",
