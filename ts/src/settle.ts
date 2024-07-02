@@ -1,9 +1,14 @@
 import BN from "bn.js";
-import { ZKWasmAppRpc } from "./rpc.js";
-import {LeHexBN} from "./sign.js";
 import { ethers } from "ethers";
-import { user_addr, contract_addr, priv } from "./config.js";
+import { contract_addr, modelBundle, priv } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
+import mongoose from 'mongoose';
+
+let mongodbUri = "localhost";
+
+if (process.env.URI) {
+  mongodbUri = process.env.URI; //"mongodb:27017";
+}
 
 // Replace with your network configuration
 const provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
@@ -47,21 +52,36 @@ async function getMerkle(): Promise<Array<string>>{
   return oldRootU64Array;
 }
 
-async function trySettle() {
-  let merkle_root = await getMerkle();
-  console.log(merkle_root);
-  /*
-  db.on('error', console.error.bind(console, 'connection error:'));
-  db.once('open', function() {
-      console.log("Connected to the database");
+mongoose.connect(`mongodb://${mongodbUri}/job-tracker`, {
+    //useNewUrlParser: true,
+    //useUnifiedTopology: true,
+});
 
-      // Search query
-    //   User.find({ name: 'John Doe' }, function(err, users) {
-    //       if (err) return console.error(err);
-    //           console.log(users);
-    //             });
-    //             });
-  */
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function() {console.log("Connected to the database")});
+
+
+
+async function trySettle() {
+  let merkleRoot = await getMerkle();
+  console.log(merkleRoot);
+  try {
+    let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+    if (record) {
+      let taskId = record.taskId;
+    } else {
+      console.log(`proof bundle ${merkleRoot} not found`);
+    }
+  } catch(e) {
+    console.log("get bundle error");
+    console.log(e);
+  }
 }
 
-trySettle();
+// start monitoring and settle
+
+while (true) {
+  await trySettle();
+  await new Promise(resolve => setTimeout(resolve, 5000));
+}

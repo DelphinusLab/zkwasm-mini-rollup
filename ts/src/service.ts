@@ -24,7 +24,7 @@ if (process.env.DEPLOY) {
 }
 
 if (process.env.URI) {
-  mongodbUri = "mongodb:27017";
+  mongodbUri = process.env.URI; //"mongodb:27017";
 }
 
 const args = process.argv.slice(2);
