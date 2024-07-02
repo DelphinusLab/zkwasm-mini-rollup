@@ -97,5 +97,3 @@ export async function get_latest_proof(): Promise<Task | null> {
     return tasks.data[0];
   }
 }
-
-

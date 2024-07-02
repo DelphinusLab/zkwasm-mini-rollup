@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import {ZkWasmServiceHelper} from 'zkwasm-service-helper';
 export const TRANSACTION_NUMBER = 10; // transactions for each rollup
 export const SERVER_PRI_KEY = "1234567";
 
@@ -40,6 +41,6 @@ export const bundleSchema = new mongoose.Schema({
 export const modelJob = mongoose.model('Job', jobSchema);
 export const modelBundle = mongoose.model('Bundle', bundleSchema);
 
-
+export const ServiceHelper = new ZkWasmServiceHelper(endpoint, "", "");
 
 

@@ -1,8 +1,9 @@
 import BN from "bn.js";
 import { ethers } from "ethers";
-import { contract_addr, modelBundle, priv } from "./config.js";
+import { ServiceHelper, contract_addr, modelBundle, priv } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
+import {PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
 
 let mongodbUri = "localhost";
 
@@ -61,6 +62,22 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {console.log("Connected to the database")});
 
+async function getTask(taskid: string) {
+  const queryParams: QueryParams = {
+          id: taskid,
+          tasktype: "Prove",
+          taskstatus: "Done",
+          user_address: null,
+          md5: null,
+          total: 1,
+        };
+
+  const response: PaginationResult<Task[]> = await ServiceHelper.loadTasks(
+    queryParams
+  );
+  return response.data[0];
+}
+
 
 
 async function trySettle() {
@@ -70,6 +87,18 @@ async function trySettle() {
     let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
     if (record) {
       let taskId = record.taskId;
+      let task = await getTask(taskId);
+      let verify_instance =
+          task.shadow_instances.length === 0
+          ? task.batch_instances
+          : task.shadow_instances;
+      let verifyProofParams: VerifyProofParams = {
+          aggregate_proof: task.proof,
+          verify_instance: verify_instance,
+          aux: task.aux,
+          instances: [task.instances], // The target instances are wrapped in an array
+      };
+      // verify proof
     } else {
       console.log(`proof bundle ${merkleRoot} not found`);
     }
