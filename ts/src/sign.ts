@@ -58,7 +58,7 @@ export function sign(cmd: Array<bigint>, prikey: string) {
   let r = pkey.r();
   let R = Point.base.mul(r);
   console.log(cmd);
-  let H = cmd[0] + (cmd[1] << 64n) + (cmd[2] << 128n) + (cmd[3] << 196n);
+  let H = cmd[0] + (cmd[1] << 64n) + (cmd[2] << 128n) + (cmd[3] << 192n);
   let hbn = new BN(H.toString(10));
   let S = r.add(pkey.key.mul(new CurveField(hbn)));
   let pubkey = pkey.publicKey;
