@@ -6,6 +6,7 @@ export const priv = "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da819
 export const endpoint = "https://rpc.zkwasmhub.com:8090";
 export const image_md5 = "1E183097C2427C41C3F1FEF4E55168DB";
 export const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
+export const contract_addr = "0x3Bf9Fe92c854E4D48Ab5e3866AE8635BecB40862";
 
 export const jobSchema = new mongoose.Schema({
     jobId: {
