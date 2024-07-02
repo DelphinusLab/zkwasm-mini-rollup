@@ -93,7 +93,12 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
           console.log("proving task submitted at:", task_id);
           console.log("tracking task in db ...");
           const bundleRecord = new modelBundle({
-              merkleRoot: merkle_root,
+            merkleRoot: [
+              merkle_root[0].toString(10),
+              merkle_root[1].toString(10),
+              merkle_root[2].toString(10),
+              merkle_root[3].toString(10),
+            ],
               taskId: task_id,
             });
           await bundleRecord.save();
@@ -142,6 +147,7 @@ async function main() {
   console.log("check merkel database connection ...");
   test_merkle_db_service();
   //initialize merkle_root based on the latest task
+  /*
   if (deploymode) {
     let task = await get_latest_proof();
     console.log("latest task", task?.instances);
@@ -156,6 +162,7 @@ async function main() {
       console.log("updated merkle root", merkle_root);
     }
   }
+  */
   console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
   merkle_root = application.query_root();

@@ -40,8 +40,8 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
 
   //console.log(priv_inputs);
 
-  //let proofSubmitMode = ProofSubmitMode.Manual; // Auto
-  let proofSubmitMode = ProofSubmitMode.Auto;
+  let proofSubmitMode = ProofSubmitMode.Manual; // Auto
+  //let proofSubmitMode = ProofSubmitMode.Auto;
   let info: ProvingParams = {
     user_address: user_addr.toLowerCase(),
     md5: image_md5,

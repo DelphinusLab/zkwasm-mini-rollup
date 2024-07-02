@@ -7,6 +7,7 @@ const LOCAL_ATTRIBUTES_SIZE: usize = 8;
 
 #[derive(Serialize, Clone)]
 pub struct Config {
+    version: &'static str,
     entity_attributes: [&'static str; ENTITY_ATTRIBUTES_SIZE],
     local_attributes: [&'static str; LOCAL_ATTRIBUTES_SIZE],
     modifiers: Vec<(
@@ -26,6 +27,7 @@ pub fn default_local() -> [i64; LOCAL_ATTRIBUTES_SIZE] {
 
 lazy_static::lazy_static! {
     pub static ref CONFIG: Config = Config {
+        version: "1.0",
         entity_attributes: ["Enercore", "Nexium", "Swifex", "Cognisurge", "Vitalshield", "Flexonix"],
         local_attributes: ["Engery Crystal", "Instellar Mineral", "Biomass", "Quantum Foam", "Necrodermis", "Alien Floral", "Spice Melange", "Treasure"],
         modifiers: vec![

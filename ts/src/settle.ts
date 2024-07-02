@@ -34,12 +34,12 @@ export class NumberUtil {
         }
         return bns;
     }
-    toNumber() {
+    toU64StringArray() {
         return this.toBN().map((x) => x.toString(10));
     }
 }
 
-async function getMerkle(): Promise<Array<string>>{
+async function getMerkle(): Promise<Array<String>>{
   // Connect to the Proxy contract
   const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
   // Fetch the proxy information
@@ -48,7 +48,7 @@ async function getMerkle(): Promise<Array<string>>{
   // Extract the old Merkle root
   const oldRoot = proxyInfo.merkle_root;
   console.log("Old Merkle Root:", oldRoot);
-  let oldRootU64Array = new NumberUtil(oldRoot.toString()).toNumber();
+  let oldRootU64Array = new NumberUtil(oldRoot.toString()).toU64StringArray();
   console.log("Old Merkle Root U64 Array:", oldRootU64Array);
   return oldRootU64Array;
 }
@@ -82,6 +82,7 @@ async function getTask(taskid: string) {
 
 async function trySettle() {
   let merkleRoot = await getMerkle();
+  console.log("typeof :", typeof(merkleRoot[0]));
   console.log(merkleRoot);
   try {
     let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
