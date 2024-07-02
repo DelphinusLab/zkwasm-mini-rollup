@@ -8,7 +8,7 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submit_proof, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
-import { TRANSACTION_NUMBER, SERVER_PRI_KEY} from "./config.js";
+import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob} from "./config.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -48,38 +48,6 @@ db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
     console.log('Connected to MongoDB');
 });
-
-const jobSchema = new mongoose.Schema({
-    jobId: {
-          type: String,
-          required: true,
-          unique: true,
-    },
-    message: {
-          type: String,
-    },
-
-    result: {
-          type: String,
-          enum: ['succeed', 'failed'],
-          default: 'pending',
-    },
-});
-
-const bundleSchema = new mongoose.Schema({
-    merkleRoot: {
-          type: Array<bigint>(4),
-          required: true,
-          unique: true,
-    },
-    taskId: {
-          type: String,
-          default: '',
-    },
-});
-
-const modelJob = mongoose.model('Job', jobSchema);
-const modelBundle = mongoose.model('Bundle', bundleSchema);
 
 
 console.log("redis server:", host);

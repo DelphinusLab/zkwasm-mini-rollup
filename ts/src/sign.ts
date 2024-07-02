@@ -30,6 +30,8 @@ export class LeHexBN {
   toBN() {
     return littleEndianHexToBN(this.hexstr);
   }
+
+  // little endian
   toU64Array(): BigUint64Array {
     let values:BigUint64Array = new BigUint64Array(4);
     let num = BigInt("0x" + this.toBN().toString(16));
