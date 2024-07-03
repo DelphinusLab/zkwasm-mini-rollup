@@ -45,7 +45,7 @@ async function main() {
   rpc.query_state([1n], account);
   rpc.query_config();
   let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
-  rpc.send_transaction([command_withdraw, 0n,0n,0n], account);
+  rpc.send_transaction([command_withdraw, 1n,2n,3n], account);
 }
 
 main();
