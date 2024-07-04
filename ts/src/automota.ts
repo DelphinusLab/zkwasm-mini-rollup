@@ -37,15 +37,21 @@ const rpc = new ZKWasmAppRpc("http://localhost:3000");
 
 async function main() {
   //sending_transaction([0n,0n,0n,0n], "1234");
+  rpc.query_config();
   let install_command = createCommand(CMD_INSTALL_PLAYER, 0n);
   rpc.send_transaction([install_command,0n,0n,0n], account);
   let modifiers = encode_modifier([0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]);
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
-  rpc.send_transaction([command, modifiers,0n,0n], account);
-  rpc.query_state([1n], account);
-  rpc.query_config();
-  let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
-  rpc.send_transaction([command_withdraw, 1n,2n,3n], account);
+  let job = rpc.send_transaction([command, modifiers,0n,0n], account);
+  rpc.query_jobstatus(job.jobid);
+
+  command = createCommand(CMD_INSTALL_OBJECT, 0n);
+  job = rpc.send_transaction([command, modifiers,0n,0n], account);
+  rpc.query_jobstatus(job.jobid);
+
+  //rpc.query_state([1n], account);
+  //let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
+  //rpc.send_transaction([command_withdraw, 0n,0n,0n], account);
 }
 
 main();

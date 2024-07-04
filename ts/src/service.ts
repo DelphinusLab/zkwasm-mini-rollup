@@ -3,7 +3,7 @@ import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
 import { verify_sign, LeHexBN, sign } from "./sign.js";
-import { Queue, Worker } from 'bullmq';
+import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
 import { submit_proof, TxWitness, get_latest_proof } from "./prover.js";
@@ -91,7 +91,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       if (deploymode) {
           let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
           console.log("proving task submitted at:", task_id);
-          console.log("tracking task in db ...");
+          console.log("tracking task in db ...", merkle_root);
           const bundleRecord = new modelBundle({
             merkleRoot: [
               merkle_root[0].toString(10),
@@ -107,7 +107,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       transactions_witness = new Array();
       merkle_root = application.query_root();
       console.log("merkle root is:", merkle_root);
-      //application.initialize(merkle_root);
+      application.initialize(merkle_root);
     } catch (e) {
       console.log(e);
     }
@@ -115,7 +115,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
 }
 
 async function track_error_transactions(tx: TxWitness, jobid: string | undefined) {
-  return;
+  throw "Transaction Inverted";
 }
 
 function signature_to_u64array(value: any) {
@@ -189,7 +189,6 @@ async function main() {
           await install_transactions(signature, job.id);
       } catch (error) {
         console.log("handling auto error", error);
-
       }
     } else if (job.name == 'transaction') {
       console.log("handle transaction ...");
@@ -304,13 +303,17 @@ async function main() {
 
   app.get('/job/:id', async (req, res) => {
     try {
-      const job = await modelJob.findById(req.params.id);
+      let jobId = req.params.id;
+      const job = await modelJob.findOne({ jobId: Number(jobId)});
       if (!job) {
-        return res.status(404).json({ message: 'Job not found' });
+        const job = await Job.fromId(myQueue, jobId);
+        return res.status(201).json(job);
       }
-      res.json(job);
+      return res.json(job);
     } catch (err) {
-      res.status(500).json({ message: (err as Error).message });
+      // job not tracked
+      console.log(err);
+      res.status(500).json({ message: (err as Error).toString()});
     }
   });
 

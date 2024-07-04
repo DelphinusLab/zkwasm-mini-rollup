@@ -22,6 +22,7 @@ export class ZKWasmAppRpc {
     if (response.ok) {
       const jsonResponse = response.json();
       console.log(jsonResponse);
+      return jsonResponse;
     } else {
       console.log(response);
       console.error('Failed to fetch:', response.statusText);
@@ -43,6 +44,7 @@ export class ZKWasmAppRpc {
     if (response.ok) {
       const jsonResponse = response.json();
       console.log(jsonResponse);
+      return jsonResponse;
     } else {
       console.log(response);
       console.error('Failed to fetch:', response.statusText);
@@ -64,6 +66,26 @@ export class ZKWasmAppRpc {
     if (response.ok) {
       const jsonResponse = response.json();
       console.log(jsonResponse);
+      return jsonResponse;
+    } else {
+      console.log(response);
+      console.error('Failed to fetch:', response.statusText);
+    }
+  }
+
+  public query_jobstatus(jobId: number) {
+    const url = `${this.baseUrl}/job/${jobId}`;
+    const response = fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+    });
+
+    if (response.ok) {
+      const jsonResponse = response.json();
+      console.log(jsonResponse);
+      return jsonResponse;
     } else {
       console.log(response);
       console.error('Failed to fetch:', response.statusText);
