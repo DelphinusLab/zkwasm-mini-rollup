@@ -144,8 +144,6 @@ async function main() {
   //console.log(application);
   await (initApplication as any)(bootstrap);
 
-  console.log("check merkel database connection ...");
-  test_merkle_db_service();
   //initialize merkle_root based on the latest task
   /*
   if (deploymode) {
