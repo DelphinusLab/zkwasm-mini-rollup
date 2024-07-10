@@ -196,9 +196,8 @@ pub fn test_bit(b: &[u8], i: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::Point;
-    use crate::utils::bn_to_field;
-    use crate::utils::field_to_bn;
-    use halo2_proofs::pairing::bn256::Fr;
+    use crate::jubjub::bn_to_field;
+    use bytes_helper::field_to_bn;
     use num_bigint::BigUint;
     use std::str::FromStr;
     #[test]
@@ -276,7 +275,7 @@ mod tests {
         println!(
             "base x is: {:?} {:?}",
             BigUint::to_u64_digits(&base_x),
-            BigUint::to_u64_digits(&field_to_bn(&-bn_to_field::<Fr>(&base_x)))
+            BigUint::to_u64_digits(&field_to_bn(&bn_to_field(&base_x)))
         );
         println!(
             "base y is: {:?} {:?}",
