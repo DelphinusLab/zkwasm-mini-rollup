@@ -9,6 +9,7 @@ const sigx = new LeHexBN("0x8a4414099b0a433851f7fb34e43febb1298193da413a35bb6951
 const sigy = new LeHexBN("0x7e243e753a4b0a792c02c9d550c5569fe5b46a9f710d9d123cd2865e0184fb12");
 const sigr = new LeHexBN("0x1e900bb388808fe40f0a11a149a322f576448d497040d72c7b3ebc832d02e701");
 
+const CMD_INSTALL_PLAYER = 1n;
 const CMD_WITHDRAW= 4n;
 
 export function createCommand(command: bigint, objindex: bigint) {
@@ -22,6 +23,11 @@ async function main() {
   //const rpc = new ZKWasmAppRpc("http://101.36.120.170:20157");
   const rpc = new ZKWasmAppRpc("http://localhost:3000");
   rpc.query_config();
+
+  // install player
+  const insPlayerCmd = createCommand(CMD_INSTALL_PLAYER, 0n);
+  rpc.send_transaction([insPlayerCmd, 0n, 0n, 0n], "1234");
+
   rpc.query_state([1n], "1234");
   rpc.query_state([1n], "1234");
   rpc.query_state([1n], "1234");
