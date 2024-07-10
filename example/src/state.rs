@@ -169,12 +169,18 @@ impl Object {
 #[derive(Debug, Serialize)]
 pub struct Player {
     #[serde(skip_serializing)]
-    pub player_id: [u64; 4],
+    pub player_id: [u64; 2],
     pub objects: Vec<u64>,
     pub local: Attributes,
 }
 
 impl Player {
+    fn pkey_to_pid(pkey: &[u64; 4]) -> [u64; 2] {
+        [pkey[1], pkey[2]]
+    }
+    fn to_key(pid: &[u64; 2]) -> [u64; 4] {
+        [pid[0], pid[1], 0xff00, 0xff01]
+    }
     pub fn generate_obj_id(pid: &[u64; 4], index: usize) -> [u64; 4] {
         let mut id = pid.clone();
         id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
@@ -193,30 +199,40 @@ impl Player {
         }
 
         let kvpair = unsafe { &mut MERKLE_MAP };
-        kvpair.set(&self.player_id, data.as_slice());
+        kvpair.set(&Self::to_key(&self.player_id), data.as_slice());
         zkwasm_rust_sdk::dbg!("end store player\n");
     }
-    pub fn new(player_id: &[u64; 4]) -> Self {
+    pub fn new(pkey: &[u64; 4]) -> Self {
         Self {
-            player_id: player_id.clone(),
+            player_id: Self::pkey_to_pid(pkey),
+            objects: vec![],
+            local: Attributes::default_local(),
+        }
+    }
+    pub fn new_from_raw(pid: [u64; 2]) -> Self {
+        Self {
+            player_id: pid,
             objects: vec![],
             local: Attributes::default_local(),
         }
     }
 
+
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
         zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
-        let mut id = self.player_id;
-        id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
-        return id;
+        let id = self.player_id;
+        let key = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
+        return [key, id[1], id[0], 0xff03];
     }
 
     pub fn apply_modifier(&mut self, m: &Modifier) -> bool {
         self.local.apply_modifier(&m.local)
     }
-    pub fn get(player_id: &[u64; 4]) -> Option<Self> {
+
+    pub fn get_from_pid(pid: &[u64; 2]) -> Option<Self> {
+        let key = Self::to_key(pid);
         let kvpair = unsafe { &mut MERKLE_MAP };
-        let data = kvpair.get(&player_id);
+        let data = kvpair.get(&key);
         if data.is_empty() {
             None
         } else {
@@ -229,12 +245,17 @@ impl Player {
                 .map(|x| *x as i64)
                 .collect::<Vec<_>>();
             let p = Player {
-                player_id: player_id.clone(),
+                player_id: pid.clone(),
                 objects: objects.to_vec(),
                 local: Attributes(local),
             };
             Some(p)
         }
+
+    }
+
+    pub fn get(pkey: &[u64; 4]) -> Option<Self> {
+        Self::get_from_pid(&Self::pkey_to_pid(pkey))
     }
 }
 
@@ -277,6 +298,7 @@ const INSTALL_PLAYER: u64 = 1;
 const INSTALL_OBJECT: u64 = 2;
 const RESTART_OBJECT: u64 = 3;
 const WITHDRAW: u64 = 4;
+const DEPOSIT: u64 = 5;
 
 impl Transaction {
     pub fn decode(params: [u64; 4]) -> Self {
@@ -289,6 +311,8 @@ impl Transaction {
             for b in params[1].to_le_bytes() {
                 data.push(b as u64);
             }
+        } else if command == DEPOSIT {
+            data = vec![params[1], params[2], params[3]] // pid[0], pid[1], amount
         };
         Transaction {
             command,
@@ -296,19 +320,19 @@ impl Transaction {
             data,
         }
     }
-    pub fn install_player(&self, pid: &[u64; 4]) -> bool {
-        let player = Player::get(pid);
+    pub fn install_player(&self, pkey: &[u64; 4]) -> bool {
+        let player = Player::get(pkey);
         match player {
             Some(_) => false,
             None => {
-                let player = Player::new(&pid);
+                let player = Player::new(&pkey);
                 player.store();
                 true
             }
         }
     }
-    pub fn install_object(&self, pid: &[u64; 4]) -> bool {
-        let mut player = Player::get(pid);
+    pub fn install_object(&self, pkey: &[u64; 4]) -> bool {
+        let mut player = Player::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
@@ -325,14 +349,14 @@ impl Transaction {
                 object.store();
                 player.store();
 
-                QUEUE.0.borrow_mut().insert(self.objindex, pid, delay, 0);
+                QUEUE.0.borrow_mut().insert(self.objindex, pkey, delay, 0);
                 true
             }
         }
     }
 
-    pub fn restart_object(&self, pid: &[u64; 4]) -> bool {
-        let mut player = Player::get(pid);
+    pub fn restart_object(&self, pkey: &[u64; 4]) -> bool {
+        let mut player = Player::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
@@ -343,7 +367,7 @@ impl Transaction {
                     QUEUE
                         .0
                         .borrow_mut()
-                        .insert(self.objindex, pid, delay, modifier);
+                        .insert(self.objindex, pkey, delay, modifier);
                     true
                 } else {
                     false
@@ -352,8 +376,8 @@ impl Transaction {
         }
     }
 
-    pub fn withdraw(&self, pid: &[u64; 4]) -> bool {
-        let mut player = Player::get(pid);
+    pub fn withdraw(&self, pkey: &[u64; 4]) -> bool {
+        let mut player = Player::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
@@ -378,12 +402,41 @@ impl Transaction {
         }
     }
 
-    pub fn process(&self, pid: &[u64; 4]) -> bool {
+    pub fn deposit(&self, _pkey: &[u64; 4]) -> bool {
+        let mut player = Player::get_from_pid(&[self.data[0], self.data[1]]);
+        match player.as_mut() {
+            None => {
+                let mut player = Player::new_from_raw([self.data[0], self.data[1]]);
+                if let Some (treasure) = player.local.0.last_mut() {
+                    *treasure += self.data[2] as i64;
+                    player.store();
+                } else {
+                    unreachable!();
+                }
+                true
+            },
+            Some(player) => {
+                if let Some(treasure) = player.local.0.last_mut() {
+                    *treasure += self.data[2] as i64;
+                    let t = player.local.0.last().unwrap();
+                    zkwasm_rust_sdk::dbg!("treasure is {}", t);
+                    player.store();
+                } else {
+                    unreachable!();
+                }
+                true
+            }
+        }
+    }
+
+
+    pub fn process(&self, pkey: &[u64; 4]) -> bool {
         let b = match self.command {
-            INSTALL_PLAYER => self.install_player(pid),
-            INSTALL_OBJECT => self.install_object(pid),
-            RESTART_OBJECT => self.restart_object(pid),
-            WITHDRAW => self.withdraw(pid),
+            INSTALL_PLAYER => self.install_player(pkey),
+            INSTALL_OBJECT => self.install_object(pkey),
+            RESTART_OBJECT => self.restart_object(pkey),
+            WITHDRAW => self.withdraw(pkey),
+            DEPOSIT => self.deposit(pkey),
             _ => {
                 QUEUE.0.borrow_mut().tick();
                 true
