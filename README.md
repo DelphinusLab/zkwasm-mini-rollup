@@ -155,3 +155,9 @@ We see that the verify instances contains the data of the merkle root before and
 
 We thus introduce a rollup monitor to settle the proofs based on the merkle root in the contract.
 ![alt text](./images/monitor-architecture.png)
+
+## Run Local Server
+1. mongod --dbpath XXX
+2. redis-server 
+3. dbservice >> run.sh 
+4. ts >> npm run server
