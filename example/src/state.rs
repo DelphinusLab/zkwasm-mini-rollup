@@ -181,10 +181,11 @@ impl Player {
     fn to_key(pid: &[u64; 2]) -> [u64; 4] {
         [pid[0], pid[1], 0xff00, 0xff01]
     }
-    pub fn generate_obj_id(pid: &[u64; 4], index: usize) -> [u64; 4] {
-        let mut id = pid.clone();
-        id[0] = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
-        id
+    pub fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4] {
+        zkwasm_rust_sdk::dbg!("\n ----> generate obj id\n");
+        let pid = Self::pkey_to_pid(pkey);
+        let key = (1 << 32) | ((index as u64) << 16) | (pid[0] & 0xffff00000000ffff);
+        return [key, pid[1], pid[0], 0xff03];
     }
     pub fn store(&self) {
         zkwasm_rust_sdk::dbg!("store player\n");
