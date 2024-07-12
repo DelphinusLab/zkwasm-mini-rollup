@@ -1,5 +1,5 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
-import { verify_sign, LeHexBN } from "./sign.js";
+import { verify_sign, LeHexBN, query } from "./sign.js";
 import { ZKWasmAppRpc } from "./rpc.js";
 import BN from "bn.js";
 
@@ -26,6 +26,7 @@ const CMD_INSTALL_PLAYER = 1n;
 const CMD_INSTALL_OBJECT = 2n;
 const CMD_RESTART_OBJECT = 3n;
 const CMD_WITHDRAW= 4n;
+const CMD_DEPOSIT = 4n;
 
 function addrToParams(bn: BN): Array<bigint> {
   // address is encoded in BigEndian
@@ -63,6 +64,11 @@ async function main() {
   rpc.query_jobstatus(job.jobid);
 
   rpc.query_state([1n], account);
+
+  let accountInfo = new LeHexBN(query(account).pkx).toU64Array();
+  let command_deposit = createCommand(CMD_DEPOSIT, 0n);
+  rpc.send_transaction([command_deposit, accountInfo[1], accountInfo[2], 1000n], account);
+
   let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
   let addParams = addrToParams(new BN('123456789011121314', 16));
   rpc.send_transaction([command_withdraw, addParams[0], addParams[1], addParams[2]], account);
