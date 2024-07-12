@@ -220,7 +220,7 @@ impl Player {
 
 
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
-        zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
+        // zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
         let id = self.player_id;
         let key = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
         return [key, id[1], id[0], 0xff03];
