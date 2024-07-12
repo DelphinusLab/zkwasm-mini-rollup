@@ -1,6 +1,7 @@
 //import initHostBind, * as hostbind from "./wasmbind/hostbind.js";
 import { verify_sign, LeHexBN } from "./sign.js";
 import { ZKWasmAppRpc } from "./rpc.js";
+import BN from "bn.js";
 
 const msgHash = new LeHexBN("0xb8f4201833cfcb9dffdd8cf875d6e1328d99b683e8373617a63f41d436a19f7c");
 const pkx = new LeHexBN("0x7137da164bacaa9332b307e25c1abd906c5c240dcb27e520b84522a1674aab01");
@@ -26,6 +27,18 @@ const CMD_INSTALL_OBJECT = 2n;
 const CMD_RESTART_OBJECT = 3n;
 const CMD_WITHDRAW= 4n;
 
+function addrToParams(bn: BN): Array<bigint> {
+  // address is encoded in BigEndian
+  const mask = new BN('ffffffffffffffff', 16);
+  let a = bn.and(mask).toArray('le', 8);
+  let b = bn.shrn(64).and(mask).toArray('le', 8);
+  let c = bn.shrn(128).and(mask).toArray('le', 8);
+  let aHex = a.map(byte => byte.toString(16).padStart(2, '0')).join('');
+  let bHex = b.map(byte => byte.toString(16).padStart(2, '0')).join('');
+  let cHex = c.map(byte => byte.toString(16).padStart(2, '0')).join('');
+  return [BigInt(`0x${cHex}`), BigInt(`0x${bHex}`), BigInt(`0x${cHex}`)];
+}
+
 function createCommand(command: bigint, objindex: bigint) {
   return (command << 32n) + objindex;
 }
@@ -49,9 +62,10 @@ async function main() {
   job = rpc.send_transaction([command, modifiers,0n,0n], account);
   rpc.query_jobstatus(job.jobid);
 
-  //rpc.query_state([1n], account);
-  //let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
-  //rpc.send_transaction([command_withdraw, 0n,0n,0n], account);
+  rpc.query_state([1n], account);
+  let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
+  let addParams = addrToParams(new BN('123456789011121314', 16));
+  rpc.send_transaction([command_withdraw, addParams[0], addParams[1], addParams[2]], account);
 }
 
 main();

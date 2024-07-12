@@ -181,11 +181,14 @@ impl Player {
     fn to_key(pid: &[u64; 2]) -> [u64; 4] {
         [pid[0], pid[1], 0xff00, 0xff01]
     }
-    pub fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4] {
-        zkwasm_rust_sdk::dbg!("\n ----> generate obj id\n");
-        let pid = Self::pkey_to_pid(pkey);
+
+    fn obj_id_from_pid(pid: &[u64; 2], index: usize) -> [u64; 4] {
         let key = (1 << 32) | ((index as u64) << 16) | (pid[0] & 0xffff00000000ffff);
         return [key, pid[1], pid[0], 0xff03];
+    }
+    pub fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4] {
+        // zkwasm_rust_sdk::dbg!("\n ----> generate obj id\n");
+        Player::obj_id_from_pid(&Self::pkey_to_pid(pkey), index)
     }
     pub fn store(&self) {
         zkwasm_rust_sdk::dbg!("store player\n");
@@ -218,12 +221,9 @@ impl Player {
         }
     }
 
-
     pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
         // zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
-        let id = self.player_id;
-        let key = (1 << 32) | ((index as u64) << 16) | (id[0] & 0xffff00000000ffff);
-        return [key, id[1], id[0], 0xff03];
+        Player::obj_id_from_pid(&self.player_id, index)
     }
 
     pub fn apply_modifier(&mut self, m: &Modifier) -> bool {
@@ -313,7 +313,7 @@ impl Transaction {
                 data.push(b as u64);
             }
         } else if command == DEPOSIT {
-            data = vec![params[1], params[2], params[3]] // pid[0], pid[1], amount
+            data = vec![params[1], params[2], params[3]] // pkey[0], pkey[1], amount
         };
         Transaction {
             command,
