@@ -26,6 +26,7 @@ pub trait StorageData {
 pub struct Player<T: StorageData + Default> {
     #[serde(skip_serializing)]
     pub player_id: [u64; 2],
+    pub nonce: u64,
     pub data: T,
 }
 
@@ -33,6 +34,7 @@ impl<T: StorageData + Default> Player<T> {
     pub fn pkey_to_pid(pkey: &[u64; 4]) -> [u64; 2] {
         [pkey[1], pkey[2]]
     }
+
     pub fn to_key(pid: &[u64; 2]) -> [u64; 4] {
         [pid[0], pid[1], 0xff00, 0xff01]
     }
@@ -40,6 +42,7 @@ impl<T: StorageData + Default> Player<T> {
     pub fn store(&self) {
         zkwasm_rust_sdk::dbg!("store player\n");
         let mut data = Vec::new();
+        data.push(self.nonce);
         self.data.to_data(&mut data);
         let kvpair = unsafe { &mut MERKLE_MAP };
         kvpair.set(&Self::to_key(&self.player_id), data.as_slice());
@@ -49,6 +52,7 @@ impl<T: StorageData + Default> Player<T> {
     pub fn new_from_pid(pid: [u64; 2]) -> Self {
         Self {
             player_id: pid,
+            nonce: 0,
             data: T::default(),
         }
     }
@@ -63,12 +67,35 @@ impl<T: StorageData + Default> Player<T> {
             let mut dataslice = data.iter_mut();
             let p = Player {
                 player_id: pid.clone(),
+                nonce: *dataslice.next().unwrap(),
                 data: T::from_data(&mut dataslice),
             };
             Some(p)
         }
-
     }
+
+    // Non-store of get and check and inc nonce
+    pub fn get_and_check_nonce(pid: &[u64; 2], nonce: u64) -> Self {
+        let player_opt = Self::get_from_pid(pid);
+        match player_opt {
+            None => {
+                unsafe {zkwasm_rust_sdk::require(nonce == 0)};
+                let mut player = Self::new_from_pid(pid.clone());
+                player.nonce = 1;
+                player
+            },
+            Some (mut player) => {
+                player.check_and_inc_nonce(nonce);
+                player
+            }
+        }
+    }
+
+    pub fn check_and_inc_nonce(&mut self, nonce: u64) {
+        unsafe {zkwasm_rust_sdk::require(self.nonce == nonce)};
+        self.nonce += 1;
+    }
+
 }
 
 #[wasm_bindgen]
