@@ -4,7 +4,7 @@ use zkwasm_rest_abi::MERKLE_MAP;
 
 use crate::{
     config::get_modifier,
-    state::{Modifier, Object, Player},
+    state::{Modifier, Object, AutomataPlayer, Owner},
 };
 
 #[derive(Clone)]
@@ -52,7 +52,7 @@ pub struct EventQueue {
     pub list: std::collections::LinkedList<Event>,
 }
 
-pub fn apply_modifier(player: &mut Player, object: &mut Object, modifier: Modifier) -> bool {
+pub fn apply_modifier(player: &mut AutomataPlayer, object: &mut Object, modifier: Modifier) -> bool {
     //zkwasm_rust_sdk::dbg!("apply modifier");
     if player.apply_modifier(&modifier) {
         object.apply_modifier(&modifier)
@@ -69,7 +69,7 @@ fn apply_object_modifier(
 ) -> Option<(usize, usize)> {
     let mut object = Object::get(obj_id).unwrap();
     let (_, modifier) = get_modifier(object.modifiers[modifier_index]);
-    let mut player = Player::get(owner_id).unwrap();
+    let mut player = AutomataPlayer::get(owner_id).unwrap();
 
     // Check if the most Significant 8 Bits of modifier_info is restart
     if object.modifier_info >> 56 == 2 {
@@ -172,7 +172,7 @@ impl EventQueue {
             if head.delta == 0 {
                 let owner_id = head.owner;
                 let objindex = head.object_index;
-                let obj_id = Player::generate_obj_id(&owner_id, objindex);
+                let obj_id = AutomataPlayer::generate_obj_id(&owner_id, objindex);
                 let m = apply_object_modifier(&obj_id, &owner_id, head.modifier_index, counter);
                 self.list.pop_front();
                 if let Some((delta, modifier)) = m {

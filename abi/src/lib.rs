@@ -3,8 +3,10 @@ use zkwasm_rust_sdk::jubjub::BabyJubjubPoint;
 use zkwasm_rust_sdk::jubjub::JubjubSignature;
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
 use zkwasm_rust_sdk::Merkle;
+use serde::Serialize;
 use primitive_types::U256;
 use wasm_bindgen::prelude::*;
+use core::slice::IterMut;
 
 pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
     root: [
@@ -14,6 +16,60 @@ pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
         2839580074036780766,
     ]}
 };
+
+pub trait StorageData {
+    fn from_data(u64data: &mut IterMut<u64>) -> Self;
+    fn to_data(&self, u64data: &mut Vec<u64>);
+}
+
+#[derive(Debug, Serialize)]
+pub struct Player<T: StorageData + Default> {
+    #[serde(skip_serializing)]
+    pub player_id: [u64; 2],
+    pub data: T,
+}
+
+impl<T: StorageData + Default> Player<T> {
+    pub fn pkey_to_pid(pkey: &[u64; 4]) -> [u64; 2] {
+        [pkey[1], pkey[2]]
+    }
+    pub fn to_key(pid: &[u64; 2]) -> [u64; 4] {
+        [pid[0], pid[1], 0xff00, 0xff01]
+    }
+
+    pub fn store(&self) {
+        zkwasm_rust_sdk::dbg!("store player\n");
+        let mut data = Vec::new();
+        self.data.to_data(&mut data);
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        kvpair.set(&Self::to_key(&self.player_id), data.as_slice());
+        zkwasm_rust_sdk::dbg!("end store player\n");
+    }
+
+    pub fn new_from_pid(pid: [u64; 2]) -> Self {
+        Self {
+            player_id: pid,
+            data: T::default(),
+        }
+    }
+
+    pub fn get_from_pid(pid: &[u64; 2]) -> Option<Self> {
+        let key = Self::to_key(pid);
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        let mut data = kvpair.get(&key);
+        if data.is_empty() {
+            None
+        } else {
+            let mut dataslice = data.iter_mut();
+            let p = Player {
+                player_id: pid.clone(),
+                data: T::from_data(&mut dataslice),
+            };
+            Some(p)
+        }
+
+    }
+}
 
 #[wasm_bindgen]
 pub fn query_root() -> Vec<u64> {

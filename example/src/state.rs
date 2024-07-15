@@ -1,10 +1,13 @@
 use crate::config::{default_entities, default_local, get_modifier};
 use crate::events::restart_object_modifier;
 use crate::events::EventQueue;
+use crate::StorageData;
 use crate::settlement::{encode_address, SettleMentInfo, WithdrawInfo};
 use crate::MERKLE_MAP;
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::cell::RefCell;
+use crate::Player;
+use core::slice::IterMut; 
 
 // Custom serializer for `[u64; 4]` as a [String; 4].
 fn serialize_u64_array_as_string<S>(value: &[u64; 4], serializer: S) -> Result<S::Ok, S::Error>
@@ -167,32 +170,38 @@ impl Object {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Player {
-    #[serde(skip_serializing)]
-    pub player_id: [u64; 2],
+pub struct PlayerData {
     pub objects: Vec<u64>,
     pub local: Attributes,
 }
 
-impl Player {
-    fn pkey_to_pid(pkey: &[u64; 4]) -> [u64; 2] {
-        [pkey[1], pkey[2]]
+impl Default for PlayerData {
+    fn default() -> Self {
+        Self {
+            objects: vec![],
+            local: Attributes::default_local(),
+        }
     }
-    fn to_key(pid: &[u64; 2]) -> [u64; 4] {
-        [pid[0], pid[1], 0xff00, 0xff01]
-    }
+}
 
-    fn obj_id_from_pid(pid: &[u64; 2], index: usize) -> [u64; 4] {
-        let key = (1 << 32) | ((index as u64) << 16) | (pid[0] & 0xffff00000000ffff);
-        return [key, pid[1], pid[0], 0xff03];
+impl StorageData for PlayerData {
+    fn from_data(u64data: &mut IterMut<u64>) -> Self {
+        let objects_size = *u64data.next().unwrap();
+        let mut objects = Vec::with_capacity(objects_size as usize);
+        for _ in 0..objects_size {
+            objects.push(*u64data.next().unwrap());
+        }
+        let local = u64data
+            .into_iter()
+            .skip(1)
+            .map(|x| *x as i64)
+            .collect::<Vec<_>>();
+        PlayerData {
+            objects,
+            local: Attributes(local),
+        }
     }
-    pub fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4] {
-        // zkwasm_rust_sdk::dbg!("\n ----> generate obj id\n");
-        Player::obj_id_from_pid(&Self::pkey_to_pid(pkey), index)
-    }
-    pub fn store(&self) {
-        zkwasm_rust_sdk::dbg!("store player\n");
-        let mut data = Vec::with_capacity(1 + self.objects.len() + self.local.0.len() + 2);
+    fn to_data(&self, data: &mut Vec<u64>) {
         data.push(self.objects.len() as u64);
         for c in self.objects.iter() {
             data.push(*c as u64);
@@ -201,61 +210,52 @@ impl Player {
         for c in self.local.0.iter() {
             data.push(*c as u64);
         }
+    }
+}
 
+pub type AutomataPlayer = Player<PlayerData>;
+
+pub trait Owner: Sized {
+    fn obj_id_from_pid(pid: &[u64; 2], index: usize) -> [u64; 4];
+    fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4];
+    fn get_obj_id(&self, index: usize) -> [u64; 4];
+    fn store(&self);
+    fn new(pkey: &[u64; 4]) -> Self;
+    fn apply_modifier(&mut self, m: &Modifier) -> bool;
+    fn get(pkey: &[u64; 4]) -> Option<Self>;
+}
+
+impl Owner for AutomataPlayer {
+    fn obj_id_from_pid(pid: &[u64; 2], index: usize) -> [u64; 4] {
+        let key = (1 << 32) | ((index as u64) << 16) | (pid[0] & 0xffff00000000ffff);
+        return [key, pid[1], pid[0], 0xff03];
+    }
+    fn generate_obj_id(pkey: &[u64; 4], index: usize) -> [u64; 4] {
+        // zkwasm_rust_sdk::dbg!("\n ----> generate obj id\n");
+        Player::obj_id_from_pid(&Self::pkey_to_pid(pkey), index)
+    }
+    fn store(&self) {
+        zkwasm_rust_sdk::dbg!("store player\n");
+        let mut data = Vec::new();
+        self.data.to_data(&mut data);
         let kvpair = unsafe { &mut MERKLE_MAP };
         kvpair.set(&Self::to_key(&self.player_id), data.as_slice());
         zkwasm_rust_sdk::dbg!("end store player\n");
     }
-    pub fn new(pkey: &[u64; 4]) -> Self {
-        Self {
-            player_id: Self::pkey_to_pid(pkey),
-            objects: vec![],
-            local: Attributes::default_local(),
-        }
-    }
-    pub fn new_from_raw(pid: [u64; 2]) -> Self {
-        Self {
-            player_id: pid,
-            objects: vec![],
-            local: Attributes::default_local(),
-        }
+    fn new(pkey: &[u64; 4]) -> Self {
+        Self::new_from_pid(Self::pkey_to_pid(pkey))
     }
 
-    pub fn get_obj_id(&self, index: usize) -> [u64; 4] {
+    fn get_obj_id(&self, index: usize) -> [u64; 4] {
         // zkwasm_rust_sdk::dbg!("\n ----> get obj with id: {}\n", index);
         Player::obj_id_from_pid(&self.player_id, index)
     }
 
-    pub fn apply_modifier(&mut self, m: &Modifier) -> bool {
-        self.local.apply_modifier(&m.local)
+    fn apply_modifier(&mut self, m: &Modifier) -> bool {
+        self.data.local.apply_modifier(&m.local)
     }
 
-    pub fn get_from_pid(pid: &[u64; 2]) -> Option<Self> {
-        let key = Self::to_key(pid);
-        let kvpair = unsafe { &mut MERKLE_MAP };
-        let data = kvpair.get(&key);
-        if data.is_empty() {
-            None
-        } else {
-            let objects_size = data[0].clone();
-            let (_, rest) = data.split_at(1);
-            let (objects, local) = rest.split_at(objects_size as usize);
-            let local = local
-                .into_iter()
-                .skip(1)
-                .map(|x| *x as i64)
-                .collect::<Vec<_>>();
-            let p = Player {
-                player_id: pid.clone(),
-                objects: objects.to_vec(),
-                local: Attributes(local),
-            };
-            Some(p)
-        }
-
-    }
-
-    pub fn get(pkey: &[u64; 4]) -> Option<Self> {
+    fn get(pkey: &[u64; 4]) -> Option<Self> {
         Self::get_from_pid(&Self::pkey_to_pid(pkey))
     }
 }
@@ -264,9 +264,9 @@ pub struct State {}
 
 impl State {
     pub fn get_state(pid: Vec<u64>) -> String {
-        let player = Player::get(&pid.try_into().unwrap()).unwrap();
+        let player = AutomataPlayer::get(&pid.try_into().unwrap()).unwrap();
         let mut objs = vec![];
-        for (index, _) in player.objects.iter().enumerate() {
+        for (index, _) in player.data.objects.iter().enumerate() {
             let oid = player.get_obj_id(index);
             let obj = Object::get(&oid).unwrap();
             objs.push(obj);
@@ -322,7 +322,7 @@ impl Transaction {
         }
     }
     pub fn install_player(&self, pkey: &[u64; 4]) -> bool {
-        let player = Player::get(pkey);
+        let player = AutomataPlayer::get(pkey);
         match player {
             Some(_) => false,
             None => {
@@ -333,14 +333,14 @@ impl Transaction {
         }
     }
     pub fn install_object(&self, pkey: &[u64; 4]) -> bool {
-        let mut player = Player::get(pkey);
+        let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
-                if self.objindex > player.objects.len() {
+                if self.objindex > player.data.objects.len() {
                     return false;
-                } else if self.objindex == player.objects.len() {
-                    player.objects.push(0);
+                } else if self.objindex == player.data.objects.len() {
+                    player.data.objects.push(0);
                 }
                 let mid = self.data[0];
                 let oid = player.get_obj_id(self.objindex);
@@ -357,7 +357,7 @@ impl Transaction {
     }
 
     pub fn restart_object(&self, pkey: &[u64; 4]) -> bool {
-        let mut player = Player::get(pkey);
+        let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
@@ -378,11 +378,11 @@ impl Transaction {
     }
 
     pub fn withdraw(&self, pkey: &[u64; 4]) -> bool {
-        let mut player = Player::get(pkey);
+        let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
             None => false,
             Some(player) => {
-                if let Some(treasure) = player.local.0.last_mut() {
+                if let Some(treasure) = player.data.local.0.last_mut() {
                     let withdraw = WithdrawInfo::new(
                         0,
                         0,
@@ -392,8 +392,8 @@ impl Transaction {
                     );
                     SettleMentInfo::append_settlement(withdraw);
                     *treasure = 0;
-                    let t = player.local.0.last().unwrap();
-                    zkwasm_rust_sdk::dbg!("treasure is {}", t);
+                    //let t = player.data.local.0.last().unwrap();
+                    //zkwasm_rust_sdk::dbg!("treasure is {}", t);
                     player.store();
                 } else {
                     unreachable!();
@@ -404,11 +404,11 @@ impl Transaction {
     }
 
     pub fn deposit(&self, _pkey: &[u64; 4]) -> bool {
-        let mut player = Player::get_from_pid(&[self.data[0], self.data[1]]);
+        let mut player = AutomataPlayer::get_from_pid(&[self.data[0], self.data[1]]);
         match player.as_mut() {
             None => {
-                let mut player = Player::new_from_raw([self.data[0], self.data[1]]);
-                if let Some (treasure) = player.local.0.last_mut() {
+                let mut player = AutomataPlayer::new_from_pid([self.data[0], self.data[1]]);
+                if let Some (treasure) = player.data.local.0.last_mut() {
                     *treasure += self.data[2] as i64;
                     player.store();
                 } else {
@@ -417,9 +417,9 @@ impl Transaction {
                 true
             },
             Some(player) => {
-                if let Some(treasure) = player.local.0.last_mut() {
+                if let Some(treasure) = player.data.local.0.last_mut() {
                     *treasure += self.data[2] as i64;
-                    let t = player.local.0.last().unwrap();
+                    let t = player.data.local.0.last().unwrap();
                     zkwasm_rust_sdk::dbg!("treasure is {}", t);
                     player.store();
                 } else {
