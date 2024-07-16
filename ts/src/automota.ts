@@ -37,7 +37,7 @@ function addrToParams(bn: BN): Array<bigint> {
   let aHex = a.map(byte => byte.toString(16).padStart(2, '0')).join('');
   let bHex = b.map(byte => byte.toString(16).padStart(2, '0')).join('');
   let cHex = c.map(byte => byte.toString(16).padStart(2, '0')).join('');
-  return [BigInt(`0x${cHex}`), BigInt(`0x${bHex}`), BigInt(`0x${cHex}`)];
+  return [BigInt(`0x${cHex}`), BigInt(`0x${bHex}`), BigInt(`0x${aHex}`)];
 }
 
 function createCommand(command: bigint, objindex: bigint) {

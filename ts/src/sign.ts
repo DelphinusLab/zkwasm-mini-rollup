@@ -1,6 +1,21 @@
 import { BN } from "bn.js";
 import { CurveField, Point, PrivateKey, bnToHexLe } from "delphinus-curves/src/altjubjub";
 
+function bigEndianHexToBN(hexString: string) {
+  // Remove the '0x' prefix if it exists
+  if (hexString.startsWith('0x')) {
+    hexString = hexString.slice(2);
+  }
+
+  // Ensure the hex string has an even length
+  if (hexString.length % 2 !== 0) {
+    hexString = '0' + hexString;
+  }
+
+  // Create a BN instance from the big-endian hex string
+  return new BN(hexString, 16);
+}
+
 function littleEndianHexToBN(hexString: string) {
   // Remove the '0x' prefix if it exists
   if (hexString.startsWith('0x')) {
@@ -21,6 +36,32 @@ function littleEndianHexToBN(hexString: string) {
   // Create a BN instance from the big-endian hex string
   return new BN(reversedHex, 16);
 }
+/*
+export class beHexBN {
+  hexstr: string;
+  constructor(hexstr: string) {
+    this.hexstr = hexstr;
+  };
+  toBN() {
+    return bigEndianHexToBN(this.hexstr);
+  }
+
+  // big endian
+  toU64Array(n: number): BigUint64Array {
+    let values:BigUint64Array = new BigUint64Array(n);
+    let num = BigInt("0x" + this.toBN().toString(16));
+    for (let i = 0; i < n; i++) {
+        let a = num % (1n<<64n);
+        a = a.toArray('le', 8);
+        let aHex = a.map(byte => byte.toString(16).padStart(2, '0')).join('');
+        values[n-i-1] = BigInt(`0x${aHex}`);
+        num = num >> 64n;
+    }
+    return values
+  }
+}
+*/
+
 
 export class LeHexBN {
   hexstr: string;
