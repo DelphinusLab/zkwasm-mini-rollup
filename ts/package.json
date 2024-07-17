@@ -23,6 +23,7 @@
     "zkwasm-service-cli": "git+https://github.com/DelphinusLab/zkWasm-service-cli.git",
     "zkwasm-service-helper": "git+https://github.com/DelphinusLab/zkWasm-service-helper.git"
   },
+  "main": "src/index.js",
   "scripts": {
     "server": "node src/service.js",
     "docker-server": "node src/service.js redis",
