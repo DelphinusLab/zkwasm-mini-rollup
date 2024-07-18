@@ -1,4 +1,4 @@
-import { sign, query }  from "./sign.js";
+import { sign, query, LeHexBN }  from "./sign.js";
 import { ZKWasmAppRpc } from "./rpc.js";
 
-export {sign, query, ZKWasmAppRpc}
+export {sign, query, ZKWasmAppRpc, LeHexBN}

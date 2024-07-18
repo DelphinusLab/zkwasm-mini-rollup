@@ -29,6 +29,7 @@
     "server": "node src/service.js",
     "docker-server": "node src/service.js redis",
     "build": "npx tsc",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "npm run build"
   }
 }
