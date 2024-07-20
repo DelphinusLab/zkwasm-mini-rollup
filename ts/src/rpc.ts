@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { sign, query } from "./sign.js";
 
+function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export class ZKWasmAppRpc {
   private baseUrl: string;
   private instance;
@@ -13,7 +17,7 @@ export class ZKWasmAppRpc {
     });
   }
 
-  public async send_transaction(cmd: Array<bigint>, prikey: string): Promise<JSON> {
+  public async sendRawTransaction(cmd: Array<bigint>, prikey: string): Promise<JSON> {
     try {
       const data = sign(cmd, prikey);
       const response = await this.instance.post(
@@ -32,7 +36,27 @@ export class ZKWasmAppRpc {
     }
   }
 
-  async query_state(prikey: string): Promise<JSON> {
+  public async sendTransaction(cmd: Array<bigint>, prikey: string): Promise<number> {
+    try {
+      let resp:any = await this.sendRawTransaction(cmd, prikey);
+      for (let i=0; i<5; i++) {//detect job status with 1 sec delay
+        await delay(1000);
+        try {
+          let jobStatus = await this.queryJobStatus(resp.jobid);
+          if (jobStatus.finishedOn != 0) {
+            return jobStatus.finishedOn;
+          }
+        } catch(e) {
+          continue
+        }
+      }
+      throw Error("MonitorTransactionFail");
+    } catch(e) {
+      throw Error("SendTransactionFail");
+    }
+  }
+
+  async queryState(prikey: string): Promise<JSON> {
     try {
       const data = query(prikey);
       const response = await this.instance.post(
@@ -82,7 +106,7 @@ export class ZKWasmAppRpc {
     }
   }
 
-  async query_jobstatus(jobId: number) {
+  async queryJobStatus(jobId: number) {
     try {
       const url = `/job/${jobId}`;
       const response = await this.instance(url, {

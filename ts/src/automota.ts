@@ -50,34 +50,35 @@ const rpc = new ZKWasmAppRpc("http://localhost:3000");
 
 
 async function main() {
+  let finished = 0;
   //sending_transaction([0n,0n,0n,0n], "1234");
   let config = await rpc.query_config();
   console.log("config", config);
   let install_command = createCommand(CMD_INSTALL_PLAYER, 0n);
-  let job_install = await rpc.send_transaction([install_command,0n,0n,0n], account);
-  console.log("tx_install", job_install);
+  finished = await rpc.sendTransaction([install_command,0n,0n,0n], account);
+  console.log("install player processed at:", finished);
 
   let modifiers = encode_modifier([0n, 0n, 0n, 0n, 0n, 0n, 0n, 0n]);
   let command = createCommand(CMD_INSTALL_OBJECT, 0n);
-  let job:any = await rpc.send_transaction([command, modifiers,0n,0n], account);
-  let job_status = await rpc.query_jobstatus(job.jobid);
-  console.log("job install status:", job_status);
+  finished = await rpc.sendTransaction([command, modifiers,0n,0n], account);
+  console.log("install object processed at:", finished);
 
   command = createCommand(CMD_INSTALL_OBJECT, 0n);
-  let job_install_object:any = await rpc.send_transaction([command, modifiers,0n,0n], account);
-  job_status = await rpc.query_jobstatus(job_install_object.jobid);
-  console.log("job install status:", job_status);
+  finished = await rpc.sendTransaction([command, modifiers,0n,0n], account);
+  console.log("install object processed at:", finished);
 
-  let state = await rpc.query_state(account);
+  let state = await rpc.queryState(account);
   console.log("query state:", state);
 
   let accountInfo = new LeHexBN(query(account).pkx).toU64Array();
   let command_deposit = createCommand(CMD_DEPOSIT, 0n);
-  await rpc.send_transaction([command_deposit, accountInfo[1], accountInfo[2], 1000n], account);
+  finished = await rpc.sendTransaction([command_deposit, accountInfo[1], accountInfo[2], 1000n], account);
+  console.log("deposit processed at:", finished);
 
   let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
   let addParams = addrToParams(new BN('123456789011121314', 16));
-  await rpc.send_transaction([command_withdraw, addParams[0], addParams[1], addParams[2]], account);
+  finished = await rpc.sendTransaction([command_withdraw, addParams[0], addParams[1], addParams[2]], account);
+  console.log("withdraw processed at:", finished);
 }
 
 main();

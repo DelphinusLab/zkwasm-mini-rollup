@@ -23,7 +23,7 @@ async function main() {
   const rpc = new ZKWasmAppRpc("http://localhost:3000");
   rpc.query_config();
   for (let i=0; i<10; i++) {
-    let state = await rpc.query_state("1234");
+    let state = await rpc.queryState("1234");
     console.log("query state with result", state);
   }
 }
