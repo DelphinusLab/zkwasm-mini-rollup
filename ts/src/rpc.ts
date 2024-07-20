@@ -1,94 +1,101 @@
-import fetch from 'sync-fetch';
+import axios from 'axios';
 import { sign, query } from "./sign.js";
 
 export class ZKWasmAppRpc {
   private baseUrl: string;
+  private instance;
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+    this.instance = axios.create({
+      baseURL: this.baseUrl,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
-  public send_transaction(cmd: Array<bigint>, prikey: string) {
-    const url = `${this.baseUrl}/send`;
-    let data = sign(cmd, prikey);
-    const response = fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (response.ok) {
-      const jsonResponse = response.json();
-      console.log(jsonResponse);
-      return jsonResponse;
-    } else {
-      console.log(response);
-      console.error('Failed to fetch:', response.statusText);
+  public async send_transaction(cmd: Array<bigint>, prikey: string): Promise<JSON> {
+    try {
+      const data = sign(cmd, prikey);
+      const response = await this.instance.post(
+        "/send",
+        JSON.stringify(data)
+      );
+      if (response.status === 201) {
+        const jsonResponse = response.data;
+        return jsonResponse;
+      } else {
+        throw "SendTransactionError";
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      throw "SendTransactionError " + error;
     }
   }
 
-  public query_state(cmd: Array<bigint>, prikey: string) {
-    const url = `${this.baseUrl}/query`;
-    let data = query(prikey);
-    console.log("query data", data);
-    const response = fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (response.ok) {
-      const jsonResponse = response.json();
-      console.log(jsonResponse);
-      return jsonResponse;
-    } else {
-      console.log(response);
-      console.error('Failed to fetch:', response.statusText);
+  async query_state(prikey: string): Promise<JSON> {
+    try {
+      const data = query(prikey);
+      const response = await this.instance.post(
+        "/query",
+        JSON.stringify(data)
+      );
+      if (response.status === 201) {
+        const jsonResponse = response.data;
+        return jsonResponse;
+      } else {
+        throw "UnexpectedResponseStatus"
+      }
+    } catch (error: any) {
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.status === 500) {
+          throw "QueryStateError";
+        } else {
+          throw "UnknownError";
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+        // http.ClientRequest in node.js
+        throw 'No response was received from the server, please check your network connection.';
+      } else {
+        throw "UnknownError";
+      }
     }
   }
 
-  public query_config() {
-    const url = `${this.baseUrl}/config`;
-    let data: Array<number> = [];
-    console.log("query data", data);
-    const response = fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(data)
-    });
+  async query_config(): Promise<JSON> {
+    try {
+      const response = await this.instance("/config", {
+        method: 'POST'
+      });
 
-    if (response.ok) {
-      const jsonResponse = response.json();
-      console.log(jsonResponse);
-      return jsonResponse;
-    } else {
-      console.log(response);
-      console.error('Failed to fetch:', response.statusText);
+      if (response.status === 201) {
+        const jsonResponse = response.data;
+        return jsonResponse;
+      } else {
+        throw "QueryConfigError";
+      }
+    } catch(error) {
+      throw "QueryStateError " + error;
     }
   }
 
-  public query_jobstatus(jobId: number) {
-    const url = `${this.baseUrl}/job/${jobId}`;
-    const response = fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    });
-
-    if (response.ok) {
-      const jsonResponse = response.json();
-      console.log(jsonResponse);
-      return jsonResponse;
-    } else {
-      console.log(response);
-      console.error('Failed to fetch:', response.statusText);
+  async query_jobstatus(jobId: number) {
+    try {
+      const url = `/job/${jobId}`;
+      const response = await this.instance(url, {
+        method: 'GET',
+      });
+      if (response.status === 201) {
+        const jsonResponse = response.data;
+        return jsonResponse;
+      } else {
+        throw "QueryJobError";
+      }
+    } catch(error) {
+      throw "QueryJobError " + error;
     }
   }
 }

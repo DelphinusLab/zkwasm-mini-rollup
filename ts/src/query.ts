@@ -22,37 +22,10 @@ async function main() {
   //const rpc = new ZKWasmAppRpc("http://101.36.120.170:20157");
   const rpc = new ZKWasmAppRpc("http://localhost:3000");
   rpc.query_config();
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  rpc.query_state([1n], "1234");
-  /*
-  let command_withdraw = createCommand(CMD_WITHDRAW, 0n);
-  rpc.send_transaction([command_withdraw, 0n,0n,0n], account);
-  */
+  for (let i=0; i<10; i++) {
+    let state = await rpc.query_state("1234");
+    console.log("query state with result", state);
+  }
 }
 
 main();

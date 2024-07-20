@@ -24,7 +24,7 @@ export interface TxWitness {
   sigr: string,
 }
 
-export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
+export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
   const priv_inputs: Array<string> = [];
@@ -79,6 +79,20 @@ export async function submit_proof(merkle: BigUint64Array, txs: Array<TxWitness>
   let response = await helper.addProvingTask(task);
   return response.id;
   //console.log("response is ", response);
+}
+
+export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
+  for (let i=0; i<10; i++) {
+    try {
+      let response = await submitProof(merkle, txs, txdata);
+      return response;
+    } catch (e) {
+      console.log("submit proof error:", e);
+      console.log("retrying ...");
+    }
+    console.log("can not generating proof ...");
+    process.exit(1);
+  }
 }
 
 export async function get_latest_proof(): Promise<Task | null> {

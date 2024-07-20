@@ -6,7 +6,7 @@ import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
-import { submit_proof, TxWitness, get_latest_proof } from "./prover.js";
+import { submitProofWithRetry, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob} from "./config.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
@@ -17,11 +17,18 @@ import mongoose from 'mongoose';
 dotenv.config();
 
 let deploymode = false;
+let remote = false;
 let mongodbUri = "localhost";
 
 if (process.env.DEPLOY) {
   deploymode = true;
 }
+
+if (process.env.REMOTE) {
+  remote = true;
+}
+
+
 
 if (process.env.URI) {
   mongodbUri = process.env.URI; //"mongodb:27017";
@@ -89,7 +96,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
     console.log("txdata is:", txdata);
     try {
       if (deploymode) {
-          let task_id = await submit_proof(merkle_root, transactions_witness, txdata);
+          let task_id = await submitProofWithRetry(merkle_root, transactions_witness, txdata);
           console.log("proving task submitted at:", task_id);
           console.log("tracking task in db ...", merkle_root);
           const bundleRecord = new modelBundle({
@@ -147,8 +154,7 @@ async function main() {
   console.log("check merkel database connection ...");
   test_merkle_db_service();
   //initialize merkle_root based on the latest task
-  /*
-  if (deploymode) {
+  if (remote) {
     let task = await get_latest_proof();
     console.log("latest task", task?.instances);
     if (task) {
@@ -162,19 +168,22 @@ async function main() {
       console.log("updated merkle root", merkle_root);
     }
   }
-  */
-  console.log("initialize application merkle db ...");
-  application.initialize(merkle_root);
-  merkle_root = application.query_root();
   console.log("initialize sequener queue ...");
   const myQueue = new Queue('sequencer', {connection});
+
+  console.log("initialize application merkle db ...");
+  application.initialize(merkle_root);
+
+  // update the merkle root variable
+  merkle_root = application.query_root();
 
   // Automatically add a job to the queue every few seconds
   setInterval(async () => {
     try {
-      const job = await myQueue.add('autoJob', {command:0});
+      await myQueue.add('autoJob', {command:0});
     } catch (error) {
       console.error('Error adding automatic job to the queue:', error);
+      process.exit(1);
     }
   }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
 
@@ -304,12 +313,8 @@ async function main() {
   app.get('/job/:id', async (req, res) => {
     try {
       let jobId = req.params.id;
-      const job = await modelJob.findOne({ jobId: Number(jobId)});
-      if (!job) {
-        const job = await Job.fromId(myQueue, jobId);
-        return res.status(201).json(job);
-      }
-      return res.json(job);
+      const job = await Job.fromId(myQueue, jobId);
+      return res.status(201).json(job);
     } catch (err) {
       // job not tracked
       console.log(err);
