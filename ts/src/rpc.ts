@@ -54,7 +54,7 @@ export class ZKWasmAppRpc {
           if (jobStatus.finishedOn != undefined && jobStatus.failedReason == undefined ) {
             return jobStatus.finishedOn;
           } else {
-            throw Error(jobStatus.faledReason)
+            throw Error(jobStatus.failedReason)
           }
         }
       }
