@@ -117,6 +117,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       application.initialize(merkle_root);
     } catch (e) {
       console.log(e);
+      process.exit(1); // this should never happen and we stop the whole process
     }
   }
 }
@@ -220,10 +221,8 @@ async function main() {
           throw Error(errorMsg)
         }
         console.log("done");
-      } catch (error) {
-        let signature = job.data.value;
-        console.log("handle tx with exception!");
-        await track_error_transactions(signature, job.id);
+      } catch (e) {
+        throw e
       }
     }
   }, {connection});
