@@ -41,18 +41,24 @@ export class ZKWasmAppRpc {
       let resp:any = await this.sendRawTransaction(cmd, prikey);
       for (let i=0; i<5; i++) {//detect job status with 1 sec delay
         await delay(1000);
+        let jobStatus;
         try {
-          let jobStatus = await this.queryJobStatus(resp.jobid);
-          if (jobStatus.finishedOn != 0) {
-            return jobStatus.finishedOn;
-          }
+            jobStatus = await this.queryJobStatus(resp.jobid);
         } catch(e) {
           continue
+        }
+        if (jobStatus) {
+          if (jobStatus.finishedOn != undefined && jobStatus.failedReason == undefined ) {
+            return jobStatus.finishedOn;
+          } else {
+            throw Error(jobStatus.faledReason)
+          }
         }
       }
       throw Error("MonitorTransactionFail");
     } catch(e) {
-      throw Error("SendTransactionFail");
+      //console.log(e);
+      throw e;
     }
   }
 
