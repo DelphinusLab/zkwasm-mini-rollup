@@ -1,8 +1,9 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export function handle_tx(a: number, b: number): void;
+export function handle_tx(a: number, b: number): number;
 export function get_state(a: number, b: number, c: number): void;
+export function decode_error(a: number, b: number): void;
 export function get_config(a: number): void;
 export function initialize(a: number, b: number): void;
 export function finalize(a: number): void;

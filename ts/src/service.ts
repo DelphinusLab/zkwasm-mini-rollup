@@ -206,18 +206,23 @@ async function main() {
         let u64array = signature_to_u64array(signature);
         console.log("tx data", signature);
         application.verify_tx_signature(u64array);
-        application.handle_tx(u64array);
-        const jobRecord = new modelJob({
-              jobId: signature.sigx,
-              message: signature.message,
-              result: "succeed",
-            });
-        await jobRecord.save();
-        await install_transactions(signature, job.id);
+        let error = application.handle_tx(u64array);
+        if (error == 0) {
+          const jobRecord = new modelJob({
+                jobId: signature.sigx,
+                message: signature.message,
+                result: "succeed",
+              });
+          await jobRecord.save();
+          await install_transactions(signature, job.id);
+        } else {
+          let errorMsg = application.decode_error(error);
+          throw Error(errorMsg)
+        }
         console.log("done");
       } catch (error) {
         let signature = job.data.value;
-        console.log("handling tx error");
+        console.log("handle tx with exception!");
         await track_error_transactions(signature, job.id);
       }
     }

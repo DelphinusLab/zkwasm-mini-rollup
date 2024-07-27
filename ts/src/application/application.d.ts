@@ -2,13 +2,19 @@
 /* eslint-disable */
 /**
 * @param {BigUint64Array} params
+* @returns {number}
 */
-export function handle_tx(params: BigUint64Array): void;
+export function handle_tx(params: BigUint64Array): number;
 /**
 * @param {BigUint64Array} pid
 * @returns {string}
 */
 export function get_state(pid: BigUint64Array): string;
+/**
+* @param {number} e
+* @returns {string}
+*/
+export function decode_error(e: number): string;
 /**
 * @returns {string}
 */

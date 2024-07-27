@@ -101,8 +101,7 @@ impl<T: StorageData + Default> Player<T> {
 #[wasm_bindgen]
 pub fn query_root() -> Vec<u64> {
     unsafe {
-        let root = 
-            MERKLE_MAP.merkle.root.clone();
+        let root = MERKLE_MAP.merkle.root.clone();
         zkwasm_rust_sdk::dbg!("query root: {:?}\n",  root);
         MERKLE_MAP.merkle.root.to_vec()
     }
@@ -167,17 +166,23 @@ pub fn conclude_tx_info(data: &[u8]) -> [u64;4] {
 macro_rules! create_zkwasm_apis {
     ($T: ident, $S: ident, $C: ident) => {
     #[wasm_bindgen]
-        pub fn handle_tx(params: Vec<u64>) {
+        pub fn handle_tx(params: Vec<u64>) -> u32 {
             let user_address = [params[4], params[5], params[6], params[7]];
             let command = [params[0], params[1], params[2], params[3]];
             let transaction = $T::decode(command);
-            transaction.process(&user_address);
+            transaction.process(&user_address)
         }
 
     #[wasm_bindgen]
         pub fn get_state(pid: Vec<u64>) -> String {
             $S::get_state(pid)
         }
+
+    #[wasm_bindgen]
+        pub fn decode_error(e: u32) -> String {
+            $T::decode_error(e).to_string()
+        }
+
 
     #[wasm_bindgen]
         pub fn get_config() -> String {

@@ -301,7 +301,17 @@ const RESTART_OBJECT: u64 = 3;
 const WITHDRAW: u64 = 4;
 const DEPOSIT: u64 = 5;
 
+const ERROR_PLAYER_ALREADY_EXIST:u32 = 1;
+const ERROR_PLAYER_NOT_EXIST:u32 = 2;
+
 impl Transaction {
+    pub fn decode_error(e: u32) -> &'static str {
+        match e {
+           ERROR_PLAYER_NOT_EXIST => "PlayerNotExist",
+           ERROR_PLAYER_ALREADY_EXIST => "PlayerAlreadyExist",
+           _ => "Unknown"
+        }
+    }
     pub fn decode(params: [u64; 4]) -> Self {
         let command = (params[0] >> 32) & 0xff;
         let objindex = (params[0] & 0xff) as usize;
@@ -321,45 +331,41 @@ impl Transaction {
             data,
         }
     }
-    pub fn install_player(&self, pkey: &[u64; 4]) -> bool {
+    pub fn install_player(&self, pkey: &[u64; 4]) -> u32 {
         let player = AutomataPlayer::get(pkey);
         match player {
-            Some(_) => false,
+            Some(_) => ERROR_PLAYER_ALREADY_EXIST,
             None => {
                 let player = Player::new(&pkey);
                 player.store();
-                true
+                0
             }
         }
     }
-    pub fn install_object(&self, pkey: &[u64; 4]) -> bool {
+    pub fn install_object(&self, pkey: &[u64; 4]) -> u32 {
         let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
-            None => false,
+            None => ERROR_PLAYER_NOT_EXIST,
             Some(player) => {
-                if self.objindex > player.data.objects.len() {
-                    return false;
-                } else if self.objindex == player.data.objects.len() {
-                    player.data.objects.push(0);
-                }
+                let objindex = player.data.objects.len();
+                player.data.objects.push(0);
                 let mid = self.data[0];
-                let oid = player.get_obj_id(self.objindex);
+                let oid = player.get_obj_id(objindex);
                 let (delay, _) = get_modifier(mid);
                 let mut object = Object::new(&oid, self.data.clone());
                 object.start_new_modifier(0, QUEUE.0.borrow().counter);
                 object.store();
                 player.store();
-
                 QUEUE.0.borrow_mut().insert(self.objindex, pkey, delay, 0);
-                true
+                0 // no error occurred
             }
         }
     }
 
-    pub fn restart_object(&self, pkey: &[u64; 4]) -> bool {
+    pub fn restart_object(&self, pkey: &[u64; 4]) -> u32 {
         let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
-            None => false,
+            None => ERROR_PLAYER_ALREADY_EXIST,
             Some(player) => {
                 let oid = player.get_obj_id(self.objindex);
                 let counter = QUEUE.0.borrow().counter;
@@ -369,18 +375,16 @@ impl Transaction {
                         .0
                         .borrow_mut()
                         .insert(self.objindex, pkey, delay, modifier);
-                    true
-                } else {
-                    false
                 }
+                0 // no error occurred
             }
         }
     }
 
-    pub fn withdraw(&self, pkey: &[u64; 4]) -> bool {
+    pub fn withdraw(&self, pkey: &[u64; 4]) -> u32 {
         let mut player = AutomataPlayer::get(pkey);
         match player.as_mut() {
-            None => false,
+            None => ERROR_PLAYER_NOT_EXIST,
             Some(player) => {
                 if let Some(treasure) = player.data.local.0.last_mut() {
                     let withdraw = WithdrawInfo::new(
@@ -398,12 +402,12 @@ impl Transaction {
                 } else {
                     unreachable!();
                 }
-                true
+                0
             }
         }
     }
 
-    pub fn deposit(&self, _pkey: &[u64; 4]) -> bool {
+    pub fn deposit(&self, _pkey: &[u64; 4]) -> u32 {
         let mut player = AutomataPlayer::get_from_pid(&[self.data[0], self.data[1]]);
         match player.as_mut() {
             None => {
@@ -414,7 +418,6 @@ impl Transaction {
                 } else {
                     unreachable!();
                 }
-                true
             },
             Some(player) => {
                 if let Some(treasure) = player.data.local.0.last_mut() {
@@ -425,13 +428,13 @@ impl Transaction {
                 } else {
                     unreachable!();
                 }
-                true
             }
         }
+        0 // no error occurred
     }
 
 
-    pub fn process(&self, pkey: &[u64; 4]) -> bool {
+    pub fn process(&self, pkey: &[u64; 4]) -> u32 {
         let b = match self.command {
             INSTALL_PLAYER => self.install_player(pkey),
             INSTALL_OBJECT => self.install_object(pkey),
@@ -440,7 +443,7 @@ impl Transaction {
             DEPOSIT => self.deposit(pkey),
             _ => {
                 QUEUE.0.borrow_mut().tick();
-                true
+                0
             }
         };
         let kvpair = unsafe { &mut MERKLE_MAP.merkle.root };
