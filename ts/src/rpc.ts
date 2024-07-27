@@ -44,6 +44,9 @@ export class ZKWasmAppRpc {
         let jobStatus;
         try {
             jobStatus = await this.queryJobStatus(resp.jobid);
+            if(jobStatus.finishedOn == undefined) {
+              throw Error("WaitingForProcess");
+            }
         } catch(e) {
           continue
         }
