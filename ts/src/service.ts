@@ -89,9 +89,9 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("transaction installed, rollup pool length is:", transactions_witness.length);
   if (transactions_witness.length == TRANSACTION_NUMBER) {
     console.log("rollup pool is full, generating proof:");
-    for (const t of transactions_witness) {
-      console.log(t);
-    }
+    //for (const t of transactions_witness) {
+    //  console.log(t);
+    //}
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
     try {
@@ -122,7 +122,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
 }
 
 async function track_error_transactions(tx: TxWitness, jobid: string | undefined) {
-  throw "Transaction Inverted";
+  throw Error("Transaction Inverted");
 }
 
 function signature_to_u64array(value: any) {
