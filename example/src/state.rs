@@ -292,6 +292,7 @@ lazy_static::lazy_static! {
 pub struct Transaction {
     pub command: u64,
     pub objindex: usize,
+    pub nonce: u64,
     pub data: Vec<u64>,
 }
 
@@ -313,8 +314,9 @@ impl Transaction {
         }
     }
     pub fn decode(params: [u64; 4]) -> Self {
-        let command = (params[0] >> 32) & 0xff;
-        let objindex = (params[0] & 0xff) as usize;
+        let command = params[0] & 0xff;
+        let objindex = ((params[0] >> 8) & 0xff) as usize;
+        let nonce = params[0] >> 16;
         let mut data = vec![];
         if command == WITHDRAW {
             data = vec![0, params[1], params[2], params[3]] // address of withdraw
@@ -328,6 +330,7 @@ impl Transaction {
         Transaction {
             command,
             objindex,
+            nonce,
             data,
         }
     }
@@ -347,6 +350,7 @@ impl Transaction {
         match player.as_mut() {
             None => ERROR_PLAYER_NOT_EXIST,
             Some(player) => {
+                player.check_and_inc_nonce(self.nonce);
                 let objindex = player.data.objects.len();
                 player.data.objects.push(0);
                 let mid = self.data[0];
@@ -367,6 +371,7 @@ impl Transaction {
         match player.as_mut() {
             None => ERROR_PLAYER_ALREADY_EXIST,
             Some(player) => {
+                player.check_and_inc_nonce(self.nonce);
                 let oid = player.get_obj_id(self.objindex);
                 let counter = QUEUE.0.borrow().counter;
                 let data = &self.data;
@@ -386,6 +391,7 @@ impl Transaction {
         match player.as_mut() {
             None => ERROR_PLAYER_NOT_EXIST,
             Some(player) => {
+                player.check_and_inc_nonce(self.nonce);
                 if let Some(treasure) = player.data.local.0.last_mut() {
                     let withdraw = WithdrawInfo::new(
                         0,
@@ -412,6 +418,7 @@ impl Transaction {
         match player.as_mut() {
             None => {
                 let mut player = AutomataPlayer::new_from_pid([self.data[0], self.data[1]]);
+                player.check_and_inc_nonce(self.nonce);
                 if let Some (treasure) = player.data.local.0.last_mut() {
                     *treasure += self.data[2] as i64;
                     player.store();
@@ -420,6 +427,7 @@ impl Transaction {
                 }
             },
             Some(player) => {
+                player.check_and_inc_nonce(self.nonce);
                 if let Some(treasure) = player.data.local.0.last_mut() {
                     *treasure += self.data[2] as i64;
                     let t = player.data.local.0.last().unwrap();

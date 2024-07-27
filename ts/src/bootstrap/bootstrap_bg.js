@@ -224,7 +224,7 @@ export function __wbindgen_object_drop_ref(arg0) {
     takeObject(arg0);
 };
 
-export function __wbg_updateleaf_583e7300fc05dcb2(arg0, arg1, arg2, arg3, arg4) {
+export function __wbg_updateleaf_c52d6903ac400a66(arg0, arg1, arg2, arg3, arg4) {
     var v0 = getArrayU8FromWasm0(arg0, arg1).slice();
     wasm.__wbindgen_free(arg0, arg1 * 1, 1);
     var v1 = getArrayU8FromWasm0(arg3, arg4).slice();
@@ -233,21 +233,21 @@ export function __wbg_updateleaf_583e7300fc05dcb2(arg0, arg1, arg2, arg3, arg4) 
     return addHeapObject(ret);
 };
 
-export function __wbg_getleaf_24c775a6a2aa4383(arg0, arg1, arg2) {
+export function __wbg_getleaf_dc1011d3abd689e9(arg0, arg1, arg2) {
     var v0 = getArrayU8FromWasm0(arg0, arg1).slice();
     wasm.__wbindgen_free(arg0, arg1 * 1, 1);
     const ret = get_leaf(v0, BigInt.asUintN(64, arg2));
     return addHeapObject(ret);
 };
 
-export function __wbg_getrecord_4c730ffdc5ac97a0(arg0, arg1) {
+export function __wbg_getrecord_9b375b736bbeb572(arg0, arg1) {
     var v0 = getArrayU8FromWasm0(arg0, arg1).slice();
     wasm.__wbindgen_free(arg0, arg1 * 1, 1);
     const ret = get_record(v0);
     return addHeapObject(ret);
 };
 
-export function __wbg_updaterecord_9efc2e1d014d3f6a(arg0, arg1, arg2, arg3) {
+export function __wbg_updaterecord_0ea13efa10ca9772(arg0, arg1, arg2, arg3) {
     var v0 = getArrayU8FromWasm0(arg0, arg1).slice();
     wasm.__wbindgen_free(arg0, arg1 * 1, 1);
     var v1 = getArrayU64FromWasm0(arg2, arg3).slice();
