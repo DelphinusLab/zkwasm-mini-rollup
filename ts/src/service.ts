@@ -18,7 +18,7 @@ dotenv.config();
 
 let deploymode = false;
 let remote = false;
-let mongodbUri = "localhost";
+let mongodbUri = "mongodb://localhost";
 
 if (process.env.DEPLOY) {
   deploymode = true;
@@ -44,7 +44,7 @@ const host = (() => {
   }
 })();
 
-mongoose.connect(`mongodb://${mongodbUri}/job-tracker`, {
+mongoose.connect(`${mongodbUri}/job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
 });
