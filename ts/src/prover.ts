@@ -11,7 +11,7 @@ import {
 import {
   priv,
   endpoint,
-  image_md5,
+  get_image_md5,
   user_addr
 } from "./config.js";
 
@@ -44,7 +44,7 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
   //let proofSubmitMode = ProofSubmitMode.Auto;
   let info: ProvingParams = {
     user_address: user_addr.toLowerCase(),
-    md5: image_md5,
+    md5: get_image_md5(),
     public_inputs: pub_inputs,
     private_inputs: priv_inputs,
     proof_submit_mode: proofSubmitMode, // default is manual
@@ -98,7 +98,7 @@ export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<Tx
 export async function get_latest_proof(): Promise<Task | null> {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   let query = {
-    md5: image_md5,
+    md5: get_image_md5(),
     user_address: null,
     id: null,
     tasktype: "Prove",

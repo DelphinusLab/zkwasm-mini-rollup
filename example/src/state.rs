@@ -7,7 +7,7 @@ use crate::MERKLE_MAP;
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 use std::cell::RefCell;
 use crate::Player;
-use core::slice::IterMut; 
+use core::slice::IterMut;
 
 // Custom serializer for `[u64; 4]` as a [String; 4].
 fn serialize_u64_array_as_string<S>(value: &[u64; 4], serializer: S) -> Result<S::Ok, S::Error>

@@ -68,37 +68,36 @@ async function trySettle() {
     if (record) {
       let taskId = record.taskId;
       let data0 = await getTask(taskId);
-	//console.log(data0);
-        let shadowInstances = data0.shadow_instances;
-        let batchInstances = data0.batch_instances;
+      //console.log(data0);
+      let shadowInstances = data0.shadow_instances;
+      let batchInstances = data0.batch_instances;
 
-        let proofArr = new U8ArrayUtil(data0.proof).toNumber();
-        let auxArr = new U8ArrayUtil(data0.aux).toNumber();
-        let verifyInstancesArr =  shadowInstances.length === 0
-            ? new U8ArrayUtil(batchInstances).toNumber()
-            : new U8ArrayUtil(shadowInstances).toNumber();
-        let instArr = new U8ArrayUtil(data0.instances).toNumber();
-	console.log("txData_orig:", data0.input_context);
-	let txData = new Uint8Array(data0.input_context);
-	console.log("txData:", txData);
-	console.log("txData.length:", txData.length);
+      let proofArr = new U8ArrayUtil(data0.proof).toNumber();
+      let auxArr = new U8ArrayUtil(data0.aux).toNumber();
+      let verifyInstancesArr =  shadowInstances.length === 0
+        ? new U8ArrayUtil(batchInstances).toNumber()
+        : new U8ArrayUtil(shadowInstances).toNumber();
+      let instArr = new U8ArrayUtil(data0.instances).toNumber();
+      console.log("txData_orig:", data0.input_context);
+      let txData = new Uint8Array(data0.input_context);
+      console.log("txData:", txData);
+      console.log("txData.length:", txData.length);
 
-        const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
-	let proxyInfo = await proxy.getProxyInfo();
+      const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
+      let proxyInfo = await proxy.getProxyInfo();
 
-	const tx = await proxy.verify(
-	  txData,
-	  proofArr,
-	  verifyInstancesArr,
-	  auxArr,
-	  [instArr],
-	  [proxyInfo.rid.toString(), "1"]
-	);
-        // wait for tx to be mined, can add no. of confirmations as arg
-        const receipt = await tx.wait();
-
-        console.log("transaction:", tx.hash);
-        console.log("receipt:", receipt);
+      const tx = await proxy.verify(
+        txData,
+        proofArr,
+        verifyInstancesArr,
+        auxArr,
+        [instArr],
+        [proxyInfo.rid.toString(), "1"]
+      );
+      // wait for tx to be mined, can add no. of confirmations as arg
+      const receipt = await tx.wait();
+      console.log("transaction:", tx.hash);
+      console.log("receipt:", receipt);
     } else {
       console.log(`proof bundle ${merkleRoot} not found`);
     }

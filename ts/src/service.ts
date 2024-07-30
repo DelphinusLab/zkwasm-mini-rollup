@@ -28,8 +28,6 @@ if (process.env.REMOTE) {
   remote = true;
 }
 
-
-
 if (process.env.URI) {
   mongodbUri = process.env.URI; //"mongodb:27017";
 }
