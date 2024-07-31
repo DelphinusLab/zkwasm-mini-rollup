@@ -105,11 +105,11 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
               taskId: task_id,
             });
           await bundleRecord.save();
-          console.log("task recorded");
+          console.log(`task recorded with key: ${merkleRootToBeHexString(merkle_root)}`);
       }
       transactions_witness = new Array();
       merkle_root = application.query_root();
-      console.log("merkle root is:", merkle_root);
+      console.log("restore root:", merkle_root);
       application.initialize(merkle_root);
     } catch (e) {
       console.log(e);

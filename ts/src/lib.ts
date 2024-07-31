@@ -40,6 +40,7 @@ export class NumberUtil {
 
 export function merkleRootToBeHexString(root: BigUint64Array) {
   let bigint = root[0] + (root[1]<<64n) + (root[2]<<128n) + (root[3]<<192n);
-  let bn = new BN(bigint.toString(16));
+  let bnStr = bigint.toString(10);
+  let bn = new BN(bnStr, 10);
   return bn.toString("hex", 64);
 }
