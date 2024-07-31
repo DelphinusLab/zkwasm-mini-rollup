@@ -37,3 +37,9 @@ export class NumberUtil {
         return this.toBN().map((x) => x.toString(10));
     }
 }
+
+export function merkleRootToBeHexString(root: BigUint64Array) {
+  let bigint = root[0] + (root[1]<<64n) + (root[2]<<128n) + (root[3]<<192n);
+  let bn = new BN(bigint.toString(16));
+  return bn.toString("hex", 64);
+}

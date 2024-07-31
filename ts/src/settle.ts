@@ -29,9 +29,11 @@ async function getMerkle(): Promise<Array<String>>{
   // Extract the old Merkle root
   const oldRoot = proxyInfo.merkle_root;
   console.log("Old Merkle Root:", oldRoot);
-  let oldRootU64Array = new NumberUtil(oldRoot.toString()).toU64StringArray();
-  console.log("Old Merkle Root U64 Array:", oldRootU64Array);
-  return oldRootU64Array;
+  let oldRootBeString = oldRoot.toString("hex", 64);
+  //let oldRootU64Array = new NumberUtil(oldRoot.toString()).toU64StringArray();
+  //console.log("Old Merkle Root U64 Array:", oldRootU64Array);
+  //return oldRootU64Array;
+  return oldRootBeString;
 }
 
 mongoose.connect(`mongodb://${mongodbUri}/job-tracker`, {

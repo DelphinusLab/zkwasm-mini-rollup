@@ -37,7 +37,7 @@ export const jobSchema = new mongoose.Schema({
 
 export const bundleSchema = new mongoose.Schema({
     merkleRoot: {
-          type: Array<String>(4),
+          type: String,
           required: true,
           unique: true,
     },

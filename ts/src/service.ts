@@ -12,6 +12,7 @@ import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob} from "./conf
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import {merkleRootToBeHexString} from "./lib.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -81,6 +82,8 @@ let merkle_root = new BigUint64Array([
     2839580074036780766n,
   ]);
 
+
+
 async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
   transactions_witness.push(tx);
@@ -98,12 +101,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
           console.log("proving task submitted at:", task_id);
           console.log("tracking task in db ...", merkle_root);
           const bundleRecord = new modelBundle({
-            merkleRoot: [
-              merkle_root[0].toString(10),
-              merkle_root[1].toString(10),
-              merkle_root[2].toString(10),
-              merkle_root[3].toString(10),
-            ],
+            merkleRoot: merkleRootToBeHexString(merkle_root),
               taskId: task_id,
             });
           await bundleRecord.save();
