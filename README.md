@@ -1,19 +1,19 @@
 # A typescript mini server for ZKWASM server side application
 
-This repo is a sample REST service in RUST which is compiled to WASM and runs in nodejs. The external running environment is described in the following picture where the left most component is our mini-rest-server.
+This repo is a sample REST service in Rust which is compiled to WASM and runs in nodejs. The external running environment is described in the following picture where the left most component is our mini-rest-server.
 ![alt text](./images/mini-rest-service-rollup.png)
 
-The trustless part are the transaction handling part whose execution is proved using the ZKWASM proving service (the middle component in the graph) and the final proofs are verified onchain with settlement callbacks.
+The trustless part is the transaction handling part whose execution is proved using the ZKWASM proving service (the middle component in the graph) and the final proofs are verified onchain with settlement callbacks.
 
 ## ABI convention
 The convention between the sequencer (implemented in typescript) and the provable application contains three parts.
 1. The transaction handlers
 2. The state initializer and querying APIs
-3. The configuration APIS
+3. The configuration APIs
 
-Once all related interfaces are defined, we use the following macro to generate the zkmain function which is suppose to run in the ZKWASM virtual machine (more details can be find in abi/src/lib.rs). After the WASM is compiled, it exposes a set of interfaces (verify_tx_signature, handle_tx, initialize, flush_settlement, etc) for the sequencer (A sketch of the sequencer can be find in ts/service.rs).
+Once all related interfaces are defined, we use the following macro to generate the zkmain function which is supposed to run in the ZKWASM virtual machine (more details can be found in abi/src/lib.rs). After the WASM is compiled, it exposes a set of interfaces (verify_tx_signature, handle_tx, initialize, flush_settlement, etc) for the sequencer (A sketch of the sequencer can be found in ts/service.rs).
 
-The WASM is bootstrap by implmenting ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementing of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
+The WASM is bootstrap by implementing ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementation of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
 ```
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
