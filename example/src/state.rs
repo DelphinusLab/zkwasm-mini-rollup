@@ -372,6 +372,7 @@ impl Transaction {
             None => ERROR_PLAYER_ALREADY_EXIST,
             Some(player) => {
                 player.check_and_inc_nonce(self.nonce);
+                player.store();
                 let oid = player.get_obj_id(self.objindex);
                 let counter = QUEUE.0.borrow().counter;
                 let data = &self.data;
