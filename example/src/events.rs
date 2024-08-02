@@ -42,7 +42,7 @@ impl Event {
             owner,
             object_index: (f >> 48) as usize,
             delta: (f & 0xffffffff) as usize,
-            modifier_index: ((f >> 48) & 0x7f) as usize,
+            modifier_index: ((f >> 32) & 0x7f) as usize,
         }
     }
 }
