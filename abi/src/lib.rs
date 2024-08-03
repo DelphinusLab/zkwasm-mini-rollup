@@ -22,6 +22,32 @@ pub trait StorageData {
     fn to_data(&self, u64data: &mut Vec<u64>);
 }
 
+pub struct WithdrawInfo { // 32bits in total
+    feature: u32, // 4
+    address: [u8; 20], // 20
+    amount: u64, // 8
+}
+
+impl WithdrawInfo {
+    pub fn new(limbs: &[u64; 3]) -> Self {
+        let mut address = ((limbs[0] >> 32) as u32).to_le_bytes().to_vec();
+        address.extend_from_slice(&limbs[1].to_le_bytes());
+        address.extend_from_slice(&limbs[2].to_le_bytes());
+
+        WithdrawInfo {
+            feature: 1,
+            address: address.try_into().unwrap(),
+            amount: limbs[0] & 0xffffffff
+        }
+    }
+    pub fn flush(self, bytes: &mut Vec<u8>) {
+        bytes.extend_from_slice(&self.feature.to_le_bytes());
+        bytes.extend_from_slice(&self.address);
+        bytes.extend_from_slice(&self.amount.to_le_bytes());
+    }
+}
+
+
 #[derive(Debug, Serialize)]
 pub struct Player<T: StorageData + Default> {
     #[serde(skip_serializing)]
