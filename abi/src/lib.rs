@@ -23,9 +23,9 @@ pub trait StorageData {
 }
 
 pub struct WithdrawInfo { // 32bits in total
-    feature: u32, // 4
-    address: [u8; 20], // 20
-    amount: u64, // 8
+    pub feature: u32, // 4
+    pub address: [u8; 20], // 20
+    pub amount: u64, // 8
 }
 
 impl WithdrawInfo {
