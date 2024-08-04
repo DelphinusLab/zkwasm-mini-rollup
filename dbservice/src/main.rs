@@ -11,6 +11,9 @@ use zkwasm_host_circuits::host::db::TreeDB;
 use zkwasm_host_circuits::host::merkle::MerkleTree;
 use zkwasm_host_circuits::host::mongomerkle::MongoMerkle;
 use zkwasm_host_circuits::proof::MERKLE_DEPTH;
+
+use std::time::Instant;
+
 //use tokio::runtime::Runtime;
 
 static mut DB: Option<Rc<RefCell<dyn TreeDB>>> = None;
@@ -42,6 +45,7 @@ fn get_mt(root: [u8; 32]) -> MongoMerkle<32> {
 }
 
 async fn update_leaf(Params(request): Params<UpdateLeafRequest>) -> Result<[u8; 32], Error> {
+    let start = Instant::now();
     let index = u64::from_str_radix(request.index.as_str(), 10).unwrap();
     let hash = actix_web::web::block(move || {
         let mut mt = get_mt(request.root);
@@ -54,10 +58,13 @@ async fn update_leaf(Params(request): Params<UpdateLeafRequest>) -> Result<[u8; 
     })
     .await
     .map_err(|_| Error::INTERNAL_ERROR)?;
+    let duration = start.elapsed();
+    println!("time taken for update_leaf is {:?}", duration);
     hash
 }
 
 async fn get_leaf(Params(request): Params<GetLeafRequest>) -> Result<[u8; 32], Error> {
+    let start = Instant::now();
     let index = u64::from_str_radix(request.index.as_str(), 10).unwrap();
     let leaf = actix_web::web::block(move || {
         let mt = get_mt(request.root);
@@ -69,6 +76,8 @@ async fn get_leaf(Params(request): Params<GetLeafRequest>) -> Result<[u8; 32], E
     })
     .await
     .map_err(|_| Error::INTERNAL_ERROR)?;
+    let duration = start.elapsed();
+    println!("time taken for get_leaf is {:?}", duration);
     leaf.map(|l| {
         l.data.unwrap_or([0; 32])
     })
