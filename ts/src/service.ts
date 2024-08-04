@@ -194,7 +194,8 @@ async function main() {
           application.handle_tx(u64array);
           await install_transactions(signature, job.id);
       } catch (error) {
-        console.log("handling auto error", error);
+        console.log("fatal: handling auto tick error, process will terminate.", error);
+        process.exit(1);
       }
     } else if (job.name == 'transaction') {
       console.log("handle transaction ...");
