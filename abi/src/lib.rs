@@ -40,7 +40,7 @@ impl WithdrawInfo {
             amount: limbs[0] & 0xffffffff
         }
     }
-    pub fn flush(self, bytes: &mut Vec<u8>) {
+    pub fn flush(&self, bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.feature.to_le_bytes());
         bytes.extend_from_slice(&self.address);
         bytes.extend_from_slice(&self.amount.to_be_bytes()); //solidity needs be endian
