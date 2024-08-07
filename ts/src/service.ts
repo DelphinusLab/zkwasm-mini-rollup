@@ -104,8 +104,17 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
             merkleRoot: merkleRootToBeHexString(merkle_root),
               taskId: task_id,
             });
-          await bundleRecord.save();
-          console.log(`task recorded with key: ${merkleRootToBeHexString(merkle_root)}`);
+          try {
+            await bundleRecord.save();
+            console.log(`task recorded with key: ${merkleRootToBeHexString(merkle_root)}`);
+          } catch (e) {
+            let record = await modelBundle.find({
+                merkleRoot: merkleRootToBeHexString(merkle_root),
+            });
+            console.log("fatal: conflict db merkle");
+            console.log(record);
+            //throw e
+          }
       }
       transactions_witness = new Array();
       merkle_root = application.query_root();
