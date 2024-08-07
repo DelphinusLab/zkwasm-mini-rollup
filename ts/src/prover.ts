@@ -96,10 +96,11 @@ export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<Tx
     } catch (e) {
       console.log("submit proof error:", e);
       console.log("retrying ...");
+      continue;
     }
-    console.log("can not generating proof ...");
-    process.exit(1);
   }
+  console.log("can not generating proof ...");
+  process.exit(1);
 }
 
 export async function get_latest_proof(): Promise<Task | null> {
