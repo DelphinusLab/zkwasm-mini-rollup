@@ -168,6 +168,11 @@ async function main() {
   console.log("initialize sequener queue ...");
   const myQueue = new Queue('sequencer', {connection});
 
+  const waitingCount = await myQueue.getWaitingCount();
+  console.log("waiting Count is:", waitingCount, " perform draining ...");
+  await myQueue.drain();
+
+
   console.log("initialize application merkle db ...");
   application.initialize(merkle_root);
 

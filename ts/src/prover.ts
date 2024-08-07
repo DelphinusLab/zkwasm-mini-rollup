@@ -81,10 +81,17 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
   //console.log("response is ", response);
 }
 
+function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    const timeoutPromise = new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout exceeded")), ms)
+        );
+    return Promise.race([promise, timeoutPromise]);
+}
+
 export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   for (let i=0; i<10; i++) {
     try {
-      let response = await submitProof(merkle, txs, txdata);
+      let response = await timeout(submitProof(merkle, txs, txdata), 4000);
       return response;
     } catch (e) {
       console.log("submit proof error:", e);
