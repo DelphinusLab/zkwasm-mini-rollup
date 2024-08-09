@@ -29,7 +29,7 @@ const __wbg_star0 = (env) => {
       console.log("wasm_dbg", c);
     },
     wasm_trace_size: () => {
-      return 0;
+      return 0n;
     },
       /**
      * - Convert the number to a character
