@@ -28,6 +28,9 @@ const __wbg_star0 = (env) => {
     wasm_dbg: (c) => {
       console.log("wasm_dbg", c);
     },
+    wasm_trace_size: () => {
+      return 0;
+    },
       /**
      * - Convert the number to a character
      * - Check if the character is a newline
