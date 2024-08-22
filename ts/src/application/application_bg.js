@@ -125,6 +125,22 @@ export function get_config() {
 }
 
 /**
+* @returns {boolean}
+*/
+export function preempt() {
+    const ret = wasm.autotick();
+    return ret !== 0;
+}
+
+/**
+* @returns {boolean}
+*/
+export function autotick() {
+    const ret = wasm.autotick();
+    return ret !== 0;
+}
+
+/**
 * @param {BigUint64Array} root
 */
 export function initialize(root) {

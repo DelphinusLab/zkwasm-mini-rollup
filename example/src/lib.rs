@@ -1,9 +1,10 @@
 use wasm_bindgen::prelude::*;
 use zkwasm_rest_abi::*;
 pub mod config;
-pub mod events;
 pub mod settlement;
 pub mod state;
+pub mod game;
+pub mod player;
 
 use crate::config::Config;
 use crate::state::{State, Transaction};

@@ -8,13 +8,14 @@ use primitive_types::U256;
 use wasm_bindgen::prelude::*;
 use core::slice::IterMut;
 
-pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap { merkle: Merkle {
-    root: [
-        14789582351289948625,
-        10919489180071018470,
-        10309858136294505219,
-        2839580074036780766,
-    ]}
+pub static mut MERKLE_MAP: KeyValueMap<Merkle> = KeyValueMap {
+    merkle: Merkle {
+        root: [
+            14789582351289948625,
+            10919489180071018470,
+            10309858136294505219,
+            2839580074036780766,
+        ]}
 };
 
 pub trait StorageData {
@@ -191,7 +192,7 @@ pub fn conclude_tx_info(data: &[u8]) -> [u64;4] {
 #[macro_export]
 macro_rules! create_zkwasm_apis {
     ($T: ident, $S: ident, $C: ident) => {
-    #[wasm_bindgen]
+        #[wasm_bindgen]
         pub fn handle_tx(params: Vec<u64>) -> u32 {
             let user_address = [params[4], params[5], params[6], params[7]];
             let command = [params[0], params[1], params[2], params[3]];
@@ -199,37 +200,47 @@ macro_rules! create_zkwasm_apis {
             transaction.process(&user_address)
         }
 
-    #[wasm_bindgen]
+        #[wasm_bindgen]
         pub fn get_state(pid: Vec<u64>) -> String {
             $S::get_state(pid)
         }
 
-    #[wasm_bindgen]
+        #[wasm_bindgen]
         pub fn decode_error(e: u32) -> String {
             $T::decode_error(e).to_string()
         }
 
 
-    #[wasm_bindgen]
+        #[wasm_bindgen]
         pub fn get_config() -> String {
             $C::to_json_string()
         }
 
-    #[wasm_bindgen]
-    pub fn initialize(root: Vec<u64>) {
-        unsafe {
-            let merkle = zkwasm_rust_sdk::Merkle::load([root[0], root[1], root[2], root[3]]);
-            MERKLE_MAP.merkle = merkle;
-            $S::initialize();
-        };
-    }
-
-    #[wasm_bindgen]
-    pub fn finalize() -> Vec<u8> {
-        unsafe {
-            $C::flush_settlement()
+        #[wasm_bindgen]
+        pub fn preempt() -> bool{
+            $S::preempt()
         }
-    }
+
+        #[wasm_bindgen]
+        pub fn autotick() -> bool{
+            $C::autotick()
+        }
+
+        #[wasm_bindgen]
+        pub fn initialize(root: Vec<u64>) {
+            unsafe {
+                let merkle = zkwasm_rust_sdk::Merkle::load([root[0], root[1], root[2], root[3]]);
+                MERKLE_MAP.merkle = merkle;
+                $S::initialize();
+            };
+        }
+
+        #[wasm_bindgen]
+        pub fn finalize() -> Vec<u8> {
+            unsafe {
+                $S::flush_settlement()
+            }
+        }
 
 
     #[wasm_bindgen]
@@ -252,7 +263,9 @@ macro_rules! create_zkwasm_apis {
                 handle_tx(params);
             }
 
-            let bytes = $C::flush_settlement();
+            unsafe { zkwasm_rust_sdk::require(preempt()) };
+
+            let bytes = $S::flush_settlement();
             let txdata = conclude_tx_info(bytes.as_slice());
 
             let root = merkle_ref.merkle.root;

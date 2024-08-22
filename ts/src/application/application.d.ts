@@ -20,6 +20,14 @@ export function decode_error(e: number): string;
 */
 export function get_config(): string;
 /**
+* @returns {boolean}
+*/
+export function preempt(): boolean;
+/**
+* @returns {boolean}
+*/
+export function autotick(): boolean;
+/**
 * @param {BigUint64Array} root
 */
 export function initialize(root: BigUint64Array): void;

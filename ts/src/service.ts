@@ -88,11 +88,9 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
   transactions_witness.push(tx);
   console.log("transaction installed, rollup pool length is:", transactions_witness.length);
-  if (transactions_witness.length == TRANSACTION_NUMBER) {
-    console.log("rollup pool is full, generating proof:");
-    //for (const t of transactions_witness) {
-    //  console.log(t);
-    //}
+  if (application.preempt()) {
+  //if (transactions_witness.length == TRANSACTION_NUMBER) {
+    console.log("rollup reach its preemption point, generating proof:");
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
     try {
@@ -189,14 +187,16 @@ async function main() {
   merkle_root = application.query_root();
 
   // Automatically add a job to the queue every few seconds
-  setInterval(async () => {
-    try {
-      await myQueue.add('autoJob', {command:0});
-    } catch (error) {
-      console.error('Error adding automatic job to the queue:', error);
-      process.exit(1);
-    }
-  }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
+  if (application.autotick()) {
+      setInterval(async () => {
+        try {
+          await myQueue.add('autoJob', {command:0});
+        } catch (error) {
+          console.error('Error adding automatic job to the queue:', error);
+          process.exit(1);
+        }
+      }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
+  }
 
 
   const worker = new Worker('sequencer', async job => {
