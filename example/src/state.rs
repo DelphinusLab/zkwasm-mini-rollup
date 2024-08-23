@@ -13,23 +13,25 @@ const DEPOSIT: u32 = 4;
 pub struct Transaction {
     pub command: u32,
     pub data: [u64; 3],
+    pub old_params: Vec<u64>,
 }
 
 const ERROR_PLAYER_NOT_FOUND: u32 = 1;
 
 impl Transaction {
-    pub fn decode_error(e: u32) -> &'static str{
+    pub fn decode_error(e: u32) -> &'static str {
         match e {
             ERROR_PLAYER_NOT_FOUND => "PlayerNotFound",
             _ => "Unknown"
         }
     }
 
-    pub fn decode(params: [u64; 4]) -> Self {
+    pub fn decode(params: [u64; 4], old_params: Vec<u64>) -> Self {
         let command = (params[0] & 0xffffffff) as u32;
         Transaction {
             command,
-            data: [params[1], params[2], params[3]]
+            data: [params[1], params[2], params[3]],
+            old_params
         }
     }
 
@@ -41,7 +43,7 @@ impl Transaction {
             None => {
                 let player = CombatPlayer::new_from_pid(pid);
                 player.store();
-            },
+            }
             Some(player) => {
                 player.data.balance += balance;
                 player.store();
@@ -56,7 +58,7 @@ impl Transaction {
             None => ERROR_PLAYER_NOT_FOUND,
             Some(player) => {
                 let amount = self.data[0] & 0xffffffff;
-                unsafe {require(player.data.balance >= amount)};
+                unsafe { require(player.data.balance >= amount) };
                 let withdrawinfo = WithdrawInfo::new(&self.data);
                 SettlementInfo::append_settlement(withdrawinfo);
                 player.data.balance -= amount;
@@ -82,13 +84,13 @@ impl Transaction {
     }
 }
 
-#[derive (Serialize)]
+#[derive(Serialize)]
 pub struct State {
     counter: u64,
-    game: Game
+    game: Game,
 }
 
-pub static mut STATE: State  = State {
+pub static mut STATE: State = State {
     counter: 0,
     game: Game {
         total_dps: 0,
@@ -96,30 +98,27 @@ pub static mut STATE: State  = State {
         target: 0,
         last_round_info: RoundInfo {
             locked_dps: 0,
-            locked_rewards: 0
-        }
-    }
+            locked_rewards: 0,
+        },
+    },
 };
 
 impl State {
-    pub fn initialize() {
-    }
+    pub fn initialize() {}
 
     pub fn preempt() -> bool {
         return false;
     }
 
     pub fn get_state(_pid: Vec<u64>) -> String {
-        serde_json::to_string(unsafe {&STATE}).unwrap()
+        serde_json::to_string(unsafe { &STATE }).unwrap()
     }
 
-    pub fn store(&self) {
-    }
+    pub fn store(&self) {}
 
     pub fn flush_settlement() -> Vec<u8> {
         let data = SettlementInfo::flush_settlement();
-        unsafe {STATE.store()};
+        unsafe { STATE.store() };
         data
     }
-
 }
