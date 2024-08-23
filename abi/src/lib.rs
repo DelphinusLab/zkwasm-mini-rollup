@@ -196,7 +196,7 @@ macro_rules! create_zkwasm_apis {
         pub fn handle_tx(params: Vec<u64>) -> u32 {
             let user_address = [params[4], params[5], params[6], params[7]];
             let command = [params[0], params[1], params[2], params[3]];
-            let transaction = $T::decode(command);
+            let transaction = $T::decode(command,params);
             transaction.process(&user_address)
         }
 
