@@ -1,7 +1,5 @@
 use zkwasm_rest_abi::WithdrawInfo;
 
-use crate::state::STATE;
-
 pub struct SettlementInfo(Vec<WithdrawInfo>);
 pub static mut SETTLEMENT: SettlementInfo = SettlementInfo(vec![]);
 

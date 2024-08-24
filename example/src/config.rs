@@ -1,4 +1,4 @@
-use crate::{game::Monster, settlement::SettlementInfo, state::STATE};
+use crate::game::Monster;
 use serde::Serialize;
 
 #[derive(Serialize, Clone)]

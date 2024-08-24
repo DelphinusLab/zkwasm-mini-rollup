@@ -5,10 +5,8 @@ use zkwasm_rust_sdk::require;
 use crate::game::Game;
 
 const TIMETICK: u32 = 0;
-const COMMITCARDS: u32 = 1;
-const PROVIDECARDS: u32 = 2;
-const WITHDRAW: u32 = 3;
-const DEPOSIT: u32 = 4;
+const WITHDRAW: u32 = 1;
+const DEPOSIT: u32 = 2;
 
 pub struct Transaction {
     pub command: u32,
@@ -66,7 +64,7 @@ impl Transaction {
         }
     }
 
-    pub fn process(&self, pid: &[u64; 4]) -> u32 {
+    pub fn process(&self, pid: &[u64; 4], _sigr: &[u64; 4]) -> u32 {
         if self.command == TIMETICK {
             let state = unsafe { &mut STATE };
             state.counter += 1;

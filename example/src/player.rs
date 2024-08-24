@@ -2,7 +2,6 @@ use crate::config::get_monster_health;
 use crate::config::get_monster_rewards;
 use crate::StorageData;
 use serde::{ser::SerializeSeq, Serialize, Serializer};
-use crate::MERKLE_MAP;
 use crate::Player;
 use core::slice::IterMut;
 

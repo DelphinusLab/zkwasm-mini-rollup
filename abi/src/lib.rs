@@ -196,8 +196,9 @@ macro_rules! create_zkwasm_apis {
         pub fn handle_tx(params: Vec<u64>) -> u32 {
             let user_address = [params[4], params[5], params[6], params[7]];
             let command = [params[0], params[1], params[2], params[3]];
+            let sig_r = [params[20], params[21], params[22], params[23]];
             let transaction = $T::decode(command);
-            transaction.process(&user_address)
+            transaction.process(&user_address, &sig_r)
         }
 
         #[wasm_bindgen]
