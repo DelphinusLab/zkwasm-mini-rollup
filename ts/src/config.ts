@@ -47,8 +47,20 @@ export const bundleSchema = new mongoose.Schema({
     },
 });
 
+export const randSchema = new mongoose.Schema({
+    commitment: {
+          type: String,
+          required: true,
+          unique: true,
+    },
+    seed: Buffer,
+});
+
+
+
 export const modelJob = mongoose.model('Job', jobSchema);
 export const modelBundle = mongoose.model('Bundle', bundleSchema);
+export const modelRand = mongoose.model('Rand', randSchema);
 
 export const ServiceHelper = new ZkWasmServiceHelper(endpoint, "", "");
 

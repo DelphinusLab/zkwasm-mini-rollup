@@ -8,11 +8,12 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submitProofWithRetry, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
-import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob} from "./config.js";
+import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob, modelRand } from "./config.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import {merkleRootToBeHexString} from "./lib.js";
+import {keccak256} from "ethers";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -82,7 +83,28 @@ let merkle_root = new BigUint64Array([
     2839580074036780766n,
   ]);
 
+function randByte()  {
+  return Math.floor(Math.random() * 0xff);
+}
 
+async function generateRandomSeed() {
+  let randSeed = [randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte()];
+  let sha = keccak256(new Uint8Array(randSeed));
+  const randRecord = new modelRand({
+    commitment: sha.toString(),
+    message: randSeed,
+  });
+  try {
+    await randRecord.save();
+    const mask64 = BigInt("0xFFFFFFFFFFFFFFFF");
+    let c = BigInt(sha) & mask64;
+    console.log("Generated Rand Seed:", randSeed, c);
+    return c;
+  } catch (e) {
+    console.log("Generating random seed error!");
+    process.exit(1)
+  }
+}
 
 async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
@@ -203,10 +225,11 @@ async function main() {
     if (job.name == 'autoJob') {
       console.log("handle auto", job.data);
       try {
-          let signature = sign([0n, 0n, 0n, 0n], SERVER_PRI_KEY);
-          let u64array = signature_to_u64array(signature);
-          application.handle_tx(u64array);
-          await install_transactions(signature, job.id);
+        let rand = await generateRandomSeed();
+        let signature = sign([0n, 0n, rand, 0n], SERVER_PRI_KEY);
+        let u64array = signature_to_u64array(signature);
+        application.handle_tx(u64array);
+        await install_transactions(signature, job.id);
       } catch (error) {
         console.log("fatal: handling auto tick error, process will terminate.", error);
         process.exit(1);
