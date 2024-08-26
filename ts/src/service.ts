@@ -94,7 +94,7 @@ async function generateRandomSeed() {
   const shaCommitment = BigInt(sha) & mask64;
   const randRecord = new modelRand({
     commitment: shaCommitment.toString(),
-    message: randSeed,
+    seed: randSeed,
   });
   try {
     await randRecord.save();
@@ -234,7 +234,7 @@ async function main() {
             });
           seed = randRecord[0].seed!.readBigInt64LE();
         };
-        let signature = sign([0n, seed, rand, 0n], SERVER_PRI_KEY);
+        let signature = sign(new BigUint64Array([0n, seed, rand, 0n]), SERVER_PRI_KEY);
         let u64array = signature_to_u64array(signature);
         application.handle_tx(u64array);
         await install_transactions(signature, job.id);

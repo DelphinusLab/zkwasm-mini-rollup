@@ -94,7 +94,7 @@ export function verify_sign(msg: LeHexBN, pkx: LeHexBN, pky: LeHexBN, rx:LeHexBN
 }
 
 // signning a [u64; 4] message with private key
-export function sign(cmd: Array<bigint>, prikey: string) {
+export function sign(cmd: BigUint64Array, prikey: string) {
   let pkey = PrivateKey.fromString(prikey);
   let r = pkey.r();
   let R = Point.base.mul(r);

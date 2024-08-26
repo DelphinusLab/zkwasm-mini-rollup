@@ -17,7 +17,7 @@ export class ZKWasmAppRpc {
     });
   }
 
-  public async sendRawTransaction(cmd: Array<bigint>, prikey: string): Promise<JSON> {
+  public async sendRawTransaction(cmd: BigUint64Array, prikey: string): Promise<JSON> {
     try {
       const data = sign(cmd, prikey);
       const response = await this.instance.post(
@@ -36,7 +36,7 @@ export class ZKWasmAppRpc {
     }
   }
 
-  public async sendTransaction(cmd: Array<bigint>, prikey: string): Promise<number> {
+  public async sendTransaction(cmd: BigUint64Array, prikey: string): Promise<number> {
     try {
       let resp:any = await this.sendRawTransaction(cmd, prikey);
       for (let i=0; i<5; i++) {//detect job status with 1 sec delay
