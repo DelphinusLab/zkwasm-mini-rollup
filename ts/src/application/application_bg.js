@@ -141,6 +141,14 @@ export function autotick() {
 }
 
 /**
+* @returns {bigint}
+*/
+export function randSeed() {
+    const ret = wasm.randSeed();
+    return BigInt.asUintN(64, ret);
+}
+
+/**
 * @param {BigUint64Array} root
 */
 export function initialize(root) {

@@ -107,6 +107,10 @@ impl State {
         return false;
     }
 
+    pub fn rand_seed() -> u64 {
+        return 0;
+    }
+
     pub fn get_state(_pid: Vec<u64>) -> String {
         serde_json::to_string(unsafe {&STATE}).unwrap()
     }

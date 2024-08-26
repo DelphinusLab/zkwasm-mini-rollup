@@ -228,6 +228,12 @@ macro_rules! create_zkwasm_apis {
         }
 
         #[wasm_bindgen]
+        pub fn randSeed() -> u64 {
+            $S::rand_seed()
+        }
+
+
+        #[wasm_bindgen]
         pub fn initialize(root: Vec<u64>) {
             unsafe {
                 let merkle = zkwasm_rust_sdk::Merkle::load([root[0], root[1], root[2], root[3]]);

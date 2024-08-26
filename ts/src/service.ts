@@ -90,16 +90,16 @@ function randByte()  {
 async function generateRandomSeed() {
   let randSeed = [randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte()];
   let sha = keccak256(new Uint8Array(randSeed));
+  const mask64 = BigInt("0xFFFFFFFFFFFFFFFF");
+  const shaCommitment = BigInt(sha) & mask64;
   const randRecord = new modelRand({
-    commitment: sha.toString(),
+    commitment: shaCommitment.toString(),
     message: randSeed,
   });
   try {
     await randRecord.save();
-    const mask64 = BigInt("0xFFFFFFFFFFFFFFFF");
-    let c = BigInt(sha) & mask64;
-    console.log("Generated Rand Seed:", randSeed, c);
-    return c;
+    console.log("Generated Rand Seed:", randSeed, shaCommitment);
+    return shaCommitment;
   } catch (e) {
     console.log("Generating random seed error!");
     process.exit(1)
@@ -226,7 +226,15 @@ async function main() {
       console.log("handle auto", job.data);
       try {
         let rand = await generateRandomSeed();
-        let signature = sign([0n, 0n, rand, 0n], SERVER_PRI_KEY);
+        let oldSeed = application.randSeed();
+        let seed = 0n;
+        if (oldSeed != 0n) {
+          const randRecord = await modelRand.find({
+                commitment: oldSeed.toString(),
+            });
+          seed = randRecord[0].seed!.readBigInt64LE();
+        };
+        let signature = sign([0n, seed, rand, 0n], SERVER_PRI_KEY);
         let u64array = signature_to_u64array(signature);
         application.handle_tx(u64array);
         await install_transactions(signature, job.id);

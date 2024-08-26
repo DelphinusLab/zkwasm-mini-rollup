@@ -28,6 +28,10 @@ export function preempt(): boolean;
 */
 export function autotick(): boolean;
 /**
+* @returns {bigint}
+*/
+export function randSeed(): bigint;
+/**
 * @param {BigUint64Array} root
 */
 export function initialize(root: BigUint64Array): void;

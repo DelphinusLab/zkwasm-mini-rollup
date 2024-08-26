@@ -6,6 +6,7 @@ export function get_state(a: number, b: number, c: number): void;
 export function decode_error(a: number, b: number): void;
 export function get_config(a: number): void;
 export function autotick(): number;
+export function randSeed(): number;
 export function initialize(a: number, b: number): void;
 export function finalize(a: number): void;
 export function zkmain(): void;
