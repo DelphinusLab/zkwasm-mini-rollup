@@ -13,7 +13,7 @@ import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import {merkleRootToBeHexString} from "./lib.js";
-import {keccak256} from "ethers";
+import {sha256} from "ethers";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -89,7 +89,7 @@ function randByte()  {
 
 async function generateRandomSeed() {
   let randSeed = [randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte(), randByte()];
-  let sha = keccak256(new Uint8Array(randSeed));
+  let sha = sha256(new Uint8Array(randSeed));
   const mask64 = BigInt("0xFFFFFFFFFFFFFFFF");
   const shaCommitment = BigInt(sha) & mask64;
   const randRecord = new modelRand({
