@@ -22,7 +22,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "zkwasm-service-cli": "git+https://github.com/DelphinusLab/zkWasm-service-cli.git",
-    "zkwasm-service-helper": "git+https://github.com/DelphinusLab/zkWasm-service-helper.git"
+    "zkwasm-service-helper": "github:DelphinusLab/zkWasm-service-helper"
   },
   "main": "src/index.js",
   "scripts": {
