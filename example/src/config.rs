@@ -18,7 +18,7 @@ impl Config {
     }
 
     pub fn autotick() -> bool {
-        false
+        true
     }
 }
 

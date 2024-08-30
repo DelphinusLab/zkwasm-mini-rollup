@@ -1,6 +1,6 @@
 use crate::{game::RoundInfo, player::CombatPlayer, settlement::SettlementInfo};
 use serde::Serialize;
-use zkwasm_rest_abi::WithdrawInfo;
+use zkwasm_rest_abi::{WithdrawInfo, MERKLE_MAP};
 use zkwasm_rust_sdk::require;
 use crate::game::Game;
 
@@ -101,10 +101,15 @@ pub static mut STATE: State  = State {
 
 impl State {
     pub fn initialize() {
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        let mut data = kvpair.get(&[0, 0, 0, 0]);
+        if !data.is_empty() {
+            unsafe { STATE.counter =  data.pop().unwrap() };
+        }
     }
 
     pub fn preempt() -> bool {
-        return false;
+        return true;
     }
 
     pub fn rand_seed() -> u64 {
@@ -116,6 +121,10 @@ impl State {
     }
 
     pub fn store(&self) {
+        let kvpair = unsafe { &mut MERKLE_MAP };
+        kvpair.set(&[0, 0, 0, 0], &vec![self.counter]);
+        let root = kvpair.merkle.root.clone();
+        zkwasm_rust_sdk::dbg!("root after store: {:?}\n", root);
     }
 
     pub fn flush_settlement() -> Vec<u8> {
