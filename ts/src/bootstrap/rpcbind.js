@@ -1,7 +1,6 @@
-import fetch from 'sync-fetch';
+//import fetch from 'sync-fetch';
 import requestMerkleData from  './syncrpc.cjs';
 let url = 'http://127.0.0.1:3030';
-
 import dotenv from 'dotenv';
 dotenv.config();
 
