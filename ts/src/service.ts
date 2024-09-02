@@ -138,13 +138,16 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       }
       transactions_witness = new Array();
       merkle_root = application.query_root();
-      console.log("restore root:", merkle_root);
+      //console.log("restore root:", merkle_root);
       application.initialize(merkle_root);
     } catch (e) {
       console.log(e);
       process.exit(1); // this should never happen and we stop the whole process
     }
   }
+  merkle_root = application.query_root();
+  console.log("last root:", merkle_root);
+
 }
 
 async function track_error_transactions(tx: TxWitness, jobid: string | undefined) {
