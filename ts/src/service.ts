@@ -138,7 +138,9 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       }
       transactions_witness = new Array();
       merkle_root = application.query_root();
-      //console.log("restore root:", merkle_root);
+      // reset application here
+      console.log("restore root:", merkle_root);
+      await (initApplication as any)(bootstrap);
       application.initialize(merkle_root);
     } catch (e) {
       console.log(e);
