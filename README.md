@@ -58,14 +58,14 @@ mongod --dbpath db
 ./example >>> make build
 ```
 
-5. Start service
+6. Start service
 ```
 ./ts >>> npm install
 ./ts >>> npx tsc
 ./ts >>> node src/service.js
 ```
 
-6. Run test
+7. Run test
 ```
 ./ts >>> node src/test.js
 ```
