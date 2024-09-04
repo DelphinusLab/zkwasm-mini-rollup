@@ -5,7 +5,17 @@ This repo is a sample REST service in Rust which is compiled to WASM and runs in
 
 The trustless part is the transaction handling part whose execution is proved using the ZKWASM proving service (the middle component in the graph) and the final proofs are verified onchain with settlement callbacks.
 
-## ABI convention
+## Put the endless REST server login written in typescript into ZKWASM
+
+1. The nature logic:
+![alt text](./images/minirollup-nature.png)
+
+2. The bundled logic:
+![alt text](./images/minirollup-bundled.png)
+
+
+
+## Rest service ABI convention
 The convention between the sequencer (implemented in typescript) and the provable application contains three parts.
 1. The transaction handlers
 2. The state initializer and querying APIs
@@ -30,25 +40,23 @@ await (initApplication as any)(bootstrap);
 ```
 
 ## Quick Start of an example application
-1. Start Redis
+1. Start Redis & mongodb
 ```
 sudo add-apt-repository ppa:redislabs/redis
 sudo apt-get update
 redis-server
-```
-
-2. Start Mongodb
-```
-mkdir db
-mongod --dbpath db
+mkdir $DBDIR
+mongod --dbpath $DBDIR
 ```
 
 3. Start dbservice
+This is the Merkle DB service which handles witness generation and storage of Merkle trees.
 ```
 ./dbservice >>> cargo run --release
 ```
 
 4. Compiling the bootstrap WASM image.
+The bootstrap WASM image provides the host APIs that are supported in ZKWASM. These are precompiled functions that can be called in our ZKWASM application.
 ```
 ./host >>> make build
 ```
@@ -65,9 +73,27 @@ mongod --dbpath db
 ./ts >>> node src/service.js
 ```
 
-6. Run test
+## Application ABI convertion
+1. State ABI:
 ```
-./ts >>> node src/test.js
+pub fn get_state(pid: Vec<u64>) -> String; // query the user state of a given user id
+pub fn preempt() -> bool; // whether to generate proof at this stage
+pub fn randSeed() -> u64; // get the current hash of the random seed
+pub fn initialize(); // initialize the state at beginning
+pub fn flush_settlement() -> Vec<u8>; // get the settlement info (see: zkwasm onchain settlement protocol)
+```
+
+2. Config ABI:
+```
+pub fn autotick() -> bool
+pub fn to_json_string() -> String
+```
+
+3. Transaction ABI:
+```
+fn decode_error(e) // decode error code to description
+fn decode(command) -> Transaction // decode transaction inputs into Transactio
+fn process(&user_address, &sig_r) // handle transaction
 ```
 
 ## Architecture
