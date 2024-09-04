@@ -137,6 +137,7 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
           }
       }
       transactions_witness = new Array();
+      // need to update merkle_root as the input of next proof
       merkle_root = application.query_root();
       // reset application here
       console.log("restore root:", merkle_root);
@@ -147,8 +148,8 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
       process.exit(1); // this should never happen and we stop the whole process
     }
   }
-  merkle_root = application.query_root();
-  console.log("last root:", merkle_root);
+  let current_merkle_root = application.query_root();
+  console.log("last root:", current_merkle_root);
 
 }
 
