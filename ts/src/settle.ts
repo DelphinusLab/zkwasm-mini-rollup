@@ -20,7 +20,7 @@ const constants = {
   proxyAddress: contract_addr,
 };
 
-async function getMerkle(): Promise<Array<String>>{
+async function getMerkle(): Promise<String>{
   // Connect to the Proxy contract
   const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
   // Fetch the proxy information
@@ -28,8 +28,10 @@ async function getMerkle(): Promise<Array<String>>{
   console.log("Proxy Info:", proxyInfo);
   // Extract the old Merkle root
   const oldRoot = proxyInfo.merkle_root;
+  console.log("Type of oldRoot:", typeof oldRoot);
   console.log("Old Merkle Root:", oldRoot);
-  let oldRootBeString = oldRoot.toString("hex", 64);
+  let oldRootBeString = '0x' + oldRoot.toString(16);
+  console.log("Old Merkle Root(string):", oldRootBeString);
   //let oldRootU64Array = new NumberUtil(oldRoot.toString()).toU64StringArray();
   //console.log("Old Merkle Root U64 Array:", oldRootU64Array);
   //return oldRootU64Array;
