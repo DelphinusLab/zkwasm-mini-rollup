@@ -16,7 +16,7 @@ export const get_image_md5 = () => {
 }
 
 export const user_addr = "0xd8f157Cc95Bc40B4F0B58eb48046FebedbF26Bde";
-export const contract_addr = "0x73E717cf6288A657e1a881742aD0BA50fcf846Ba";
+export const contract_addr = "0xf826f771BC12eD8142e631A15fb8E5A61465bC2B";
 
 export const jobSchema = new mongoose.Schema({
     jobId: {
