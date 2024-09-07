@@ -49,19 +49,19 @@ mkdir $DBDIR
 mongod --dbpath $DBDIR
 ```
 
-3. Start dbservice
+2. Start dbservice
 This is the Merkle DB service which handles witness generation and storage of Merkle trees.
 ```
 ./dbservice >>> cargo run --release
 ```
 
-4. Compiling the bootstrap WASM image.
+3. Compiling the bootstrap WASM image.
 The bootstrap WASM image provides the host APIs that are supported in ZKWASM. These are precompiled functions that can be called in our ZKWASM application.
 ```
 ./host >>> make build
 ```
 
-5. Compiling the application WASM image.
+4. Compiling the application WASM image.
 ```
 ./example >>> make build
 ```
