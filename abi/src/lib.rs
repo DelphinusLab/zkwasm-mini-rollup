@@ -36,7 +36,7 @@ impl WithdrawInfo {
         address.extend_from_slice(&limbs[2].to_le_bytes());
 
         WithdrawInfo {
-            feature: 1,
+            feature: 0,
             address: address.try_into().unwrap(),
             amount: limbs[0] & 0xffffffff
         }
