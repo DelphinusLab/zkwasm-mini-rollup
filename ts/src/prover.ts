@@ -9,10 +9,10 @@ import {
 } from "zkwasm-service-helper";
 
 import {
-  priv,
+  get_user_private_account,
   endpoint,
   get_image_md5,
-  user_addr
+  get_user_addr,
 } from "./config.js";
 
 export interface TxWitness {
@@ -43,7 +43,7 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
   let proofSubmitMode = ProofSubmitMode.Manual; // Auto
   //let proofSubmitMode = ProofSubmitMode.Auto;
   let info: ProvingParams = {
-    user_address: user_addr.toLowerCase(),
+    user_address: get_user_addr().toLowerCase(),
     md5: get_image_md5(),
     public_inputs: pub_inputs,
     private_inputs: priv_inputs,
@@ -66,7 +66,7 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
 
   let signature: string;
   try {
-    signature = await ZkWasmUtil.signMessage(msgString, priv);
+    signature = await ZkWasmUtil.signMessage(msgString, get_user_private_account());
   } catch (e: unknown) {
     console.log("error signing message", e);
     throw "Signing proving message failesd";
