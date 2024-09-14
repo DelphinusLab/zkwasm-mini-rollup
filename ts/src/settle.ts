@@ -30,11 +30,12 @@ async function getMerkle(): Promise<String>{
   const oldRoot = proxyInfo.merkle_root;
   console.log("Type of oldRoot:", typeof oldRoot);
   console.log("Old Merkle Root:", oldRoot);
-  let oldRootBeString = '0x' + oldRoot.toString(16);
+
+  let bnStr = oldRoot.toString(10);
+  let bn = new BN(bnStr, 10);
+  let oldRootBeString = '0x' + bn.toString("hex", 64);
+
   console.log("Old Merkle Root(string):", oldRootBeString);
-  //let oldRootU64Array = new NumberUtil(oldRoot.toString()).toU64StringArray();
-  //console.log("Old Merkle Root U64 Array:", oldRootU64Array);
-  //return oldRootU64Array;
   return oldRootBeString;
 }
 
