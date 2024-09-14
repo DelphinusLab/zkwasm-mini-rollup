@@ -270,6 +270,8 @@ macro_rules! create_zkwasm_apis {
                 handle_tx(params);
             }
 
+
+            zkwasm_rust_sdk::dbg!("check preempt: {}", {preempt()});
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
             let bytes = $S::flush_settlement();
