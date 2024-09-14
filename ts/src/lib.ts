@@ -39,8 +39,8 @@ export class NumberUtil {
 }
 
 export function merkleRootToBeHexString(root: BigUint64Array) {
-  let bigint = root[0] + (root[1]<<64n) + (root[2]<<128n) + (root[3]<<192n);
+  let bigint = root[3] + (root[2]<<64n) + (root[1]<<128n) + (root[0]<<192n);
   let bnStr = bigint.toString(10);
   let bn = new BN(bnStr, 10);
-  return bn.toString("hex", 64);
+  return '0x' + bn.toString("hex", 64);
 }
