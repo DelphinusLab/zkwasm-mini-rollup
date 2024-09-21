@@ -16,6 +16,19 @@ export class U8ArrayUtil {
     toNumber() {
         return this.toBN().map((x) => x.toString(10));
     }
+
+    toHex() {
+      let bns = new Array<string>();
+      for (let i = 0; i < this.u8arr.length; i += 32) {
+          const chunk = this.u8arr.slice(i, i + 32);
+          const bytes = "0x"
+            + Array.from(chunk)
+              .map(byte => byte.toString(16).padStart(2, '0'))
+              .join('');
+          bns.push(bytes);
+      }
+      return bns;
+    }
 }
 
 export class NumberUtil {
