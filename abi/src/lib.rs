@@ -254,12 +254,16 @@ macro_rules! create_zkwasm_apis {
         pub fn zkmain() {
             use zkwasm_rust_sdk::wasm_input;
             use zkwasm_rust_sdk::wasm_output;
+            use zkwasm_rust_sdk::wasm_trace_size;
             let merkle_ref = unsafe {&mut MERKLE_MAP};
             let tx_length = unsafe {wasm_input(0)};
 
             unsafe {
                 initialize([wasm_input(1), wasm_input(1), wasm_input(1), wasm_input(1)].to_vec())
             }
+
+            let trace = unsafe {wasm_trace_size()};
+            zkwasm_rust_sdk::dbg!("trace after initialize: {}\n", trace);
 
             for _ in 0..tx_length {
                 let mut params = Vec::with_capacity(24);
@@ -268,10 +272,11 @@ macro_rules! create_zkwasm_apis {
                 }
                 verify_tx_signature(params.clone());
                 handle_tx(params);
+                let trace = unsafe {wasm_trace_size()};
+                zkwasm_rust_sdk::dbg!("trace track: {}\n", trace);
             }
 
 
-            zkwasm_rust_sdk::dbg!("check preempt: {}", {preempt()});
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
             let bytes = $S::flush_settlement();
