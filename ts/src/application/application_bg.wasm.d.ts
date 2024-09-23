@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export function handle_tx(a: number, b: number): number;
 export function get_state(a: number, b: number, c: number): void;
+export function snapshot(a: number): void;
 export function decode_error(a: number, b: number): void;
 export function get_config(a: number): void;
 export function autotick(): number;

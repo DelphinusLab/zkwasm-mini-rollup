@@ -83,6 +83,8 @@ let merkle_root = new BigUint64Array([
     2839580074036780766n,
   ]);
 
+let snapshot = JSON.parse("{}");
+
 function randByte()  {
   return Math.floor(Math.random() * 0xff);
 }
@@ -109,6 +111,7 @@ async function generateRandomSeed() {
 async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   console.log("installing transaction into rollup ...");
   transactions_witness.push(tx);
+  snapshot = JSON.parse(application.snapshot());
   console.log("transaction installed, rollup pool length is:", transactions_witness.length);
   if (application.preempt()) {
   //if (transactions_witness.length == TRANSACTION_NUMBER) {
@@ -352,9 +355,14 @@ async function main() {
       let u64array = new BigUint64Array(4);
       u64array.set(pkx);
       let jstr = application.get_state(pkx);
+      let player = JSON.parse(jstr);
+      let result = {
+        player: player,
+        state: snapshot
+      }
       res.status(201).send({
         success: true,
-        data: jstr
+        data: JSON.stringify(result),
       });
 
     } catch (error) {

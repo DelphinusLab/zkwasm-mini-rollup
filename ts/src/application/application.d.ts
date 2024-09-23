@@ -11,6 +11,10 @@ export function handle_tx(params: BigUint64Array): number;
 */
 export function get_state(pid: BigUint64Array): string;
 /**
+* @returns {string}
+*/
+export function snapshot(): string;
+/**
 * @param {number} e
 * @returns {string}
 */

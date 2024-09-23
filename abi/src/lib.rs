@@ -207,6 +207,11 @@ macro_rules! create_zkwasm_apis {
         }
 
         #[wasm_bindgen]
+        pub fn snapshot() -> String {
+            $S::snapshot()
+        }
+
+        #[wasm_bindgen]
         pub fn decode_error(e: u32) -> String {
             $T::decode_error(e).to_string()
         }

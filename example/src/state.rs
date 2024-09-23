@@ -116,8 +116,12 @@ impl State {
         return 0;
     }
 
-    pub fn get_state(_pid: Vec<u64>) -> String {
+    pub fn snapshot() -> String {
         serde_json::to_string(unsafe {&STATE}).unwrap()
+    }
+
+    pub fn get_state(_pid: Vec<u64>) -> String {
+        "anonymous".to_string()
     }
 
     pub fn store(&self) {
