@@ -1,10 +1,13 @@
 import BN from "bn.js";
 import { ethers } from "ethers";
-import { ServiceHelper, get_contract_addr, modelBundle, get_user_private_account } from "./config.js";
+import { ServiceHelper, get_contract_addr, get_image_md5, modelBundle, get_user_private_account } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
 import { U8ArrayUtil, NumberUtil } from './lib.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 let mongodbUri = "localhost";
 
@@ -12,8 +15,11 @@ if (process.env.URI) {
   mongodbUri = process.env.URI; //"mongodb:27017";
 }
 
-// Replace with your network configuration
-const provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+let provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+if (process.env.RPC_PROVIDER) {
+ provider = new ethers.JsonRpcProvider(process.env.RPC_PROVIDER);
+}
+
 const signer = new ethers.Wallet(get_user_private_account(), provider);
 //
 const constants = {
@@ -38,8 +44,8 @@ async function getMerkle(): Promise<String>{
   console.log("Old Merkle Root(string):", oldRootBeString);
   return oldRootBeString;
 }
-
-mongoose.connect(`mongodb://${mongodbUri}/job-tracker`, {
+let imageMD5Prefix = process.env.IMAGE || "";
+mongoose.connect(`mongodb://${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
 });
@@ -54,14 +60,21 @@ async function getTask(taskid: string) {
           tasktype: "Prove",
           taskstatus: "Done",
           user_address: null,
-          md5: null,
+          md5: get_image_md5(),
           total: 1,
         };
 
   const response: PaginationResult<Task[]> = await ServiceHelper.loadTasks(
     queryParams
   );
+
   return response.data[0];
+}
+
+async function getTaskWithTimeout(taskId: string, timeout: number): Promise<any> {
+ return Promise.race([getTask(taskId), new Promise((_, reject) =>
+     setTimeout(() => reject(new Error('load proof task Timeout exceeded')), timeout))
+	]);
 }
 
 async function trySettle() {
@@ -72,8 +85,11 @@ async function trySettle() {
     let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
     if (record) {
       let taskId = record.taskId;
-      let data0 = await getTask(taskId);
-      //console.log(data0);
+      let data0 = await getTaskWithTimeout(taskId, 5000);
+
+      if (data0.proof.length == 0) {
+        throw new Error("proving not complete!");
+      }
       let shadowInstances = data0.shadow_instances;
       let batchInstances = data0.batch_instances;
 
@@ -116,5 +132,5 @@ async function trySettle() {
 
 while (true) {
   await trySettle();
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise(resolve => setTimeout(resolve, 10000));
 }
