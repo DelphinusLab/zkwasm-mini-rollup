@@ -41,6 +41,14 @@ export const get_user_private_account = () => {
   }
 }
 
+export const get_settle_private_account = () => {
+  if (process.env.SETTLER_PRIVATE_ACCOUNT) {
+    return process.env.SETTLER_PRIVATE_ACCOUNT;
+  } else {
+    return "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da8194995a";
+  }
+}
+
 export const jobSchema = new mongoose.Schema({
     jobId: {
           type: String,

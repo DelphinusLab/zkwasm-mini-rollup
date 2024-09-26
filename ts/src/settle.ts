@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { ethers } from "ethers";
-import { ServiceHelper, get_contract_addr, get_image_md5, modelBundle, get_user_private_account } from "./config.js";
+import { ServiceHelper, get_contract_addr, get_image_md5, modelBundle, get_settle_private_account } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
@@ -20,7 +20,7 @@ if (process.env.RPC_PROVIDER) {
  provider = new ethers.JsonRpcProvider(process.env.RPC_PROVIDER);
 }
 
-const signer = new ethers.Wallet(get_user_private_account(), provider);
+const signer = new ethers.Wallet(get_settle_private_account(), provider);
 //
 const constants = {
   proxyAddress: get_contract_addr(),
