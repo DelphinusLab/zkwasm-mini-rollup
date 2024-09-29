@@ -13,17 +13,159 @@ The trustless part is the transaction handling part whose execution is proved us
 2. The bundled logic:
 ![alt text](./images/minirollup-bundled.png)
 
+## Verifiable Application Template
+
+In this repo, we provide a template in `abi/src/lib.rs` which implements the bundled logic within the function `zkmain`. The temlate has the following pseudo code structure:
+```
+#[wasm_bindgen]
+    pub fn zkmain() {
+        use zkwasm_rust_sdk::wasm_input;
+        use zkwasm_rust_sdk::wasm_output;
+        use zkwasm_rust_sdk::wasm_trace_size;
+        let merkle_ref = unsafe {&mut MERKLE_MAP};
+        let tx_length = unsafe {wasm_input(0)};
+
+        unsafe {
+            initialize([wasm_input(1), wasm_input(1), wasm_input(1), wasm_input(1)].to_vec())
+        }
+
+        let trace = unsafe {wasm_trace_size()};
+        zkwasm_rust_sdk::dbg!("trace after initialize: {}\n", trace);
+
+        for _ in 0..tx_length {
+            let mut params = Vec::with_capacity(24);
+            for _ in 0..24 {
+                params.push(unsafe {wasm_input(0)});
+            }
+            verify_tx_signature(params.clone());
+            handle_tx(params);
+            let trace = unsafe {wasm_trace_size()};
+            zkwasm_rust_sdk::dbg!("trace track: {}\n", trace);
+        }
 
 
-## Rest service ABI convention
+        unsafe { zkwasm_rust_sdk::require(preempt()) };
+
+        let bytes = $S::flush_settlement();
+        let txdata = conclude_tx_info(bytes.as_slice());
+
+        let root = merkle_ref.merkle.root;
+        unsafe {
+            wasm_output(root[0]);
+            wasm_output(root[1]);
+            wasm_output(root[2]);
+            wasm_output(root[3]);
+        }
+
+        unsafe {
+            wasm_output(txdata[0]);
+            wasm_output(txdata[1]);
+            wasm_output(txdata[2]);
+            wasm_output(txdata[3]);
+        }
+    }
+}
+```
+At the beginning of each chunk, the state is initialized. After the initialization, an array of transactions are handled until the state reaches its preemption point. After the preemption point is reached, the state is stored and the bundle outputs the new merkle root which will be used for the following bundle. Based on this template, it remains to implementing a few APIs for the whole application to work as a rollup.
+
+## Rest service ABI convention:
 The convention between the sequencer (implemented in typescript) and the provable application contains three parts.
-1. The transaction handlers
-2. The state initializer and querying APIs
+1. The transaction APIs.
+2. The state initializer and querying APIs.
 3. The configuration APIs
 
-Once all related interfaces are defined, we use the following macro to generate the zkmain function which is supposed to run in the ZKWASM virtual machine (more details can be found in abi/src/lib.rs). After the WASM is compiled, it exposes a set of interfaces (verify_tx_signature, handle_tx, initialize, flush_settlement, etc) for the sequencer (A sketch of the sequencer can be found in ts/service.rs).
+In the template, `T` is the transaction trait, `S` is the state trait and `C` is the configuration trait.
+```
+macro_rules! create_zkwasm_apis {
+    ($T: ident, $S: ident, $C: ident) => {
+        ....
+    }
+}
+```
 
-The WASM is bootstrap by implementing ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementation of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
+### Transaction based API:
+```
+    #[wasm_bindgen]
+    pub fn handle_tx(params: Vec<u64>) -> u32 {
+        let user_address = [params[4], params[5], params[6], params[7]];
+        let command = [params[0], params[1], params[2], params[3]];
+        let sig_r = [params[20], params[21], params[22], params[23]];
+        let transaction = $T::decode(command);
+        transaction.process(&user_address, &sig_r)
+    }
+
+    #[wasm_bindgen]
+    pub fn decode_error(e: u32) -> String {
+        $T::decode_error(e).to_string()
+    }
+```
+
+### State based API:
+```
+    #[wasm_bindgen]
+    pub fn get_state(pid: Vec<u64>) -> String {
+        $S::get_state(pid)
+    }
+
+    #[wasm_bindgen]
+    pub fn snapshot() -> String {
+        $S::snapshot()
+    }
+
+
+
+    #[wasm_bindgen]
+    pub fn preempt() -> bool{
+        $S::preempt()
+    }
+
+
+    #[wasm_bindgen]
+    pub fn randSeed() -> u64 {
+        $S::rand_seed()
+    }
+
+
+    #[wasm_bindgen]
+    pub fn initialize(root: Vec<u64>) {
+        unsafe {
+            let merkle = zkwasm_rust_sdk::Merkle::load([root[0], root[1], root[2], root[3]]);
+            MERKLE_MAP.merkle = merkle;
+            $S::initialize();
+        };
+    }
+
+    #[wasm_bindgen]
+    pub fn finalize() -> Vec<u8> {
+        unsafe {
+            $S::flush_settlement()
+        }
+    }
+```
+
+### Config based API:
+
+```
+    #[wasm_bindgen]
+    pub fn autotick() -> bool{
+        $C::autotick()
+    }
+
+    #[wasm_bindgen]
+    pub fn get_config() -> String {
+        $C::to_json_string()
+    }
+
+```
+
+## Start your rollup application
+
+To start the rest server we can simply do:
+```
+node service.js
+```
+
+`service.js` bootstraps WASM by implementing ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementation of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
 ```
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
@@ -38,6 +180,86 @@ await (initApplication as any)(bootstrap);
 ......
 
 ```
+
+Once the WASM application is initialized, we start the minirollup PRC server using nodejs express. It contains three endpoints.
+1. query: This endpoint allows user to query their current state and the game public state:
+```
+app.post('/query', async (req, res) => {
+    const value = req.body;
+    if (!value) {
+        return res.status(400).send('Value is required');
+    }
+    try {
+        const pkx = new LeHexBN(value.pkx).toU64Array();
+        let u64array = new BigUint64Array(4);
+        u64array.set(pkx);
+        let jstr = application.get_state(pkx);   // here we use the get_state function from application wasm binary
+        let player = JSON.parse(jstr);
+        let result = {
+            player: player,
+            state: snapshot
+        };
+        res.status(201).send({
+            success: true,
+            data: JSON.stringify(result),
+        });
+    }
+    catch (error) {
+        res.status(500).send('Get Status Error');
+    }
+});
+```
+
+2. send: An endpoint handles user transactions.
+```
+app.post('/send', async (req, res) => {
+    const value = req.body;
+    if (!value) {
+        return res.status(400).send('Value is required');
+    }
+    try {
+        const msg = new LeHexBN(value.msg);
+        const pkx = new LeHexBN(value.pkx);
+        const pky = new LeHexBN(value.pky);
+        const sigx = new LeHexBN(value.sigx);
+        const sigy = new LeHexBN(value.sigy);
+        const sigr = new LeHexBN(value.sigr);
+        if (verify_sign(msg, pkx, pky, sigx, sigy, sigr) == false) {
+            res.status(500).send('Invalid signature');
+        }
+        else {
+            const job = await myQueue.add('transaction', { value });
+            res.status(201).send({
+                success: true,
+                jobid: job.id
+            });
+        }
+    }
+    catch (error) {
+        res.status(500).send('Failed to add job to the queue');
+    }
+});
+
+```
+This endpoint will add transactions into the global job sequencer where each job is handled via the exposed wasm function `handle_tx`.
+
+
+3. config: An endpoint that returns all static configuration of the application.
+```
+    app.post('/config', async (req, res) => {
+        try {
+            let jstr = application.get_config();
+            res.status(201).send({
+                success: true,
+                data: jstr
+            });
+        }
+        catch (error) {
+            res.status(500).send('Get Status Error');
+        }
+    });
+```
+
 
 ## Quick Start of an example application
 1. Start Redis & mongodb
