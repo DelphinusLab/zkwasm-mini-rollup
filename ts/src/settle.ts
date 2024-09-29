@@ -35,6 +35,21 @@ function convertToBigUint64Array(combinedRoot: bigint): BigUint64Array {
  }
 
  return result;
+ }
+
+export async function getMerkleArray(): Promise<BigUint64Array>{
+  // Connect to the Proxy contract
+  const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
+  // Fetch the proxy information
+  let proxyInfo = await proxy.getProxyInfo();
+  console.log("Proxy Info:", proxyInfo);
+  // Extract the old Merkle root
+  const oldRoot = proxyInfo.merkle_root;
+  console.log("Type of oldRoot:", typeof oldRoot);
+  console.log("Old Merkle Root:", oldRoot);
+  console.log("Settle:Old Merkle Root in u64:",convertToBigUint64Array(oldRoot));
+
+  return convertToBigUint64Array(oldRoot);
 }
 
 async function getMerkle(): Promise<String>{
@@ -141,8 +156,17 @@ async function trySettle() {
 }
 
 // start monitoring and settle
+async function main() {
+ while (true) {
+     await trySettle();
+     await new Promise(resolve => setTimeout(resolve, 10000));
+ }
+}
 
-while (true) {
-  await trySettle();
-  await new Promise(resolve => setTimeout(resolve, 10000));
+// Check if this module is being run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    console.log("Running settle.js directly");
+    main().catch(console.error);
+} else {
+    console.log("settle.js is being imported as a module");
 }
