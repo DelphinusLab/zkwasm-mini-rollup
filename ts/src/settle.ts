@@ -26,6 +26,17 @@ const constants = {
   proxyAddress: get_contract_addr(),
 };
 
+function convertToBigUint64Array(combinedRoot: bigint): BigUint64Array {
+ const result = new BigUint64Array(4);
+
+ for (let i = 3; i >= 0; i--) {
+    result[i] = combinedRoot & BigInt(2n ** 64n - 1n);
+    combinedRoot = combinedRoot >> 64n;
+ }
+
+ return result;
+}
+
 async function getMerkle(): Promise<String>{
   // Connect to the Proxy contract
   const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
@@ -36,6 +47,7 @@ async function getMerkle(): Promise<String>{
   const oldRoot = proxyInfo.merkle_root;
   console.log("Type of oldRoot:", typeof oldRoot);
   console.log("Old Merkle Root:", oldRoot);
+  console.log("Settle:Old Merkle Root in u64:",convertToBigUint64Array(oldRoot));
 
   let bnStr = oldRoot.toString(10);
   let bn = new BN(bnStr, 10);
