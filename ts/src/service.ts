@@ -21,6 +21,7 @@ dotenv.config();
 
 let deploymode = false;
 let remote = false;
+let migrate = false;
 let mongodbUri = "mongodb://localhost";
 
 if (process.env.DEPLOY) {
@@ -29,6 +30,10 @@ if (process.env.DEPLOY) {
 
 if (process.env.REMOTE) {
   remote = true;
+}
+
+if (process.env.MIGRATE) {
+  migrate = true;
 }
 
 if (process.env.URI) {
@@ -190,6 +195,12 @@ async function main() {
 
   console.log("check merkel database connection ...");
   test_merkle_db_service();
+
+  if (migrate) {
+    if (remote) {throw Error("Can't migrate in remote mode");}
+    merkle_root = await getMerkleArray();
+    console.log("Migrate: updated merkle root", merkle_root);
+  }
   //initialize merkle_root based on the latest task
   if (remote) {
     let task = await get_latest_proof();
