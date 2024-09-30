@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let mongodbUri = "localhost";
+let mongodbUri = "mongodb://localhost";
 
 if (process.env.URI) {
   mongodbUri = process.env.URI; //"mongodb:27017";

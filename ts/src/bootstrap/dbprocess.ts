@@ -1,5 +1,8 @@
 import axios from 'axios';
 let url = 'http://127.0.0.1:3030';
+if (process.env.MERKLE_SERVER) {
+  url = process.env.MERKLE_SERVER;
+}
 
 export class MerkleServiceRpc {
   private baseUrl: string;
