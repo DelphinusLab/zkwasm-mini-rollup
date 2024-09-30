@@ -23,6 +23,7 @@ let deploymode = false;
 let remote = false;
 let migrate = false;
 let mongodbUri = "mongodb://localhost";
+let redisHost ;
 
 if (process.env.DEPLOY) {
   deploymode = true;
@@ -50,6 +51,11 @@ const host = (() => {
   }
 })();
 
+redisHost = host;
+if (process.env.REDISHOST) {
+  redisHost = process.env.REDISHOST;
+}
+
 let imageMD5Prefix = process.env.IMAGE || "";
 mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
@@ -64,11 +70,11 @@ db.once('open', () => {
 });
 
 
-console.log("redis server:", host);
+console.log("redis server:", redisHost);
 
 const connection = new IORedis(
     {
-        host: host,  // Your Redis server host
+        host: redisHost,  // Your Redis server host
         port: 6379,        // Your Redis server port
         reconnectOnError: (err) => {
           console.log("reconnect on error", err);
