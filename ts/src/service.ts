@@ -51,13 +51,14 @@ const host = (() => {
 })();
 
 let imageMD5Prefix = process.env.IMAGE || "";
-mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
+// mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
+// });
+
+const db = mongoose.createConnection(`${mongodbUri}/${imageMD5Prefix}_job-tracker`,{
+  // useNewUrlParser: true
 });
-
-const db = mongoose.connection;
-
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', () => {
     console.log('Connected to MongoDB');

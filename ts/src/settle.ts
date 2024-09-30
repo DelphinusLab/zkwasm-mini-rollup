@@ -72,12 +72,14 @@ async function getMerkle(): Promise<String>{
   return oldRootBeString;
 }
 let imageMD5Prefix = process.env.IMAGE || "";
-mongoose.connect(`mongodb://${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
+// mongoose.connect(`mongodb://${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
-});
+// });
 
-const db = mongoose.connection;
+const db = mongoose.createConnection(`${mongodbUri}/${imageMD5Prefix}_job-tracker`,{
+  // useNewUrlParser: true
+});
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {console.log("Connected to the database")});
 
