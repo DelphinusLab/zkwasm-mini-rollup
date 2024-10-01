@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let mongodbUri = "localhost";
+let mongodbUri = "mongodb://localhost";
 
 if (process.env.URI) {
   mongodbUri = process.env.URI; //"mongodb:27017";
@@ -72,7 +72,7 @@ async function getMerkle(): Promise<String>{
   return oldRootBeString;
 }
 let imageMD5Prefix = process.env.IMAGE || "";
-mongoose.connect(`mongodb://${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
+mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
 });
