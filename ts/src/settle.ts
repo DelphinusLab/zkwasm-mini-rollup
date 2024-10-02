@@ -112,7 +112,7 @@ async function trySettle() {
     let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
     if (record) {
       let taskId = record.taskId;
-      let data0 = await getTaskWithTimeout(taskId, 5000);
+      let data0 = await getTaskWithTimeout(taskId, 20000);
 
       if (data0.proof.length == 0) {
         throw new Error("proving not complete!");
@@ -159,7 +159,7 @@ async function trySettle() {
 async function main() {
  while (true) {
      await trySettle();
-     await new Promise(resolve => setTimeout(resolve, 10000));
+     await new Promise(resolve => setTimeout(resolve, 60000));
  }
 }
 
