@@ -291,6 +291,9 @@ async function main() {
           throw Error(errorMsg)
         }
         console.log("done");
+        const pkx = new LeHexBN(job.data.value.pkx).toU64Array();
+        return application.get_state(pkx);
+
       } catch (e) {
         throw e
       }
