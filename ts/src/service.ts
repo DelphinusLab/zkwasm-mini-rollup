@@ -292,8 +292,13 @@ async function main() {
         }
         console.log("done");
         const pkx = new LeHexBN(job.data.value.pkx).toU64Array();
-        return application.get_state(pkx);
-
+        let jstr = application.get_state(pkx);
+        let player = JSON.parse(jstr);
+        let result = {
+          player: player,
+          state: snapshot
+        };
+        return result
       } catch (e) {
         throw e
       }
