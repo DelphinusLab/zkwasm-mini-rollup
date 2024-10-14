@@ -153,7 +153,7 @@ fn main() -> std::io::Result<()> {
                     .finish(rpc.into_web_service()),
             )
         })
-        .bind("127.0.0.1:3030")?
+        .bind("0.0.0.0:3030")?
         .run(),
     )
 }
