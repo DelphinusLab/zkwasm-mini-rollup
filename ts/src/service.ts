@@ -6,7 +6,7 @@ import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
-import { submitProofWithRetry, TxWitness, get_latest_proof } from "./prover.js";
+import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { SERVER_PRI_KEY, modelBundle, modelJob, modelRand, get_service_port } from "./config.js";
 import { getMerkleArray } from "./settle.js";
@@ -209,6 +209,11 @@ async function main() {
   }
   //initialize merkle_root based on the latest task
   if (remote) {
+    const hasTasks = await has_uncomplete_task();
+    if (hasTasks) {
+     console.log("There are uncompleted tasks. try later...");
+     process.exit(1);
+    }
     let task = await get_latest_proof();
     console.log("latest task", task?.instances);
     if (task) {

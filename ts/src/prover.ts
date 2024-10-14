@@ -120,3 +120,25 @@ export async function get_latest_proof(): Promise<Task | null> {
     return tasks.data[0];
   }
 }
+
+export async function has_uncomplete_task(): Promise<boolean> {
+  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  let query = {
+    md5: get_image_md5(),
+    user_address: null,
+    id: null,
+    tasktype: "Prove",
+    taskstatus: "Pending",
+    total: 1,
+  };
+  let tasks = await helper.loadTaskList(query);
+
+  // If no Pending tasks, check for Processing tasks
+  if (tasks.data.length === 0) {
+    query.taskstatus = "Processing";
+    tasks = await helper.loadTaskList(query);
+  }
+
+  // Return true if there are any uncompleted tasks, false otherwise
+  return tasks.data.length > 0;
+}
