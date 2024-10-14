@@ -8,7 +8,7 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submitProofWithRetry, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
-import { TRANSACTION_NUMBER, SERVER_PRI_KEY, modelBundle, modelJob, modelRand } from "./config.js";
+import { SERVER_PRI_KEY, modelBundle, modelJob, modelRand, get_service_port } from "./config.js";
 import { getMerkleArray } from "./settle.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
@@ -128,7 +128,6 @@ async function install_transactions(tx: TxWitness, jobid: string | undefined) {
   snapshot = JSON.parse(application.snapshot());
   console.log("transaction installed, rollup pool length is:", transactions_witness.length);
   if (application.preempt()) {
-  //if (transactions_witness.length == TRANSACTION_NUMBER) {
     console.log("rollup reach its preemption point, generating proof:");
     let txdata = application.finalize();
     console.log("txdata is:", txdata);
@@ -309,7 +308,7 @@ async function main() {
 
   console.log("start express server");
   const app = express();
-  const PORT = 3000;
+  const port = get_service_port();
 
   app.use(express.json());
   app.use(cors());
@@ -424,8 +423,8 @@ async function main() {
   });
 
   // Start the server
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  app.listen(port, () => {
+    console.log(`Server is running on http://0.0.0.0:${port}`);
   });
 }
 

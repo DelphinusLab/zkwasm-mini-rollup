@@ -4,10 +4,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const TRANSACTION_NUMBER = 10; // transactions for each rollup
 export const SERVER_PRI_KEY = "1234567";
 
 export const endpoint = "https://rpc.zkwasmhub.com:8090";
+
+export const get_service_port = () => {
+  if (process.env.PORT) {
+    return process.env.PORT;
+  } else {
+    return 3000;
+  }
+}
 
 export const get_image_md5 = () => {
   if (process.env.IMAGE) {
