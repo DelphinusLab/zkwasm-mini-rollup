@@ -111,6 +111,7 @@ export async function get_latest_proof(): Promise<Task | null> {
     id: null,
     tasktype: "Prove",
     taskstatus: "Done",
+    total: 1,
   };
   let tasks = await helper.loadTasks(query);
   if (tasks.data.length == 0) {

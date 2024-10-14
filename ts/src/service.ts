@@ -57,6 +57,7 @@ if (process.env.REDISHOST) {
 }
 
 let imageMD5Prefix = process.env.IMAGE || "";
+
 mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,

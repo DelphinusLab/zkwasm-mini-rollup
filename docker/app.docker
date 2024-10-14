@@ -1,0 +1,22 @@
+# Use the official Rust image from the Docker Hub
+FROM rust:latest
+# Install Node.js 18.6
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs=18.6.0-1nodesource1
+
+# Install Git
+RUN apt-get update && apt-get install -y git
+
+COPY ./ts ./ts
+COPY ./start.sh ./start.sh
+
+#WORKDIR /usr/src/ts
+#ENV MERKLE_SERVER=zkwasm-server:3030
+
+EXPOSE 3000
+
+# Run the application
+CMD ["sh", "start.sh"]
+
