@@ -29,5 +29,4 @@ WORKDIR /usr/src/zkwasm-typescript-mini-server/dbservice
 # Build the application
 RUN cargo build --release
 
-# Run the application
-CMD ["./target/release/csm_service --uri $URI"]
+WORKDIR /usr/src/zkwasm-typescript-mini-server

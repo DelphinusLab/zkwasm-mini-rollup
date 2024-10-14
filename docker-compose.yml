@@ -1,28 +1,31 @@
 services:
+    merkleservice:
+        image: sinka2022/zkwasm-merkleservice:latest # the zkwasm merkle db service
+        environment:
+            - URI=mongodb://mongodb:27017
+        command: ["./target/release/csm_service", "--uri", "mongodb://mongodb:27017"]
+        ports:
+            - "3030:3030"  # Map MongoDB port
     redis:
         image: redis:latest  # Use the latest Redis image from Docker Hub
-        networks:
-            - my-network
+        ports:
+            - "6379:6379"  # Map MongoDB port
+          #  networks:
+          #  - my-network
 
     mongodb:
         image: mongo:latest  # Use the latest MongoDB image from Docker Hub
         volumes:
             - mongo-data:/data/db  # Mount volume for MongoDB data persistence
-        networks:
-            - my-network
-
-    zkwasmserver:
-        image: zkwasm-server
+          #  networks:
+          #  - my-network
         ports:
-            - "8085:3000"
-        environment:
-            - URI=mongodb://mongodb:27017
-        networks:
-            - my-network
+            - "27017:27017"  # Map MongoDB port
 
 volumes:
     mongo-data:  # Declare the volume for MongoDB
 
-networks:
-    my-network:
-        driver: bridge
+#networks:
+#    my-network:
+#        driver: bridge
+
