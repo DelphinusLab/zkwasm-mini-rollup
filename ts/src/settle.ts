@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { ethers } from "ethers";
-import { ServiceHelper, get_contract_addr, get_image_md5, modelBundle, get_settle_private_account } from "./config.js";
+import { ServiceHelper, get_mongoose_db, get_contract_addr, get_image_md5, modelBundle, get_settle_private_account } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
@@ -8,12 +8,6 @@ import { U8ArrayUtil, NumberUtil } from './lib.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
-
-let mongodbUri = "mongodb://localhost";
-
-if (process.env.URI) {
-  mongodbUri = process.env.URI; //"mongodb:27017";
-}
 
 let provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
 if (process.env.RPC_PROVIDER) {
@@ -71,8 +65,8 @@ async function getMerkle(): Promise<String>{
   console.log("Old Merkle Root(string):", oldRootBeString);
   return oldRootBeString;
 }
-let imageMD5Prefix = process.env.IMAGE || "";
-mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
+
+mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
 });

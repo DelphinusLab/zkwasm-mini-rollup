@@ -27,7 +27,7 @@
   "main": "src/index.js",
   "scripts": {
     "server": "node src/service.js",
-    "docker-server": "node src/service.js redis",
+    "settle": "node src/settle.js",
     "build": "npx tsc",
     "test": "jest",
     "postinstall": "npm run build"
