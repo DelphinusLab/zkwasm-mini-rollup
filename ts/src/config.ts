@@ -8,6 +8,20 @@ export const SERVER_PRI_KEY = "1234567";
 
 export const endpoint = "https://rpc.zkwasmhub.com:8090";
 
+export const get_mongodb_uri = () => {
+  if (process.env.URI) {
+    return process.env.URI;
+  } else {
+    return "mongodb://localhost";
+  }
+}
+
+export const get_mongoose_db = () => {
+  let mongodbUri = get_mongodb_uri();
+  let imageMD5Prefix = get_image_md5();
+  return `${mongodbUri}/${imageMD5Prefix}_job-tracker`
+}
+
 export const get_service_port = () => {
   if (process.env.PORT) {
     return process.env.PORT;
@@ -20,7 +34,7 @@ export const get_image_md5 = () => {
   if (process.env.IMAGE) {
     return process.env.IMAGE;
   } else {
-    return "77B332087A32A232314C309C5760DA44";
+    return "unspecified";
   }
 }
 

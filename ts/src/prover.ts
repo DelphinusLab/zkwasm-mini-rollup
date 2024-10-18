@@ -88,6 +88,10 @@ function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
     return Promise.race([promise, timeoutPromise]);
 }
 
+function wait(ms: number): Promise<void> {
+      return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   for (let i=0; i<10; i++) {
     try {
@@ -96,6 +100,7 @@ export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<Tx
     } catch (e) {
       console.log("submit proof error:", e);
       console.log("retrying ...");
+      wait(4000);
       continue;
     }
   }

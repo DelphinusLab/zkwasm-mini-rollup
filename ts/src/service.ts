@@ -8,7 +8,7 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
-import { SERVER_PRI_KEY, modelBundle, modelJob, modelRand, get_service_port } from "./config.js";
+import { SERVER_PRI_KEY, get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port } from "./config.js";
 import { getMerkleArray } from "./settle.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
@@ -22,8 +22,7 @@ dotenv.config();
 let deploymode = false;
 let remote = false;
 let migrate = false;
-let mongodbUri = "mongodb://localhost";
-let redisHost ;
+let redisHost = 'localhost';
 
 if (process.env.DEPLOY) {
   deploymode = true;
@@ -37,28 +36,11 @@ if (process.env.MIGRATE) {
   migrate = true;
 }
 
-if (process.env.URI) {
-  mongodbUri = process.env.URI; //"mongodb:27017";
-}
-
-const args = process.argv.slice(2);
-
-const host = (() => {
-  if (args.length > 0) {
-    return args[0];
-  } else {
-    return 'localhost'
-  }
-})();
-
-redisHost = host;
 if (process.env.REDISHOST) {
   redisHost = process.env.REDISHOST;
 }
 
-let imageMD5Prefix = process.env.IMAGE || "";
-
-mongoose.connect(`${mongodbUri}/${imageMD5Prefix}_job-tracker`, {
+mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
 });
