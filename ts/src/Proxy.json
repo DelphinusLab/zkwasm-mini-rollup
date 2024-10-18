@@ -557,23 +557,6 @@
           "internalType": "uint256[][]",
           "name": "instances",
           "type": "uint256[][]"
-        },
-        {
-          "components": [
-            {
-              "internalType": "uint256",
-              "name": "rid",
-              "type": "uint256"
-            },
-            {
-              "internalType": "uint256",
-              "name": "batch_size",
-              "type": "uint256"
-            }
-          ],
-          "internalType": "struct RidInfo",
-          "name": "ridInfo",
-          "type": "tuple"
         }
       ],
       "name": "verify",
