@@ -126,7 +126,6 @@ async function trySettle() {
       console.log("txData.length:", txData.length);
 
       const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
-      let proxyInfo = await proxy.getProxyInfo();
 
       const tx = await proxy.verify(
         txData,
@@ -134,7 +133,6 @@ async function trySettle() {
         verifyInstancesArr,
         auxArr,
         [instArr],
-        [proxyInfo.rid.toString(), "1"]
       );
       // wait for tx to be mined, can add no. of confirmations as arg
       const receipt = await tx.wait();
