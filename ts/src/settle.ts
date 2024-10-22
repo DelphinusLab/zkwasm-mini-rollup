@@ -5,6 +5,7 @@ import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
 import { U8ArrayUtil, NumberUtil } from './lib.js';
+import { submitRawProof} from "./prover.js";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -75,11 +76,11 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {console.log("Connected to the database")});
 
-async function getTask(taskid: string) {
+async function getTask(taskid: string, d_state: string|null) {
   const queryParams: QueryParams = {
           id: taskid,
           tasktype: "Prove",
-          taskstatus: "Done",
+          taskstatus: d_state,
           user_address: null,
           md5: get_image_md5(),
           total: 1,
@@ -93,7 +94,7 @@ async function getTask(taskid: string) {
 }
 
 async function getTaskWithTimeout(taskId: string, timeout: number): Promise<any> {
- return Promise.race([getTask(taskId), new Promise((_, reject) =>
+ return Promise.race([getTask(taskId, "Done"), new Promise((_, reject) =>
      setTimeout(() => reject(new Error('load proof task Timeout exceeded')), timeout))
 	]);
 }
@@ -108,8 +109,34 @@ async function trySettle() {
       let taskId = record.taskId;
       let data0 = await getTaskWithTimeout(taskId, 20000);
 
+      //check failed or just timeout
       if (data0.proof.length == 0) {
-        throw new Error("proving not complete!");
+        let data1 = await getTask(taskId, null);
+	if (data1.status === "Fail") {
+	   console.log("task failed with state:", taskId, data1.status, data1.input_context);
+	   //resubmit task with the data input
+	   try {
+	     let input_context =
+    Array.isArray(data1.input_context) &&
+    !(data1.input_context.length === 1 && data1.input_context[0] === 0)
+    ? new Uint8Array(data1.input_context)
+    : new Uint8Array(0);
+
+	     let new_taskId = await submitRawProof(data1.public_inputs, data1.private_inputs, input_context);
+	     console.log("old_taskid=:", taskId, "new_taskid=",new_taskId);
+
+
+	     record.taskId = new_taskId;
+	     await record.save();
+             //if succ, replace Bundle with the new taskId
+	   } catch(e) {
+              console.log("Error in handle failed taskId:", taskId);
+              process.exit(1);
+	   }
+	  throw new Error(`Task: ${taskId}, proving failed and replaced with new task.`);
+	}  else {
+          throw new Error(`Task: ${taskId}, proving not complete.`); //will restart settle
+	}
       }
       let shadowInstances = data0.shadow_instances;
       let batchInstances = data0.batch_instances;
@@ -142,7 +169,7 @@ async function trySettle() {
       console.log(`proof bundle ${merkleRoot} not found`);
     }
   } catch(e) {
-    console.log("get bundle error");
+    console.log("get bundle error(fail or not completed, will retry ");
     console.log(e);
   }
 }

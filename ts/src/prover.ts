@@ -24,6 +24,50 @@ export interface TxWitness {
   sigr: string,
 }
 
+export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Array<string>, txdata: Uint8Array) {
+  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+
+  let proofSubmitMode = ProofSubmitMode.Manual; // Auto
+  //let proofSubmitMode = ProofSubmitMode.Auto;
+  let info: ProvingParams = {
+    user_address: get_user_addr().toLowerCase(),
+    md5: get_image_md5(),
+    public_inputs: pub_inputs,
+    private_inputs: priv_inputs,
+    proof_submit_mode: proofSubmitMode, // default is manual
+    //input_context_type: InputContextType.Custom// default is image current
+  };
+
+  let tc = InputContextType.Custom;
+
+  ZkWasmUtil.validateContextBytes(txdata);
+  let bytesFile = await ZkWasmUtil.bytesToTempFile(txdata);
+
+  let info_context =  { ...info,
+    input_context: bytesFile,
+    input_context_md5: ZkWasmUtil.convertToMd5(txdata),
+    input_context_type: tc,
+  };
+
+  let msgString = ZkWasmUtil.createProvingSignMessage(info_context);
+
+  let signature: string;
+  try {
+    signature = await ZkWasmUtil.signMessage(msgString, get_user_private_account());
+  } catch (e: unknown) {
+    console.log("error signing message", e);
+    throw "Signing proving message failesd";
+  }
+
+  let task: WithSignature<ProvingParams> = {
+    ...info_context,
+    signature: signature,
+  };
+  let response = await helper.addProvingTask(task);
+  return response.id;
+  //console.log("response is ", response);
+}
+
 export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
