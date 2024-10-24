@@ -165,18 +165,17 @@ async function trySettle() {
 
 	     let new_taskId = await submitRawProof(data1.public_inputs, data1.private_inputs, input_context);
 	     console.log("old_taskid=:", taskId, "new_taskid=",new_taskId);
-
-
 	     record.taskId = new_taskId;
 	     await record.save();
-             //if succ, replace Bundle with the new taskId
 	   } catch(e) {
               console.log("Error in handle failed taskId:", taskId);
-              process.exit(1);
+	      return;
 	   }
-	  throw new Error(`Task: ${taskId}, proving failed and replaced with new task.`);
+	   console.log(`Task: ${taskId}, proving failed and replaced with new task.`);
+	   return;
 	}  else {
-          throw new Error(`Task: ${taskId}, proving not complete.`); //will restart settle
+          console.log(`Task: ${taskId}, proving hasn't complete...`); //will restart settle
+	  return;
 	}
       }
       let shadowInstances = data0.shadow_instances;
@@ -221,6 +220,7 @@ async function trySettle() {
               
               if (rItem.address !== sItem.address || rItem.amount !== sItem.amount) {
                   console.error(`Mismatch found: ${rItem.address}:${rItem.amount} ${sItem.address}:${sItem.amount}`);
+		  while(1); //This is serious error, while loop to trigger manual review.
 		  status = 'Fail';
 		  break;
 	      } else {
@@ -241,7 +241,7 @@ async function trySettle() {
       console.log(`proof bundle ${merkleRoot} not found`);
     }
   } catch(e) {
-    console.log("get bundle error(fail or not completed, will retry ");
+    console.log("Exception happen in trySettle()");
     console.log(e);
   }
 }

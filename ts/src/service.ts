@@ -191,11 +191,17 @@ async function main() {
   }
   //initialize merkle_root based on the latest task
   if (remote) {
-    const hasTasks = await has_uncomplete_task();
-    if (hasTasks) {
-     console.log("There are uncompleted tasks. try later...");
-     process.exit(1);
+    while (true) {
+        const hasTasks = await has_uncomplete_task();
+        if (hasTasks) {
+            console.log("remote = 1,There are uncompleted tasks. Trying again in 5 second...");
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Sleep for 5 second
+        } else {
+            console.log("remote = 1, No incomplete tasks. Proceeding...");
+            break; // Exit the loop if there are no incomplete tasks
+        }
     }
+
     let task = await get_latest_proof();
     console.log("latest task", task?.instances);
     if (task) {
