@@ -97,6 +97,18 @@ export const bundleSchema = new mongoose.Schema({
           type: String,
           default: '',
     },
+    withdrawArray: [{
+          address: { type: String, default:'' },
+          amount: { type: BigInt, default:'' },
+    }],
+    settleStatus: {
+        type: String,
+        default: 'waiting',  // wait-for settle, settle failed, settle done
+    },
+    settleTxHash: {
+        type: String,
+        default: '',
+    },
 });
 
 export const randSchema = new mongoose.Schema({

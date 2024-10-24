@@ -209,7 +209,10 @@ async function trySettle() {
 
       const r = decodeWithdraw(txData);
       const s = await getWithdrawEventParameters(proxy, receipt);
+      const withdrawArray = [];
+      let status = 'Done';
       if (r.length !== s.length) {
+	  status = 'Fail';
           console.error("Arrays have different lengths,",r,s);
       } else {
           for (let i = 0; i < r.length; i++) {
@@ -218,9 +221,21 @@ async function trySettle() {
               
               if (rItem.address !== sItem.address || rItem.amount !== sItem.amount) {
                   console.error(`Mismatch found: ${rItem.address}:${rItem.amount} ${sItem.address}:${sItem.amount}`);
-              }
+		  status = 'Fail';
+		  break;
+	      } else {
+	      // Assuming rItem is defined and has address and amount
+	      record.withdrawArray.push({
+	         address: rItem.address,
+	         amount: rItem.amount,
+	      });
+	      }
           }
       }
+      //update record
+      record.settleTxHash = tx.hash;
+      record.settleStatus = status;
+      await record.save();
       console.log("Receipt verified");
     } else {
       console.log(`proof bundle ${merkleRoot} not found`);
