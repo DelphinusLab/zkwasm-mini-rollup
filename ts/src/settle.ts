@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
 import { U8ArrayUtil, NumberUtil } from './lib.js';
 import { submitRawProof} from "./prover.js";
+import { decodeWithdraw} from "./convention.js";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -99,6 +100,46 @@ async function getTaskWithTimeout(taskId: string, timeout: number): Promise<any>
 	]);
 }
 
+export async function getWithdrawEventParameters(
+  proxy: ethers.Contract,
+  receipt: ethers.ContractTransactionReceipt
+): Promise<any[]> {
+  let r: any[] = [];
+  try {
+    // Define the event signature
+    const eventSignature = "event WithDraw(address l1token, address l1account, uint256 amount)";
+    const iface = new ethers.Interface([eventSignature]);
+
+    // Get the logs
+    const logs = receipt.logs; // Assuming you have the logs from the receipt
+    logs.forEach(log => {
+      // Decode the log
+      try {
+        const decoded = iface.parseLog(log);
+        if (decoded) {
+          const l1token = decoded.args.l1token;
+          const l1account = decoded.args.l1account;
+	  const amount = decoded.args.amount; //in Wei
+	  //console.log({ l1token, l1account, amount });
+          r.push({
+            token: l1token,
+            address: l1account,
+            amount: amount,
+          });
+        }
+      } catch (error) {
+        // Handle logs that don't match the event signature
+        console.error("Log does not match event signature:", error);
+      }
+    });
+
+  } catch (error) {
+    console.error('Error retrieving withdraw event parameters:', error);
+  }
+  return r;
+}
+
+
 async function trySettle() {
   let merkleRoot = await getMerkle();
   console.log("typeof :", typeof(merkleRoot[0]));
@@ -107,7 +148,7 @@ async function trySettle() {
     let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
     if (record) {
       let taskId = record.taskId;
-      let data0 = await getTaskWithTimeout(taskId, 20000);
+      let data0 = await getTaskWithTimeout(taskId, 60000);
 
       //check failed or just timeout
       if (data0.proof.length == 0) {
@@ -165,6 +206,22 @@ async function trySettle() {
       const receipt = await tx.wait();
       console.log("transaction:", tx.hash);
       console.log("receipt:", receipt);
+
+      const r = decodeWithdraw(txData);
+      const s = await getWithdrawEventParameters(proxy, receipt);
+      if (r.length !== s.length) {
+          console.error("Arrays have different lengths,",r,s);
+      } else {
+          for (let i = 0; i < r.length; i++) {
+              const rItem = r[i];
+              const sItem = s[i];
+              
+              if (rItem.address !== sItem.address || rItem.amount !== sItem.amount) {
+                  console.error(`Mismatch found: ${rItem.address}:${rItem.amount} ${sItem.address}:${sItem.amount}`);
+              }
+          }
+      }
+      console.log("Receipt verified");
     } else {
       console.log(`proof bundle ${merkleRoot} not found`);
     }

@@ -1,4 +1,6 @@
-import BN from "bn.js"
+import BN from "bn.js";
+import { ethers } from "ethers";
+
 function bytesToHex(bytes: Array<number>): string  {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -13,16 +15,20 @@ export function composeWithdrawParams(addressBN: BN, amount: bigint) {
 
 export function decodeWithdraw(txdata: Uint8Array) {
   let r = [];
-  for (let i = 0; i < txdata.length; i += 32) {
-    let extra = txdata.slice(i, 4);
-    let address = txdata.slice(i+4, 20);
-    let amount = txdata.slice(i+24, 8);
-    r.push({
-      op: extra[0],
-      index: extra[1],
-      address: bytesToHex(Array.from(address)),
-      amount: bytesToHex(Array.from(amount)),
-    });
+  if (txdata.length > 1) {
+    for (let i = 0; i < txdata.length; i += 32) {
+      let extra = txdata.slice(i, i+4);
+      let address = txdata.slice(i+4, i+24);
+      let amount = txdata.slice(i+24, i+32);
+      let amountInWei = ethers.parseEther(bytesToHex(Array.from(amount)));
+      r.push({
+        op: extra[0],
+        index: extra[1],
+        address: ethers.getAddress(bytesToHex(Array.from(address))),
+        amount: amountInWei,
+      });
+    }
+    console.log(r);
   }
   return r;
 }
