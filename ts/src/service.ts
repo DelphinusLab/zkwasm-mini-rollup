@@ -203,6 +203,7 @@ async function main() {
     }
 
     let task = await get_latest_proof();
+    console.log("latest taskId got from remote:", task?._id);
     console.log("latest task", task?.instances);
     if (task) {
       const instances = ZkWasmUtil.bytesToBN(task?.instances);
