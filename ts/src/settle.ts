@@ -153,7 +153,7 @@ async function trySettle() {
       //check failed or just timeout
       if (data0.proof.length == 0) {
         let data1 = await getTask(taskId, null);
-	if (data1.status === "Fail") {
+	if (data1.status === "Fail" || data1.status === "Unprovable") {
 	   console.log("task failed with state:", taskId, data1.status, data1.input_context);
 	   //resubmit task with the data input
 	   try {
@@ -169,13 +169,13 @@ async function trySettle() {
 	     await record.save();
 	   } catch(e) {
               console.log("Error in handle failed taskId:", taskId);
-	      return;
+	      return -1;
 	   }
 	   console.log(`Task: ${taskId}, proving failed and replaced with new task.`);
-	   return;
+	   return -1;
 	}  else {
           console.log(`Task: ${taskId}, proving hasn't complete...`); //will restart settle
-	  return;
+	  return -1;
 	}
       }
       let shadowInstances = data0.shadow_instances;
@@ -249,7 +249,11 @@ async function trySettle() {
 // start monitoring and settle
 async function main() {
  while (true) {
-     await trySettle();
+        try {
+            await trySettle();
+        } catch (error) {
+            console.error("Error during trySettle:", error);
+        }
      await new Promise(resolve => setTimeout(resolve, 60000));
  }
 }
