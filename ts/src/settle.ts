@@ -153,28 +153,12 @@ async function trySettle() {
       //check failed or just timeout
       if (data0.proof.length == 0) {
         let data1 = await getTask(taskId, null);
-	if (data1.status === "Fail" || data1.status === "Unprovable") {
-	   console.log("task failed with state:", taskId, data1.status, data1.input_context);
-	   //resubmit task with the data input
-	   try {
-	     let input_context =
-    Array.isArray(data1.input_context) &&
-    !(data1.input_context.length === 1 && data1.input_context[0] === 0)
-    ? new Uint8Array(data1.input_context)
-    : new Uint8Array(0);
-
-	     let new_taskId = await submitRawProof(data1.public_inputs, data1.private_inputs, input_context);
-	     console.log("old_taskid=:", taskId, "new_taskid=",new_taskId);
-	     record.taskId = new_taskId;
-	     await record.save();
-	   } catch(e) {
-              console.log("Error in handle failed taskId:", taskId);
-	      return -1;
-	   }
-	   console.log(`Task: ${taskId}, proving failed and replaced with new task.`);
+	if (data1.status === "DryRunFailed" || data1.status === "Unprovable") {
+	   console.log("Crash(Need manual review): task failed with state:", taskId, data1.status, data1.input_context);
+	   while(1); //This is serious error, while loop to trigger manual review.
 	   return -1;
 	}  else {
-          console.log(`Task: ${taskId}, proving hasn't complete...`); //will restart settle
+	  console.log(`Task: ${taskId}, ${data1.status}, retry settle later.`); //will restart settle
 	  return -1;
 	}
       }
@@ -219,6 +203,7 @@ async function trySettle() {
               const sItem = s[i];
               
               if (rItem.address !== sItem.address || rItem.amount !== sItem.amount) {
+	          console.log("Crash(Need manual review):");
                   console.error(`Mismatch found: ${rItem.address}:${rItem.amount} ${sItem.address}:${sItem.amount}`);
 		  while(1); //This is serious error, while loop to trigger manual review.
 		  status = 'Fail';
