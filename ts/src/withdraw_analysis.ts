@@ -6,10 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 mongoose.connect(get_mongoose_db(), {
-	//useNewUrlParser: true,
-	//    //useUnifiedTopology: true,
 });
-
 
 async function analyzeWithdrawals() {
 	try {
@@ -32,7 +29,7 @@ async function analyzeWithdrawals() {
 
 		console.log(`Total Withdrawals: ${totalWithdrawals}`);
 		console.log(`Unique Addresses: ${uniqueAddresses.size}`);
-		console.log(`Total Amount Withdrawn: ${totalAmount.toString()}`);
+		console.log(`Total Amount Withdrawn: ${totalAmount.toString()}`); //In wei
 	} catch (error) {
 		console.error('Error analyzing withdrawals:', error);
 	}
