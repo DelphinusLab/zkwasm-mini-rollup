@@ -139,12 +139,12 @@ function wait(ms: number): Promise<void> {
 export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
   for (let i=0; i<20; i++) {
     try {
-      let response = await timeout(submitProof(merkle, txs, txdata), 6000);
+      let response = await timeout(submitProof(merkle, txs, txdata), 10000);
       return response;
     } catch (e) {
       console.log("submit proof error:", e);
       console.log("retrying ...");
-      wait(6000);
+      wait(30000);
       continue;
     }
   }
