@@ -174,7 +174,7 @@ function signature_to_u64array(value: any) {
 }
 
 async function main() {
-  console.log("bootstraping ...");
+  console.log(`bootstrapping ... (deploymode: ${deploymode}, remote: ${remote}, migrate: ${migrate})`);
   await (initBootstrap as any)();
   //console.log(bootstrap);
   console.log("loading wasm application ...");
