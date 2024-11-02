@@ -22,18 +22,23 @@ async function getTask(taskid: string) {
   return response.data[0];
 }
 
-async function trySettle(taskId: string) {
+async function replay(taskId: string) {
   const data0 = await getTask(taskId);
   const public_inputs = data0.public_inputs;
   const private_inputs = data0.private_inputs;
-  fs.writeFileSync('output.txt', `$CLI --params $PARAMS dry-run --wasm $IMAGE \\\n`, 'utf-8');
+
+  fs.writeFileSync('run-image.sh', `CLI=$HOME/zkWasm/target/release/zkwasm-cli\n`);
+  fs.appendFileSync('run-image.sh', `PARAMS=$HOME/zkWasm/params\n`);
+  fs.appendFileSync('run-image.sh', `IMAGE=image.wasm\n`);
+  fs.appendFileSync('run-image.sh', `OUTPUT=output\n`);
+  fs.appendFileSync('run-image.sh', `$CLI --params $PARAMS test dry-run --wasm $IMAGE \\\n`, 'utf-8');
   for (const p of public_inputs) {
-    fs.appendFileSync('output.txt', `--public ${p} \\\n`, 'utf-8');
+    fs.appendFileSync('run-image.sh', `--public ${p} \\\n`, 'utf-8');
   }
   for (const p of private_inputs) {
-    fs.appendFileSync('output.txt', `--private ${p} \\\n`, 'utf-8');
+    fs.appendFileSync('run-image.sh', `--private ${p} \\\n`, 'utf-8');
   }
-  fs.appendFileSync('output.txt', `--output $OUTPUT`, 'utf-8');
+  fs.appendFileSync('run-image.sh', `--output $OUTPUT`, 'utf-8');
 }
 
-trySettle("66ee9d79d988d3dbdfd2b891");
+replay("66ee9d79d988d3dbdfd2b891");

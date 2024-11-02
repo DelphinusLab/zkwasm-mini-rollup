@@ -273,13 +273,19 @@ async function main() {
         application.verify_tx_signature(u64array);
         let error = application.handle_tx(u64array);
         if (error == 0) {
-          const jobRecord = new modelJob({
-                jobId: signature.sigx,
-                message: signature.message,
-                result: "succeed",
-              });
-          await jobRecord.save();
+          // make sure install transaction will succeed
           await install_transactions(signature, job.id);
+          try {
+            const jobRecord = new modelJob({
+              jobId: signature.sigx,
+              message: signature.message,
+              result: "succeed",
+            });
+            await jobRecord.save();
+          } catch (e) {
+            console.log("Error: store transaction job error");
+            throw e
+          }
         } else {
           let errorMsg = application.decode_error(error);
           throw Error(errorMsg)
