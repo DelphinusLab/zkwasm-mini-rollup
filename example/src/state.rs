@@ -1,140 +1,138 @@
-use crate::{game::RoundInfo, player::CombatPlayer, settlement::SettlementInfo};
+use crate::StorageData;
+use crate::MERKLE_MAP;
+use core::slice::IterMut;
+use zkwasm_rest_abi::Player;
 use serde::Serialize;
-use zkwasm_rest_abi::{WithdrawInfo, MERKLE_MAP};
-use zkwasm_rust_sdk::require;
-use crate::game::Game;
+use zkwasm_rest_convention::CommonState;
+use crate::settlement::SettlementInfo;
+use std::cell::{RefCell, Ref, RefMut};
 
-const TIMETICK: u32 = 0;
-const WITHDRAW: u32 = 1;
-const DEPOSIT: u32 = 2;
-
-pub struct Transaction {
-    pub command: u32,
-    pub data: [u64; 3],
+#[derive(Debug, Serialize)]
+pub struct PlayerData {
+    pub counter: u64,
 }
 
-const ERROR_PLAYER_NOT_FOUND: u32 = 1;
+impl Default for PlayerData {
+    fn default() -> Self {
+        Self {
+            counter: 0
+        }
+    }
+}
+
+impl StorageData for PlayerData {
+    fn from_data(u64data: &mut IterMut<u64>) -> Self {
+        let counter = *u64data.next().unwrap();
+        PlayerData {
+            counter
+        }
+    }
+    fn to_data(&self, data: &mut Vec<u64>) {
+        data.push(self.counter);
+    }
+}
+
+pub type HelloWorldPlayer = Player<PlayerData>;
+
+#[derive (Serialize, Default)]
+pub struct State {}
+
+pub struct SafeState (pub RefCell<State>);
+unsafe impl Sync for SafeState {}
+
+lazy_static::lazy_static! {
+    pub static ref GLOBAL_STATE: SafeState = SafeState(RefCell::new(State::new()));
+}
+
+
+impl CommonState for State {
+    type PlayerData = PlayerData;
+    fn get_global<'a>() -> Ref<'a, State> {
+        GLOBAL_STATE.0.borrow()
+    }
+    fn get_global_mut<'a>() -> RefMut<'a, State> {
+        GLOBAL_STATE.0.borrow_mut()
+    }
+}
+
+impl StorageData for State {
+    fn from_data(_u64data: &mut IterMut<u64>) -> Self {
+        State {}
+    }
+    fn to_data(&self, _data: &mut Vec<u64>) {
+    }
+}
+
+impl State {
+    pub fn flush_settlement() -> Vec<u8> {
+        let data = SettlementInfo::flush_settlement();
+        unsafe {STATE.store()};
+        data
+    }
+    pub fn new() -> Self {
+        State {}
+    }
+}
+
+pub static mut STATE: State  = State {};
+
+pub struct Transaction {
+    pub command: u64,
+    pub data: Vec<u64>,
+}
+
+const INSTALL_PLAYER: u64 = 1;
+const INC_COUNTER: u64 = 2;
+
+const ERROR_PLAYER_ALREADY_EXIST:u32 = 1;
+const ERROR_PLAYER_NOT_EXIST:u32 = 2;
 
 impl Transaction {
-    pub fn decode_error(e: u32) -> &'static str{
+    pub fn decode_error(e: u32) -> &'static str {
         match e {
-            ERROR_PLAYER_NOT_FOUND => "PlayerNotFound",
-            _ => "Unknown"
+           ERROR_PLAYER_NOT_EXIST => "PlayerNotExist",
+           ERROR_PLAYER_ALREADY_EXIST => "PlayerAlreadyExist",
+           _ => "Unknown"
         }
     }
-
     pub fn decode(params: [u64; 4]) -> Self {
-        let command = (params[0] & 0xffffffff) as u32;
+        let command = params[0] & 0xff;
+        //let nonce = params[0] >> 16;
+        let data = vec![params[1], params[2], params[3]]; // pkey[0], pkey[1], amount
         Transaction {
             command,
-            data: [params[1], params[2], params[3]]
+            data,
         }
     }
-
-    pub fn deposit(&self) -> u32 {
-        let pid = [self.data[0], self.data[1]];
-        let mut player = CombatPlayer::get_from_pid(&pid);
-        let balance = self.data[3];
-        match player.as_mut() {
+    pub fn install_player(&self, pkey: &[u64; 4]) -> u32 {
+        zkwasm_rust_sdk::dbg!("install \n");
+        let pid = HelloWorldPlayer::pkey_to_pid(pkey);
+        let player = HelloWorldPlayer::get_from_pid(&pid);
+        match player {
+            Some(_) => ERROR_PLAYER_ALREADY_EXIST,
             None => {
-                let player = CombatPlayer::new_from_pid(pid);
-                player.store();
-            },
-            Some(player) => {
-                player.data.balance += balance;
-                player.store();
-            }
-        }
-        0
-    }
-
-    pub fn withdraw(&self, pkey: &[u64; 4]) -> u32 {
-        let mut player = CombatPlayer::get_from_pid(&CombatPlayer::pkey_to_pid(pkey));
-        match player.as_mut() {
-            None => ERROR_PLAYER_NOT_FOUND,
-            Some(player) => {
-                let amount = self.data[0] & 0xffffffff;
-                unsafe {require(player.data.balance >= amount)};
-                let withdrawinfo = WithdrawInfo::new(&self.data);
-                SettlementInfo::append_settlement(withdrawinfo);
-                player.data.balance -= amount;
+                let player = HelloWorldPlayer::new_from_pid(pid);
                 player.store();
                 0
             }
         }
     }
 
-    pub fn process(&self, pid: &[u64; 4], _sigr: &[u64; 4]) -> u32 {
-        if self.command == TIMETICK {
-            let state = unsafe { &mut STATE };
-            state.counter += 1;
-            state.game.settle();
-            0
-        } else if self.command == WITHDRAW {
-            self.withdraw(pid)
-        } else if self.command == DEPOSIT {
-            self.deposit()
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive (Serialize)]
-pub struct State {
-    counter: u64,
-    game: Game
-}
-
-pub static mut STATE: State  = State {
-    counter: 0,
-    game: Game {
-        total_dps: 0,
-        progress: 0,
-        target: 0,
-        last_round_info: RoundInfo {
-            locked_dps: 0,
-            locked_rewards: 0
-        }
-    }
-};
-
-impl State {
-    pub fn initialize() {
-        let kvpair = unsafe { &mut MERKLE_MAP };
-        let mut data = kvpair.get(&[0, 0, 0, 0]);
-        if !data.is_empty() {
-            unsafe { STATE.counter =  data.pop().unwrap() };
-        }
+    pub fn inc_counter(&self, _pkey: &[u64; 4]) -> u32 {
+        //let player = HelloWorldPlayer::get(pkey);
+        todo!()
     }
 
-    pub fn preempt() -> bool {
-        return true;
+    pub fn process(&self, pkey: &[u64; 4], _rand: &[u64; 4]) -> u32 {
+        let b = match self.command {
+            INSTALL_PLAYER => self.install_player(pkey),
+            INC_COUNTER => self.inc_counter(pkey),
+            _ => {
+                0
+            }
+        };
+        let kvpair = unsafe { &mut MERKLE_MAP.merkle.root };
+        zkwasm_rust_sdk::dbg!("root after process {:?}\n", kvpair);
+        b
     }
-
-    pub fn rand_seed() -> u64 {
-        return 0;
-    }
-
-    pub fn snapshot() -> String {
-        serde_json::to_string(unsafe {&STATE}).unwrap()
-    }
-
-    pub fn get_state(_pid: Vec<u64>) -> String {
-        "anonymous".to_string()
-    }
-
-    pub fn store(&self) {
-        let kvpair = unsafe { &mut MERKLE_MAP };
-        kvpair.set(&[0, 0, 0, 0], &vec![self.counter]);
-        let root = kvpair.merkle.root.clone();
-        zkwasm_rust_sdk::dbg!("root after store: {:?}\n", root);
-    }
-
-    pub fn flush_settlement() -> Vec<u8> {
-        let data = SettlementInfo::flush_settlement();
-        unsafe {STATE.store()};
-        data
-    }
-
 }
