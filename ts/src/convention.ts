@@ -5,6 +5,10 @@ function bytesToHex(bytes: Array<number>): string  {
   return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function bytesToDecimal(bytes: Array<number>): string  {
+  return Array.from(bytes, byte => byte.toString().padStart(2, '0')).join('');
+}
+
 export function composeWithdrawParams(addressBN: BN, amount: bigint) {
     const addressBE = addressBN.toArray("be", 20); // 20 bytes = 160 bits and split into 4, 8, 8
     const firstLimb = BigInt('0x' + bytesToHex(addressBE.slice(0,4).reverse()));
@@ -20,7 +24,7 @@ export function decodeWithdraw(txdata: Uint8Array) {
       let extra = txdata.slice(i, i+4);
       let address = txdata.slice(i+4, i+24);
       let amount = txdata.slice(i+24, i+32);
-      let amountInWei = ethers.parseEther(bytesToHex(Array.from(amount)));
+      let amountInWei = ethers.parseEther(bytesToDecimal(Array.from(amount)));
       r.push({
         op: extra[0],
         index: extra[1],
