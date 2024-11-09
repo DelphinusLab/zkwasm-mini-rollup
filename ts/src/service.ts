@@ -40,6 +40,14 @@ if (process.env.REDISHOST) {
   redisHost = process.env.REDISHOST;
 }
 
+let taskid: string | null = null;
+
+if (process.env.TASKID) {
+  taskid = process.env.TASKID;
+}
+
+
+
 mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
@@ -202,7 +210,7 @@ async function main() {
         }
     }
 
-    let task = await get_latest_proof();
+    let task = await get_latest_proof(taskid);
     console.log("latest taskId got from remote:", task?._id);
     console.log("latest task", task?.instances);
     if (task) {

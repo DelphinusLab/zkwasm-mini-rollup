@@ -152,12 +152,12 @@ export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<Tx
   process.exit(1);
 }
 
-export async function get_latest_proof(): Promise<Task | null> {
+export async function get_latest_proof(taskid: string | null): Promise<Task | null> {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
-    id: null,
+    id: taskid,
     tasktype: "Prove",
     taskstatus: "Done",
     total: 1,
