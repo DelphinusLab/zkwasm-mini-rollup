@@ -62,9 +62,7 @@ impl SettlementInfo {
         let sinfo = unsafe { &mut SETTLEMENT };
         let mut bytes: Vec<u8> = Vec::with_capacity(sinfo.0.len() * 32);
         for s in &sinfo.0 {
-            bytes.extend_from_slice(&s.feature.to_le_bytes());
-            bytes.extend_from_slice(&s.address);
-            bytes.extend_from_slice(&s.amount.to_le_bytes());
+            s.flush(&mut bytes);
         }
         sinfo.0 = vec![];
         bytes

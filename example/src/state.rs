@@ -61,11 +61,14 @@ impl StorageData for State {
 impl State {
     pub fn flush_settlement() -> Vec<u8> {
         let data = SettlementInfo::flush_settlement();
-        unsafe { STATE.store() };
         data
     }
     pub fn new() -> Self {
         State {}
+    }
+
+    pub fn store() {
+        unsafe { STATE.store() };
     }
 }
 
