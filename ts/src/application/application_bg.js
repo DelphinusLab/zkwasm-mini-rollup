@@ -148,7 +148,7 @@ export function get_config() {
 * @returns {boolean}
 */
 export function preempt() {
-    const ret = wasm.autotick();
+    const ret = wasm.preempt();
     return ret !== 0;
 }
 

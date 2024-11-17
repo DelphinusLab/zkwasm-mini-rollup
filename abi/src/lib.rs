@@ -30,13 +30,13 @@ pub struct WithdrawInfo { // 32bits in total
 }
 
 impl WithdrawInfo {
-    pub fn new(limbs: &[u64; 3]) -> Self {
+    pub fn new(limbs: &[u64; 3], token_index: u32) -> Self {
         let mut address = ((limbs[0] >> 32) as u32).to_le_bytes().to_vec();
         address.extend_from_slice(&limbs[1].to_le_bytes());
         address.extend_from_slice(&limbs[2].to_le_bytes());
 
         WithdrawInfo {
-            feature: 0,
+            feature: token_index,
             address: address.try_into().unwrap(),
             amount: limbs[0] & 0xffffffff
         }
@@ -285,6 +285,8 @@ macro_rules! create_zkwasm_apis {
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
             let bytes = $S::flush_settlement();
+            $S::store();
+
             let txdata = conclude_tx_info(bytes.as_slice());
 
             let root = merkle_ref.merkle.root;

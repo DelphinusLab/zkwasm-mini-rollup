@@ -17,6 +17,23 @@ export function composeWithdrawParams(addressBN: BN, amount: bigint) {
     return [(firstLimb << 32n) + amount, sndLimb, thirdLimb];
 }
 
+export class TransactionData {
+  nonce: bigint;
+  feature: bigint;
+  command: bigint;
+  params: BigUint64Array;
+  constructor(nonce: bigint, feature: bigint, command: bigint, params: BigUint64Array) {
+    this.nonce = nonce;
+    this.feature = feature;
+    this.command = command;
+    this.params = params;
+  }
+  encodeCommand() {
+    return [...this.params, (this.nonce << 16n) + (this.feature << 8n) + this.command]
+  }
+
+}
+
 export function decodeWithdraw(txdata: Uint8Array) {
   let r = [];
   if (txdata.length > 1) {
