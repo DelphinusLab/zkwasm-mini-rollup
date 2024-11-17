@@ -8,7 +8,7 @@ import IORedis from 'ioredis';
 import express from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
-import { SERVER_PRI_KEY, get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port } from "./config.js";
+import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key } from "./config.js";
 import { getMerkleArray } from "./settle.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
@@ -264,7 +264,7 @@ async function main() {
             });
           seed = randRecord[0].seed!.readBigInt64LE();
         };
-        let signature = sign(new BigUint64Array([0n, seed, rand, 0n]), SERVER_PRI_KEY);
+        let signature = sign(new BigUint64Array([0n, seed, rand, 0n]), get_server_admin_key());
         let u64array = signature_to_u64array(signature);
         application.handle_tx(u64array);
         await install_transactions(signature, job.id);

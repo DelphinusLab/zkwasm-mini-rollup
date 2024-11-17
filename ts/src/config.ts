@@ -1,12 +1,27 @@
 import mongoose from 'mongoose';
 import {ZkWasmServiceHelper} from 'zkwasm-service-helper';
+import { BN } from "bn.js";
+import { PrivateKey } from "delphinus-curves/src/altjubjub";
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const SERVER_PRI_KEY = "1234567";
 
 export const endpoint = "https://rpc.zkwasmhub.com:8090";
+
+export const get_server_admin_key = () => {
+  if (process.env.SERVER_ADMIN_KEY) {
+    return process.env.SERVER_ADMIN_KEY;
+  } else {
+    return "1234567"; // server admin private key
+  }
+}
+
+export const get_server_admin_pubkey = () => {
+  let prikey = PrivateKey.fromString(get_server_admin_key());
+  let pubkey = prikey.publicKey.key.x.v;
+  return pubkey
+}
 
 export const get_mongodb_uri = () => {
   if (process.env.URI) {
