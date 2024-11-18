@@ -13,7 +13,7 @@ import { getMerkleArray } from "./settle.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import {merkleRootToBeHexString} from "./lib.js";
+import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 
 // Load environment variables from .env file
@@ -378,9 +378,7 @@ async function main() {
   });
 
   app.post('/query', async (req, res) => {
-    console.log("receive query command");
     const value = req.body;
-    console.log("value is", value);
     if (!value) {
       return res.status(400).send('Value is required');
     }
@@ -416,6 +414,24 @@ async function main() {
       res.status(500).json({ message: (err as Error).toString()});
     }
   });
+
+  app.get('/prooftask/:root', async (req, res) => {
+    try {
+      let merkleRootString = req.params.root;
+      let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
+      let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+      if (record) {
+        return res.status(201).json(record);
+      } else {
+        throw Error("TaskNotFound");
+      }
+    } catch (err) {
+      // job not tracked
+      console.log(err);
+      res.status(500).json({ message: (err as Error).toString()});
+    }
+  });
+
 
   app.post('/config', async (req, res) => {
     try {

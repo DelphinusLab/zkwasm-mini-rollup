@@ -61,6 +61,10 @@ export const get_contract_addr = () => {
   }
 }
 
+export const get_chain_id = () => {
+  return 16;
+}
+
 export const get_user_addr = () => {
   if (process.env.USER_ADDRESS) {
     return process.env.USER_ADDRESS;
