@@ -9,10 +9,10 @@ import express from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx } from "./config.js";
-import { getMerkleArray } from "./settle.js";
+import { getMerkleArray } from "./contract.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
-import mongoose, {Connection} from 'mongoose';
+import mongoose from 'mongoose';
 import {merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 

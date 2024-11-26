@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import {ZkWasmServiceHelper} from 'zkwasm-service-helper';
-import { BN } from "bn.js";
+import { ZkWasmServiceHelper } from 'zkwasm-service-helper';
 import { PrivateKey } from "delphinus-curves/src/altjubjub";
 import dotenv from 'dotenv';
 
