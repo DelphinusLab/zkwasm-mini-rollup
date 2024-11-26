@@ -250,7 +250,9 @@ macro_rules! create_zkwasm_apis {
         #[wasm_bindgen]
         pub fn finalize() -> Vec<u8> {
             unsafe {
-                $S::flush_settlement()
+                let bytes = $S::flush_settlement();
+                $S::store();
+                bytes
             }
         }
 
@@ -284,8 +286,7 @@ macro_rules! create_zkwasm_apis {
 
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
-            let bytes = $S::flush_settlement();
-            $S::store();
+            let bytes = finalize();
 
             let txdata = conclude_tx_info(bytes.as_slice());
 
