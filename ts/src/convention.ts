@@ -6,7 +6,8 @@ function bytesToHex(bytes: Array<number>): string  {
 }
 
 function bytesToDecimal(bytes: Array<number>): string  {
-  return Array.from(bytes, byte => byte.toString().padStart(2, '0')).join('');
+  const bigInt = BigInt("0x" + bytesToHex(bytes)); // Convert bytes to hex string and then to BigInt
+  return bigInt.toString(); // Convert the BigInt to a decimal string
 }
 
 export function composeWithdrawParams(addressBN: BN, amount: bigint) {
