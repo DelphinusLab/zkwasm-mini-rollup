@@ -86,6 +86,9 @@ const ERROR_PLAYER_ALREADY_EXIST: u32 = 1;
 const ERROR_PLAYER_NOT_EXIST: u32 = 2;
 
 impl Transaction {
+    pub fn command_length() -> usize {
+        4
+    }
     pub fn decode_error(e: u32) -> &'static str {
         match e {
             ERROR_PLAYER_NOT_EXIST => "PlayerNotExist",
@@ -93,7 +96,7 @@ impl Transaction {
             _ => "Unknown",
         }
     }
-    pub fn decode(params: [u64; 4]) -> Self {
+    pub fn decode(params: &[u64]) -> Self {
         let command = params[0] & 0xff;
         //let nonce = params[0] >> 16;
         let data = vec![params[1], params[2], params[3]]; // pkey[0], pkey[1], amount

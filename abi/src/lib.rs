@@ -2,6 +2,7 @@ use sha2::{Sha256, Digest};
 use zkwasm_rust_sdk::jubjub::BabyJubjubPoint;
 use zkwasm_rust_sdk::jubjub::JubjubSignature;
 use zkwasm_rust_sdk::kvpair::KeyValueMap;
+use zkwasm_rust_sdk::poseidon::PoseidonHasher;
 use zkwasm_rust_sdk::Merkle;
 use serde::Serialize;
 use primitive_types::U256;
@@ -138,42 +139,44 @@ pub fn query_root() -> Vec<u64> {
 pub fn verify_tx_signature(inputs: Vec<u64>) {
     let pk = BabyJubjubPoint {
         x: U256([
+                inputs[0],
+                inputs[1],
+                inputs[2],
+                inputs[3],
+        ]),
+        y: U256([
                 inputs[4],
                 inputs[5],
                 inputs[6],
                 inputs[7],
-        ]),
-        y: U256([
-                inputs[8],
-                inputs[9],
-                inputs[10],
-                inputs[11],
         ]),
     };
 
     let sig = JubjubSignature {
         sig_r: BabyJubjubPoint {
             x: U256([
+                inputs[8],
+                inputs[9],
+                inputs[10],
+                inputs[11],
+            ]),
+            y: U256([
                 inputs[12],
                 inputs[13],
                 inputs[14],
                 inputs[15],
             ]),
-            y: U256([
-                inputs[16],
-                inputs[17],
-                inputs[18],
-                inputs[19],
-            ]),
         },
         sig_s: [
-            inputs[20],
-            inputs[21],
-            inputs[22],
-            inputs[23],
+            inputs[16],
+            inputs[17],
+            inputs[18],
+            inputs[19],
         ]
     };
-    sig.verify(&pk, &[inputs[0], inputs[1], inputs[2], inputs[3]]);
+    let commands = &inputs[20..];
+    let msg = PoseidonHasher::hash(commands, true);
+    sig.verify(&pk, &msg);
 }
 
 /// encode bytes into wasm output
@@ -194,9 +197,9 @@ macro_rules! create_zkwasm_apis {
     ($T: ident, $S: ident, $C: ident) => {
         #[wasm_bindgen]
         pub fn handle_tx(params: Vec<u64>) -> u32 {
-            let user_address = [params[4], params[5], params[6], params[7]];
-            let command = [params[0], params[1], params[2], params[3]];
-            let sig_r = [params[20], params[21], params[22], params[23]];
+            let user_address = [params[0], params[1], params[2], params[3]];
+            let sig_r = [params[16], params[17], params[18], params[19]];
+            let command = &params[20..];
             let transaction = $T::decode(command);
             transaction.process(&user_address, &sig_r)
         }
@@ -272,9 +275,11 @@ macro_rules! create_zkwasm_apis {
             let trace = unsafe {wasm_trace_size()};
             zkwasm_rust_sdk::dbg!("trace after initialize: {}\n", trace);
 
+            let cmdlen = $T::command_length();
+
             for _ in 0..tx_length {
-                let mut params = Vec::with_capacity(24);
-                for _ in 0..24 {
+                let mut params = Vec::with_capacity(20 + cmdlen);
+                for _ in 0..(20 + cmdlen) {
                     params.push(unsafe {wasm_input(0)});
                 }
                 verify_tx_signature(params.clone());

@@ -1,5 +1,5 @@
 import fetch from 'sync-fetch';
-import { LeHexBN } from "./sign.js";
+import { LeHexBN } from "zkwasm-minirollup-rpc";
 
 import dotenv from 'dotenv';
 dotenv.config();

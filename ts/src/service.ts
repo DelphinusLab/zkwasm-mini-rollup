@@ -2,7 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
-import { verify_sign, LeHexBN, sign } from "./sign.js";
+import { verifySign, LeHexBN, sign } from "zkwasm-minirollup-rpc";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
@@ -338,7 +338,7 @@ export class Service {
         const sigx = new LeHexBN(value.sigx);
         const sigy = new LeHexBN(value.sigy);
         const sigr = new LeHexBN(value.sigr);
-        if (verify_sign(msg, pkx, pky, sigx, sigy, sigr) == false) {
+        if (verifySign(msg, pkx, pky, sigx, sigy, sigr) == false) {
           console.error('Invalid signature:');
           res.status(500).send('Invalid signature');
         } else {
