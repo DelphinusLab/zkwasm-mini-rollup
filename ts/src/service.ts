@@ -2,7 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
-import { verifySign, LeHexBN, sign } from "zkwasm-minirollup-rpc";
+import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc } from "zkwasm-minirollup-rpc";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
@@ -251,6 +251,7 @@ export class Service {
       }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
     }
 
+    let admin = new PlayerConvention(get_server_admin_key(), new ZKWasmAppRpc(""), 0n, 0n);
 
     this.worker = new Worker('sequencer', async job => {
       if (job.name == 'autoJob') {
@@ -265,8 +266,10 @@ export class Service {
             });
             seed = randRecord[0].seed!.readBigInt64LE();
           };
-          let signature = sign(new BigUint64Array([0n, seed, rand, 0n]), get_server_admin_key());
+          let signature = sign(admin.createCommand(0n, 0n, [seed, rand, 0n, 0n]), get_server_admin_key());
+          console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
+          application.verify_tx_signature(u64array);
           application.handle_tx(u64array);
           await this.install_transactions(signature, job.id);
         } catch (error) {
@@ -425,11 +428,11 @@ function signature_to_u64array(value: any) {
   const sigr = new LeHexBN(value.sigr).toU64Array();
 
   let u64array = new BigUint64Array(24);
-  u64array.set(msg);
-  u64array.set(pkx, 4);
-  u64array.set(pky, 8);
-  u64array.set(sigx, 12);
-  u64array.set(sigy, 16);
-  u64array.set(sigr, 20);
+  u64array.set(pkx, 0);
+  u64array.set(pky, 4);
+  u64array.set(sigx, 8);
+  u64array.set(sigy, 12);
+  u64array.set(sigr, 16);
+  u64array.set(msg, 20);
   return u64array;
 }

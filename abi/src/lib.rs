@@ -275,11 +275,17 @@ macro_rules! create_zkwasm_apis {
             let trace = unsafe {wasm_trace_size()};
             zkwasm_rust_sdk::dbg!("trace after initialize: {}\n", trace);
 
-            let cmdlen = $T::command_length();
 
             for _ in 0..tx_length {
-                let mut params = Vec::with_capacity(20 + cmdlen);
-                for _ in 0..(20 + cmdlen) {
+                let mut params = Vec::with_capacity(20 + 16);
+                for _ in 0..20 {
+                    params.push(unsafe {wasm_input(0)});
+                }
+                let command = unsafe {wasm_input(0)};
+                let command_length = ((command & 0xff00) >> 8)  as usize;
+                unsafe { zkwasm_rust_sdk::require(command_length < 16) };
+                params.push(command);
+                for _  in 0..command_length - 1 {
                     params.push(unsafe {wasm_input(0)});
                 }
                 verify_tx_signature(params.clone());
@@ -287,7 +293,6 @@ macro_rules! create_zkwasm_apis {
                 let trace = unsafe {wasm_trace_size()};
                 zkwasm_rust_sdk::dbg!("trace track: {}\n", trace);
             }
-
 
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
