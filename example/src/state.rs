@@ -93,7 +93,7 @@ impl Transaction {
             _ => "Unknown",
         }
     }
-    pub fn decode(params: [u64; 4]) -> Self {
+    pub fn decode(params: &[u64]) -> Self {
         let command = params[0] & 0xff;
         //let nonce = params[0] >> 16;
         let data = vec![params[1], params[2], params[3]]; // pkey[0], pkey[1], amount
