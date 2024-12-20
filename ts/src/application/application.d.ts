@@ -57,3 +57,5 @@ export function verify_tx_signature(inputs: BigUint64Array): void;
 /**
 */
 export function test_merkle(): void;
+
+export default function __wbg_init(): Promise<void>;
