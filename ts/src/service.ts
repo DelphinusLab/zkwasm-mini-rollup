@@ -335,13 +335,13 @@ export class Service {
       }
 
       try {
-        const msg = new LeHexBN(value.msg);
+        const hash = new LeHexBN(value.hash);
         const pkx = new LeHexBN(value.pkx);
         const pky = new LeHexBN(value.pky);
         const sigx = new LeHexBN(value.sigx);
         const sigy = new LeHexBN(value.sigy);
         const sigr = new LeHexBN(value.sigr);
-        if (verifySign(msg, pkx, pky, sigx, sigy, sigr) == false) {
+        if (verifySign(hash, pkx, pky, sigx, sigy, sigr) == false) {
           console.error('Invalid signature:');
           res.status(500).send('Invalid signature');
         } else {
