@@ -420,14 +420,14 @@ export class Service {
 
 
 function signature_to_u64array(value: any) {
-  const msg = new LeHexBN(value.msg).toU64Array();
+  const msg = new LeHexBN(value.msg).toU64Array(value.msg.length/16);
   const pkx = new LeHexBN(value.pkx).toU64Array();
   const pky = new LeHexBN(value.pky).toU64Array();
   const sigx = new LeHexBN(value.sigx).toU64Array();
   const sigy = new LeHexBN(value.sigy).toU64Array();
   const sigr = new LeHexBN(value.sigr).toU64Array();
 
-  let u64array = new BigUint64Array(24);
+  let u64array = new BigUint64Array(20 + value.msg.length/16);
   u64array.set(pkx, 0);
   u64array.set(pky, 4);
   u64array.set(sigx, 8);
