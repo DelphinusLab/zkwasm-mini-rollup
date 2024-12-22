@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src/
 
 # Clone the GitHub repository
-RUN git clone https://github.com/DelphinusLab/zkwasm-typescript-mini-server
+RUN git clone https://github.com/DelphinusLab/zkwasm-typescript-mini-server --branch release-v1
 
 WORKDIR /usr/src/zkwasm-typescript-mini-server/dbservice
 

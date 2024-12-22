@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 ff = "0.12"
-zkwasm-host-circuits = { git = "https://github.com/DelphinusLab/zkWasm-host-circuits.git", default-features=false, features = ["mongo-std-sync"], branch = "xgao/dynamic-db-uri"}
+zkwasm-host-circuits = { git = "https://github.com/DelphinusLab/zkWasm-host-circuits.git", default-features=false, features = ["mongo-std-sync"], branch = "xgao/refactor"}
 num-bigint = { version = "0.4" }
 serde = { version = "1.0", features = ["serde_derive"] }
 serde_json = "1.0"

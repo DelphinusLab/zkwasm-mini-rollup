@@ -5,4 +5,3 @@ resolver = "2"
 [workspace.dependencies]
 bytes-helper= { git = "https://github.com/xgaozoyoe/bytes-reducer.git" }
 pairing = { git = "https://github.com/lanbones/pairing", package = "pairing_bn256"}
-poseidon = { git = "https://github.com/DelphinusLab/poseidon", branch="no-std" }

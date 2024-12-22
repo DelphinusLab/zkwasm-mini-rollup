@@ -1,4 +1,4 @@
-import {ZKWasmAppRpc, sign, query, LeHexBN }  from "zkwasm-minirollup-rpc";
+import { ZKWasmAppRpc, sign, query, LeHexBN }  from "zkwasm-minirollup-rpc";
 import { composeWithdrawParams} from "./convention.js";
 import { Service } from "./service.js";
 

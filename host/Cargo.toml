@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 ff = "0.12"
 bytes-helper= { git = "https://github.com/xgaozoyoe/bytes-reducer.git" }
 halo2curves = { git = "https://github.com/xgaozoyoe/halo2curves.git" }
-poseidon = { git = "https://github.com/DelphinusLab/poseidon", branch="no-std" }
+poseidon = { git = "https://github.com/DelphinusLab/poseidon", branch="no-std"}
 wasm-bindgen = "0.2.83"
 js-sys = "0.3"
 serde_json = "1.0"
