@@ -99,7 +99,7 @@ impl<E: EventHandler> EventQueue<E> {
     }
 
     /// Perform tick:
-    /// 1. get old entries and peform event handlers on each event
+    /// 1. get old entries and perform event handlers on each event
     /// 2. insert new generated events into the event queue
     /// 3. handle all events whose counter are zero
     /// 4. insert new generated envets into the event queue
