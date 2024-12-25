@@ -74,12 +74,12 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
   const priv_inputs: Array<string> = [];
   priv_inputs.push(`${txs.length}:i64`);
   for (const tx of txs) {
-    priv_inputs.push(`0x${tx.msg}:bytes-packed`);
     priv_inputs.push(`0x${tx.pkx}:bytes-packed`);
     priv_inputs.push(`0x${tx.pky}:bytes-packed`);
     priv_inputs.push(`0x${tx.sigx}:bytes-packed`);
     priv_inputs.push(`0x${tx.sigy}:bytes-packed`);
     priv_inputs.push(`0x${tx.sigr}:bytes-packed`);
+    priv_inputs.push(`0x${tx.msg}:bytes-packed`);
   };
 
   //console.log(priv_inputs);
