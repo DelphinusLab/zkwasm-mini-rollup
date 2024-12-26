@@ -118,7 +118,7 @@ impl Transaction {
         todo!()
     }
 
-    pub fn process(&self, pkey: &[u64; 4], _rand: &[u64; 4]) -> u32 {
+    pub fn process(&self, pkey: &[u64; 4], _rand: &[u64; 4]) -> Vec<u64> {
         let b = match self.command {
             INSTALL_PLAYER => self.install_player(pkey),
             INC_COUNTER => self.inc_counter(pkey),
@@ -126,6 +126,6 @@ impl Transaction {
         };
         let kvpair = unsafe { &mut MERKLE_MAP.merkle.root };
         zkwasm_rust_sdk::dbg!("root after process {:?}\n", kvpair);
-        b
+        vec![b as u64]
     }
 }
