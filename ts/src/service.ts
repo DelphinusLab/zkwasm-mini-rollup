@@ -118,16 +118,43 @@ export class Service {
         if (deploymode) {
           task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
           console.log("proving task submitted at:", task_id);
-          console.log("tracking task in db ...", this.merkleRoot);
+          console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
           let preMerkleRootStr = "";
+          let bundleIndex = 0;
           if (this.preMerkleRoot != null) {
             preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
           };
+
+          if (this.preMerkleRoot != null) {
+            console.log("update merkle chain ...", merkleRootToBeHexString(this.preMerkleRoot));
+            try {
+              const prevBundle = await modelBundle.findOneAndUpdate(
+                {
+                  merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
+                },
+                {
+                  taskId: task_id,
+                  postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
+                },
+                {}
+              );
+              bundleIndex = prevBundle!.bundleIndex + 1;
+              console.log("merkle chain prev is", prevBundle);
+            } catch (e) {
+              console.log(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
+              //throw e
+            }
+          }
+
+          console.log("add transaction bundle:", bundleIndex);
           const bundleRecord = new modelBundle({
             merkleRoot: merkleRootToBeHexString(this.merkleRoot),
             preMerkleRoot: preMerkleRootStr,
             taskId: task_id,
+            bundleIndeX: bundleIndex,
           });
+
+
           try {
             await bundleRecord.save();
             console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
@@ -140,6 +167,7 @@ export class Service {
                 taskId: task_id,
                 postMerkleRoot: "",
                 preMerkleRoot: preMerkleRootStr,
+                bundleIndex: bundleIndex,
               },
               {}
             );
@@ -149,23 +177,6 @@ export class Service {
             //throw e
           }
           // update the merkel chain if necessary
-          if (this.preMerkleRoot != null) {
-            try {
-              await modelBundle.findOneAndUpdate(
-                {
-                  merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
-                },
-                {
-                  taskId: task_id,
-                  postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
-                },
-                {}
-              );
-            } catch (e) {
-              console.log(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
-              //throw e
-            }
-          }
         }
         for (let tx of transactions_witness) {
           this.txBatched(tx, task_id);

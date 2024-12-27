@@ -12,3 +12,6 @@ clean:
 	rm -rf ../ts/src/application/application.d.ts
 	rm -rf ../ts/src/application/application_bg.js
 	rm -rf ../ts/src/application/application_bg.wasm.d.ts
+
+run:
+	node ../ts/src/run.js

@@ -148,6 +148,10 @@ export const bundleSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
+    bundleIndex: {
+      type: Number,
+      default: 0,
+    }
 });
 
 export const randSchema = new mongoose.Schema({
