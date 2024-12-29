@@ -50,13 +50,6 @@ if (process.env.TASKID) {
 
 let transactions_witness = new Array();
 
-let merkle_root = new BigUint64Array([
-    14789582351289948625n,
-    10919489180071018470n,
-    10309858136294505219n,
-    2839580074036780766n,
-  ]);
-
 let snapshot = JSON.parse("{}");
 
 function randByte()  {
@@ -85,17 +78,49 @@ async function generateRandomSeed() {
 export class Service {
   worker: null | Worker;
   queue: null | Queue;
-  txCallback: (arg: TxWitness) => void;
-  constructor(cb: (arg: TxWitness) => void) {
+  txCallback: (arg: TxWitness, events: BigUint64Array) => void;
+  txBatched: (arg: TxWitness, task_id: string) => void;
+  merkleRoot: BigUint64Array;
+  bundleIndex: number;
+  preMerkleRoot: BigUint64Array | null;
+
+  constructor(cb: (arg: TxWitness) => void, txBatched: (arg: TxWitness, task_id: string)=> void) {
     this.worker = null;
     this.queue = null;
     this.txCallback = cb;
+    this.txBatched = txBatched;
+    this.merkleRoot = new BigUint64Array([
+      14789582351289948625n,
+      10919489180071018470n,
+      10309858136294505219n,
+      2839580074036780766n,
+    ]);
+    this.bundleIndex = 0;
+    this.preMerkleRoot = null;
   }
 
-  async install_transactions(tx: TxWitness, jobid: string | undefined) {
+  async findBundleIndex(merkleRoot: BigUint64Array) {
+      try {
+        const prevBundle = await modelBundle.findOne(
+          {
+            merkleRoot: merkleRootToBeHexString(merkleRoot),
+          },
+        );
+        if (prevBundle != null) {
+          return prevBundle!.bundleIndex;
+        } else {
+          throw Error("BundleNotFound");
+        }
+      } catch (e) {
+        console.log(`fatal: bundle for ${merkleRoot} is not recorded`);
+        process.exit();
+      }
+  }
+
+  async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
-    this.txCallback(tx);
+    this.txCallback(tx, events);
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
     try {
@@ -109,40 +134,93 @@ export class Service {
       let txdata = application.finalize();
       console.log("txdata is:", txdata);
       try {
+        let task_id = null;
         if (deploymode) {
-          let task_id = await submitProofWithRetry(merkle_root, transactions_witness, txdata);
+          task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
           console.log("proving task submitted at:", task_id);
-          console.log("tracking task in db ...", merkle_root);
+          console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
+          let preMerkleRootStr = "";
+          if (this.preMerkleRoot != null) {
+            preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
+          };
+
+          if (this.preMerkleRoot != null) {
+            console.log("update merkle chain ...", merkleRootToBeHexString(this.preMerkleRoot));
+            try {
+              const prevBundle = await modelBundle.findOneAndUpdate(
+                {
+                  merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
+                },
+                {
+                  taskId: task_id,
+                  postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
+                },
+                {}
+              );
+              if (this.bundleIndex != prevBundle!.bundleIndex) {
+                console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
+              }
+              console.log("merkle chain prev is", prevBundle);
+            } catch (e) {
+              console.log(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
+              //throw e
+            }
+          }
+
+          this.bundleIndex += 1;
+
+          console.log("add transaction bundle:", this.bundleIndex);
           const bundleRecord = new modelBundle({
-            merkleRoot: merkleRootToBeHexString(merkle_root),
+            merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+            preMerkleRoot: preMerkleRootStr,
             taskId: task_id,
+            bundleIndeX: this.bundleIndex,
           });
+
           try {
             await bundleRecord.save();
-            console.log(`task recorded with key: ${merkleRootToBeHexString(merkle_root)}`);
+            console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
           } catch (e) {
-            let record = await modelBundle.find({
-              merkleRoot: merkleRootToBeHexString(merkle_root),
-            });
+            let record = await modelBundle.findOneAndUpdate(
+              {
+                merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+              },
+              {
+                taskId: task_id,
+                postMerkleRoot: "",
+                preMerkleRoot: preMerkleRootStr,
+                bundleIndex: this.bundleIndex,
+              },
+              {}
+            );
             console.log("fatal: conflict db merkle");
+            // TODO: do we need to trim the corrputed branch?
             console.log(record);
             //throw e
           }
+          // update the merkel chain if necessary
         }
+        for (let tx of transactions_witness) {
+          this.txBatched(tx, task_id);
+        }
+
+        // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
+        this.preMerkleRoot = this.merkleRoot;
+
         // need to update merkle_root as the input of next proof
-        merkle_root = application.query_root();
+        this.merkleRoot = application.query_root();
         // reset application here
-        console.log("restore root:", merkle_root);
+        console.log("restore root:", this.merkleRoot);
         await (initApplication as any)(bootstrap);
-        application.initialize(merkle_root);
+        application.initialize(this.merkleRoot);
       } catch (e) {
         console.log(e);
         process.exit(1); // this should never happen and we stop the whole process
       }
     }
     let current_merkle_root = application.query_root();
-    console.log("last root:", current_merkle_root);
+    console.log("transaction installed with last root:", current_merkle_root);
   }
 
   async initialize() {
@@ -193,8 +271,8 @@ export class Service {
 
     if (migrate) {
       if (remote) {throw Error("Can't migrate in remote mode");}
-      merkle_root = await getMerkleArray();
-      console.log("Migrate: updated merkle root", merkle_root);
+      this.merkleRoot = await getMerkleArray();
+      console.log("Migrate: updated merkle root", this.merkleRoot);
     }
     //initialize merkle_root based on the latest task
     if (remote) {
@@ -214,13 +292,14 @@ export class Service {
       console.log("latest task", task?.instances);
       if (task) {
         const instances = ZkWasmUtil.bytesToBN(task?.instances);
-        merkle_root = new BigUint64Array([
+        this.merkleRoot = new BigUint64Array([
           BigInt(instances[4].toString()),
           BigInt(instances[5].toString()),
           BigInt(instances[6].toString()),
           BigInt(instances[7].toString()),
         ]);
-        console.log("updated merkle root", merkle_root);
+        this.bundleIndex = await this.findBundleIndex(this.merkleRoot);
+        console.log("updated merkle root", this.merkleRoot, this.bundleIndex);
       }
     }
 
@@ -234,10 +313,10 @@ export class Service {
     this.queue = myQueue;
 
     console.log("initialize application merkle db ...");
-    application.initialize(merkle_root);
+    application.initialize(this.merkleRoot);
 
     // update the merkle root variable
-    merkle_root = application.query_root();
+    this.merkleRoot = application.query_root();
 
     // Automatically add a job to the queue every few seconds
     if (application.autotick()) {
@@ -271,7 +350,7 @@ export class Service {
           let u64array = signature_to_u64array(signature);
           application.verify_tx_signature(u64array);
           application.handle_tx(u64array);
-          await this.install_transactions(signature, job.id);
+          await this.install_transactions(signature, job.id, new BigUint64Array([]));
         } catch (error) {
           console.log("fatal: handling auto tick error, process will terminate.", error);
           process.exit(1);
@@ -283,10 +362,11 @@ export class Service {
           let u64array = signature_to_u64array(signature);
           console.log("tx data", signature);
           application.verify_tx_signature(u64array);
-          let error = application.handle_tx(u64array);
-          if (error == 0) {
+          let txResult = application.handle_tx(u64array);
+          let errorCode = txResult[0];
+          if (errorCode == 0n) {
             // make sure install transaction will succeed
-            await this.install_transactions(signature, job.id);
+            await this.install_transactions(signature, job.id, txResult);
             try {
               const jobRecord = new modelJob({
                 jobId: signature.sigx,
@@ -299,7 +379,7 @@ export class Service {
               throw e
             }
           } else {
-            let errorMsg = application.decode_error(error);
+            let errorMsg = application.decode_error(Number(errorCode));
             throw Error(errorMsg)
           }
           console.log("done");
@@ -417,7 +497,6 @@ export class Service {
   }
 
 }
-
 
 function signature_to_u64array(value: any) {
   const msg = new LeHexBN(value.msg).toU64Array(value.msg.length/16);

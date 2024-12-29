@@ -196,7 +196,7 @@ pub fn conclude_tx_info(data: &[u8]) -> [u64;4] {
 macro_rules! create_zkwasm_apis {
     ($T: ident, $S: ident, $C: ident) => {
         #[wasm_bindgen]
-        pub fn handle_tx(params: Vec<u64>) -> u32 {
+        pub fn handle_tx(params: Vec<u64>) -> Vec<u64> {
             let user_address = [params[0], params[1], params[2], params[3]];
             let sig_r = [params[16], params[17], params[18], params[19]];
             let command = &params[20..];
@@ -259,8 +259,7 @@ macro_rules! create_zkwasm_apis {
             }
         }
 
-
-    #[wasm_bindgen]
+        #[wasm_bindgen]
         pub fn zkmain() {
             use zkwasm_rust_sdk::wasm_input;
             use zkwasm_rust_sdk::wasm_output;
@@ -283,21 +282,17 @@ macro_rules! create_zkwasm_apis {
                 }
                 let command = unsafe {wasm_input(0)};
                 let command_length = ((command & 0xff00) >> 8)  as usize;
-                zkwasm_rust_sdk::dbg!("cmd length: {}\n", command_length);
                 unsafe { zkwasm_rust_sdk::require(command_length < 16) };
                 params.push(command);
                 for _  in 0..command_length - 1 {
                     params.push(unsafe {wasm_input(0)});
                 }
-                zkwasm_rust_sdk::dbg!("sig verify\n");
                 verify_tx_signature(params.clone());
-                zkwasm_rust_sdk::dbg!("success\n");
                 handle_tx(params);
                 let trace = unsafe {wasm_trace_size()};
                 zkwasm_rust_sdk::dbg!("trace track: {}\n", trace);
             }
 
-            zkwasm_rust_sdk::dbg!("trace after tx handlers\n");
             unsafe { zkwasm_rust_sdk::require(preempt()) };
 
             let bytes = finalize();

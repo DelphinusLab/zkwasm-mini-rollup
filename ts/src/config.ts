@@ -120,13 +120,21 @@ export const jobSchema = new mongoose.Schema({
 
 export const bundleSchema = new mongoose.Schema({
     merkleRoot: {
-          type: String,
-          required: true,
-          unique: true,
+        type: String,
+        required: true,
+        unique: true,
+    },
+    preMerkleRoot: {
+        type: String,
+        default: '',
+    },
+    postMerkleRoot: {
+        type: String,
+        default: '',
     },
     taskId: {
-          type: String,
-          default: '',
+        type: String,
+        default: '',
     },
     withdrawArray: [{
           address: { type: String, default:'' },
@@ -140,6 +148,10 @@ export const bundleSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
+    bundleIndex: {
+      type: Number,
+      default: 0,
+    }
 });
 
 export const randSchema = new mongoose.Schema({

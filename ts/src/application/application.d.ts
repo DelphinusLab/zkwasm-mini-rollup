@@ -2,9 +2,9 @@
 /* eslint-disable */
 /**
 * @param {BigUint64Array} params
-* @returns {number}
+* @returns {BigUint64Array}
 */
-export function handle_tx(params: BigUint64Array): number;
+export function handle_tx(params: BigUint64Array): BigUint64Array;
 /**
 * @param {BigUint64Array} pid
 * @returns {string}

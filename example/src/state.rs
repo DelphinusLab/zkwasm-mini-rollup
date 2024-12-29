@@ -31,7 +31,9 @@ impl StorageData for PlayerData {
 pub type HelloWorldPlayer = Player<PlayerData>;
 
 #[derive(Serialize, Default)]
-pub struct State {}
+pub struct State {
+    tick: u64
+}
 
 pub struct SafeState(pub RefCell<State>);
 unsafe impl Sync for SafeState {}
@@ -52,10 +54,14 @@ impl CommonState for State {
 }
 
 impl StorageData for State {
-    fn from_data(_u64data: &mut IterMut<u64>) -> Self {
-        State {}
+    fn from_data(u64data: &mut IterMut<u64>) -> Self {
+        State {
+            tick: *u64data.next().unwrap()
+        }
     }
-    fn to_data(&self, _data: &mut Vec<u64>) {}
+    fn to_data(&self, data: &mut Vec<u64>) {
+        data.push(self.tick);
+    }
 }
 
 impl State {
@@ -64,21 +70,25 @@ impl State {
         data
     }
     pub fn new() -> Self {
-        State {}
+        State {
+            tick: 0
+        }
+    }
+    pub fn preempt() -> bool {
+        return Self::get_global().tick % 5 == 0
     }
 
     pub fn store() {
-        unsafe { STATE.store() };
+        unsafe { Self::get_global().store() };
     }
 }
-
-pub static mut STATE: State = State {};
 
 pub struct Transaction {
     pub command: u64,
     pub data: Vec<u64>,
 }
 
+const TICK: u64 = 0;
 const INSTALL_PLAYER: u64 = 1;
 const INC_COUNTER: u64 = 2;
 
@@ -118,14 +128,18 @@ impl Transaction {
         todo!()
     }
 
-    pub fn process(&self, pkey: &[u64; 4], _rand: &[u64; 4]) -> u32 {
+    pub fn process(&self, pkey: &[u64; 4], _rand: &[u64; 4]) -> Vec<u64> {
         let b = match self.command {
+            TICK => {
+                State::get_global_mut().tick += 1;
+                0
+            },
             INSTALL_PLAYER => self.install_player(pkey),
             INC_COUNTER => self.inc_counter(pkey),
             _ => 0,
         };
         let kvpair = unsafe { &mut MERKLE_MAP.merkle.root };
         zkwasm_rust_sdk::dbg!("root after process {:?}\n", kvpair);
-        b
+        vec![b as u64]
     }
 }
