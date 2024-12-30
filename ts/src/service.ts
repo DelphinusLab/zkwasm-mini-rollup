@@ -84,7 +84,7 @@ export class Service {
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
 
-  constructor(cb: (arg: TxWitness) => void, txBatched: (arg: TxWitness, task_id: string)=> void) {
+  constructor(cb: (arg: TxWitness, events: BigUint64Array) => void, txBatched: (arg: TxWitness, task_id: string)=> void) {
     this.worker = null;
     this.queue = null;
     this.txCallback = cb;
