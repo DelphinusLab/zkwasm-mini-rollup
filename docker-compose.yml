@@ -1,6 +1,6 @@
 services:
     merkleservice:
-        image: sinka2022/zkwasm-merkleservice:latest # the zkwasm merkle db service
+        image: sinka2022/zkwasm-merkleservice:v1 # the zkwasm merkle db service
         environment:
             - URI=mongodb://mongodb:27017
         command: ["./target/release/csm_service", "--uri", "mongodb://mongodb:27017"]
