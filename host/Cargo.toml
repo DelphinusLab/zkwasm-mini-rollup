@@ -28,5 +28,5 @@ num-bigint = { version = "0.4" }
 web-sys = { version = "0.3", features = ["console"] }
 
 [features]
-defaut = []
+default = []
 local = []

@@ -15,7 +15,7 @@ The trustless part is the transaction handling part whose execution is proved us
 
 ## Verifiable Application Template
 
-In this repo, we provide a template in `abi/src/lib.rs` which implements the bundled logic within the function `zkmain`. The temlate has the following pseudo code structure:
+In this repo, we provide a template in `abi/src/lib.rs` which implements the bundled logic within the function `zkmain`. The template has the following pseudo code structure:
 ```
 #[wasm_bindgen]
     pub fn zkmain() {
@@ -165,7 +165,7 @@ To start the rest server we can simply do:
 node service.js
 ```
 
-`service.js` bootstraps WASM by implementing ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementation of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstraping looks like the following:
+`service.js` bootstraps WASM by implementing ZKWASM's host interfaces which are another WASM image that is preloaded before loading the main WASM image. The implementation of these host APIs can be found in ts/src/bootstrap/ which is compiled from the rust bootstrap code in host directory. The sketch of the bootstrapping looks like the following:
 ```
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
@@ -295,7 +295,7 @@ The bootstrap WASM image provides the host APIs that are supported in ZKWASM. Th
 ./ts >>> node src/service.js
 ```
 
-## Application ABI convertion
+## Application ABI conversion
 1. State ABI:
 ```
 pub fn get_state(pid: Vec<u64>) -> String; // query the user state of a given user id
@@ -329,7 +329,7 @@ All the transactions are recorded in the **transactions_witness** pool in *servi
         // processing the transaction
         application.verify_tx_signature(u64array);
         application.handle_tx(u64array);
-        // if no execption is caught by now, record the transaction witness
+        // if no exception is caught by now, record the transaction witness
         await install_transactions(value);
       } catch (error) {
         console.log("handling tx error");
@@ -378,7 +378,7 @@ function verify(
               (instances[0][9] << 128) +
               (instances[0][10] << 64) +
               instances[0][11],
-      "Inconstant: Sha data inconsistant"
+      "Inconstant: Sha data inconsistent"
   );
 
   require(
