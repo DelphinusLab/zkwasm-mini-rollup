@@ -152,7 +152,6 @@ export class Service {
                   merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
                 },
                 {
-                  taskId: task_id,
                   postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
                 },
                 {}
@@ -174,7 +173,7 @@ export class Service {
             merkleRoot: merkleRootToBeHexString(this.merkleRoot),
             preMerkleRoot: preMerkleRootStr,
             taskId: task_id,
-            bundleIndeX: this.bundleIndex,
+            bundleIndex: this.bundleIndex,
           });
 
           try {
@@ -298,7 +297,14 @@ export class Service {
           BigInt(instances[6].toString()),
           BigInt(instances[7].toString()),
         ]);
-        this.bundleIndex = await this.findBundleIndex(this.merkleRoot);
+        this.preMerkleRoot = new BigUint64Array([
+          BigInt(instances[0].toString()),
+          BigInt(instances[1].toString()),
+          BigInt(instances[2].toString()),
+          BigInt(instances[3].toString()),
+        ]);
+
+        this.bundleIndex = await this.findBundleIndex(this.preMerkleRoot);
         console.log("updated merkle root", this.merkleRoot, this.bundleIndex);
       }
     }
