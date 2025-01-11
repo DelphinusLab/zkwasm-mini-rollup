@@ -13,7 +13,7 @@ import { getMerkleArray } from "./contract.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import {merkleRootToBeHexString} from "./lib.js";
+import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 
 // Load environment variables from .env file
@@ -401,6 +401,18 @@ export class Service {
           success: true,
           data: jstr
         });
+      }
+    } catch (error) {
+      console.error('Error adding job to the queue:', error);
+      res.status(500).send('Failed to add job to the queue');
+    }
+  });
+
+  app.post('/query', async (req, res) => {
+    const value = req.body;
+    if (!value) {
+      return res.status(400).send('Value is required');
+    }
 
       } catch (error) {
         res.status(500).send('Get Status Error');
@@ -415,6 +427,37 @@ export class Service {
 
 }
 
+
+  app.get('/prooftask/:root', async (req, res) => {
+    try {
+      let merkleRootString = req.params.root;
+      let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
+      let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+      if (record) {
+        return res.status(201).json(record);
+      } else {
+        throw Error("TaskNotFound");
+      }
+    } catch (err) {
+      // job not tracked
+      console.log(err);
+      res.status(500).json({ message: (err as Error).toString()});
+    }
+  });
+
+
+  app.post('/config', async (req, res) => {
+    try {
+      let jstr = application.get_config();
+      res.status(201).send({
+        success: true,
+        data: jstr
+      });
+
+    } catch (error) {
+      res.status(500).send('Get Status Error');
+    }
+  });
 
 function signature_to_u64array(value: any) {
   const msg = new LeHexBN(value.msg).toU64Array();
