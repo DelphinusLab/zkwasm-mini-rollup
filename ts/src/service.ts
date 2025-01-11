@@ -394,40 +394,6 @@ export class Service {
       }
     });
 
-    app.post('/config', async (req, res) => {
-      try {
-        let jstr = application.get_config();
-        res.status(201).send({
-          success: true,
-          data: jstr
-        });
-      }
-    } catch (error) {
-      console.error('Error adding job to the queue:', error);
-      res.status(500).send('Failed to add job to the queue');
-    }
-  });
-
-  app.post('/query', async (req, res) => {
-    const value = req.body;
-    if (!value) {
-      return res.status(400).send('Value is required');
-    }
-
-      } catch (error) {
-        res.status(500).send('Get Status Error');
-      }
-    });
-
-    // Start the server
-    app.listen(port, () => {
-      console.log(`Server is running on http://0.0.0.0:${port}`);
-    });
-  }
-
-}
-
-
   app.get('/prooftask/:root', async (req, res) => {
     try {
       let merkleRootString = req.params.root;
@@ -446,18 +412,27 @@ export class Service {
   });
 
 
-  app.post('/config', async (req, res) => {
-    try {
-      let jstr = application.get_config();
-      res.status(201).send({
-        success: true,
-        data: jstr
-      });
+    app.post('/config', async (req, res) => {
+      try {
+        let jstr = application.get_config();
+        res.status(201).send({
+          success: true,
+          data: jstr
+        });
 
-    } catch (error) {
-      res.status(500).send('Get Status Error');
-    }
-  });
+      } catch (error) {
+        res.status(500).send('Get Status Error');
+      }
+    });
+
+    // Start the server
+    app.listen(port, () => {
+      console.log(`Server is running on http://0.0.0.0:${port}`);
+    });
+  }
+
+}
+
 
 function signature_to_u64array(value: any) {
   const msg = new LeHexBN(value.msg).toU64Array();

@@ -44,26 +44,6 @@ export async function getMerkleArray(): Promise<BigUint64Array>{
   return convertToBigUint64Array(oldRoot);
 }
 
-async function getMerkle(): Promise<String>{
-  // Connect to the Proxy contract
-  const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
-  // Fetch the proxy information
-  let proxyInfo = await proxy.getProxyInfo();
-  console.log("Proxy Info:", proxyInfo);
-  // Extract the old Merkle root
-  const oldRoot = proxyInfo.merkle_root;
-  console.log("Type of oldRoot:", typeof oldRoot);
-  console.log("Old Merkle Root:", oldRoot);
-  console.log("Settle:Old Merkle Root in u64:",convertToBigUint64Array(oldRoot));
-
-  let bnStr = oldRoot.toString(10);
-  let bn = new BN(bnStr, 10);
-  let oldRootBeString = '0x' + bn.toString("hex", 64);
-
-  console.log("Old Merkle Root(string):", oldRootBeString);
-  return oldRootBeString;
-}
-
 mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,

@@ -61,7 +61,11 @@ export const get_contract_addr = () => {
 }
 
 export const get_chain_id = () => {
-  return 16;
+  if (process.env.CHAIN_ID) {
+    return parseInt(process.env.CHAIN_ID);
+  } else {
+    return 16; // Coston testnet (Flare Network testnet) chain ID
+  }
 }
 
 export const get_user_addr = () => {
