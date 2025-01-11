@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import {ZkWasmServiceHelper} from 'zkwasm-service-helper';
-import { BN } from "bn.js";
+import { ZkWasmServiceHelper } from 'zkwasm-service-helper';
 import { PrivateKey } from "delphinus-curves/src/altjubjub";
 import dotenv from 'dotenv';
 
@@ -89,6 +88,23 @@ export const get_settle_private_account = () => {
   }
 }
 
+export const txSchema = new mongoose.Schema(
+    {
+      msg: {
+        type: String,
+        required: true,
+      },
+      pkx: {
+        type: String,
+        required: true,
+      },
+      sigx: {
+        type: String,
+        required: true,
+      }
+    }
+);
+
 export const jobSchema = new mongoose.Schema({
     jobId: {
           type: String,
@@ -141,6 +157,7 @@ export const randSchema = new mongoose.Schema({
 
 
 
+export const modelTx = mongoose.model('Tx', txSchema);
 export const modelJob = mongoose.model('Job', jobSchema);
 export const modelBundle = mongoose.model('Bundle', bundleSchema);
 export const modelRand = mongoose.model('Rand', randSchema);

@@ -133,7 +133,7 @@ function async_get_record(hash) {
   } else {
     console.log("get_record");
     console.error('Failed to fetch:', response.statusText);
-    throw("Failed to update_record");
+    throw("Failed to get_record");
   }
 }
 

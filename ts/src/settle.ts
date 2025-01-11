@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { ethers } from "ethers";
 import { ServiceHelper, get_mongoose_db, get_contract_addr, get_image_md5, modelBundle, get_settle_private_account, get_chain_id } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
@@ -8,13 +7,9 @@ import { U8ArrayUtil } from './lib.js';
 import { submitRawProof} from "./prover.js";
 import { decodeWithdraw} from "./convention.js";
 import dotenv from 'dotenv';
+import { provider, getMerkle } from "./contract.js";
 
 dotenv.config();
-
-let provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-if (process.env.RPC_PROVIDER) {
- provider = new ethers.JsonRpcProvider(process.env.RPC_PROVIDER);
-}
 
 const signer = new ethers.Wallet(get_settle_private_account(), provider);
 //

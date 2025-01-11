@@ -64,3 +64,5 @@ export function merkle_get(): bigint;
 * @returns {BigUint64Array}
 */
 export function check(): BigUint64Array;
+
+export default function __wbg_init(): Promise<void>;
