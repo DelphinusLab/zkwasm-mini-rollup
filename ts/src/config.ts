@@ -60,6 +60,14 @@ export const get_contract_addr = () => {
   }
 }
 
+export const get_chain_id = () => {
+  if (process.env.CHAIN_ID) {
+    return parseInt(process.env.CHAIN_ID);
+  } else {
+    return 16; // Coston testnet (Flare Network testnet) chain ID
+  }
+}
+
 export const get_user_addr = () => {
   if (process.env.USER_ADDRESS) {
     return process.env.USER_ADDRESS;
