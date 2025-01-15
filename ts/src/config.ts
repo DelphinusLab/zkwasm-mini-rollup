@@ -76,6 +76,14 @@ export const get_user_private_account = () => {
   }
 }
 
+export const get_chain_id = () => {
+  if (process.env.CHAIN_ID) {
+    return process.env.CHAIN_ID;
+  } else {
+    return 16;
+  }
+}
+
 export const get_settle_private_account = () => {
   if (process.env.SETTLER_PRIVATE_ACCOUNT) {
     return process.env.SETTLER_PRIVATE_ACCOUNT;
