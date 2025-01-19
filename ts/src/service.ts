@@ -2,7 +2,7 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
-import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc } from "zkwasm-minirollup-rpc";
+import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc, createCommand } from "zkwasm-minirollup-rpc";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express from 'express';
@@ -351,7 +351,7 @@ export class Service {
             });
             seed = randRecord[0].seed!.readBigInt64LE();
           };
-          let signature = sign(admin.createCommand(0n, 0n, [seed, rand, 0n, 0n]), get_server_admin_key());
+          let signature = sign(createCommand(0n, 0n, [seed, rand, 0n, 0n]), get_server_admin_key());
           console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
           application.verify_tx_signature(u64array);
