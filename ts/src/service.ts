@@ -5,7 +5,7 @@ import { test_merkle_db_service } from "./test.js";
 import { verify_sign, LeHexBN, sign } from "./sign.js";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
-import express from 'express';
+import express, {Express} from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx } from "./config.js";
@@ -86,10 +86,13 @@ export class Service {
   worker: null | Worker;
   queue: null | Queue;
   txCallback: (arg: TxWitness) => void;
-  constructor(cb: (arg: TxWitness) => void) {
+  registerAPICallback: (app: Express) => void;
+
+  constructor(cb: (arg: TxWitness) => void, registerAPICallback: (app: Express) => void = (app: Express) => {}) {
     this.worker = null;
     this.queue = null;
     this.txCallback = cb;
+    this.registerAPICallback = registerAPICallback;
   }
 
   async install_transactions(tx: TxWitness, jobid: string | undefined) {
@@ -425,6 +428,8 @@ export class Service {
       }
     });
 
+    this.registerAPICallback(app);
+    
     // Start the server
     app.listen(port, () => {
       console.log(`Server is running on http://0.0.0.0:${port}`);
