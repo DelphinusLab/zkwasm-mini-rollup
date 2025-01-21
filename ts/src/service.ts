@@ -5,7 +5,7 @@ import { test_merkle_db_service } from "./test.js";
 import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc, createCommand } from "zkwasm-minirollup-rpc";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
-import express from 'express';
+import express, {Express} from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
 import cors from "cors";
 import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx } from "./config.js";
@@ -13,7 +13,7 @@ import { getMerkleArray } from "./contract.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import {merkleRootToBeHexString} from "./lib.js";
+import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 
 // Load environment variables from .env file
@@ -80,15 +80,21 @@ export class Service {
   queue: null | Queue;
   txCallback: (arg: TxWitness, events: BigUint64Array) => void;
   txBatched: (arg: TxWitness, task_id: string) => void;
+  registerAPICallback: (app: Express) => void;
   merkleRoot: BigUint64Array;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
 
-  constructor(cb: (arg: TxWitness, events: BigUint64Array) => void, txBatched: (arg: TxWitness, task_id: string)=> void) {
+  constructor(
+      cb: (arg: TxWitness, events: BigUint64Array) => void = (arg: TxWitness, events: BigUint64Array) => {},
+      txBatched: (arg: TxWitness, task_id: string)=> void = (arg: TxWitness, task_id: string) => {},
+      registerAPICallback: (app: Express) => void = (app: Express) => {}
+  ) {
     this.worker = null;
     this.queue = null;
     this.txCallback = cb;
     this.txBatched = txBatched;
+    this.registerAPICallback = registerAPICallback;
     this.merkleRoot = new BigUint64Array([
       14789582351289948625n,
       10919489180071018470n,
@@ -483,6 +489,24 @@ export class Service {
       }
     });
 
+  app.get('/prooftask/:root', async (req, res) => {
+    try {
+      let merkleRootString = req.params.root;
+      let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
+      let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+      if (record) {
+        return res.status(201).json(record);
+      } else {
+        throw Error("TaskNotFound");
+      }
+    } catch (err) {
+      // job not tracked
+      console.log(err);
+      res.status(500).json({ message: (err as Error).toString()});
+    }
+  });
+
+
     app.post('/config', async (req, res) => {
       try {
         let jstr = application.get_config();
@@ -496,6 +520,8 @@ export class Service {
       }
     });
 
+    this.registerAPICallback(app);
+    
     // Start the server
     app.listen(port, () => {
       console.log(`Server is running on http://0.0.0.0:${port}`);

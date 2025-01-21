@@ -60,6 +60,14 @@ export const get_contract_addr = () => {
   }
 }
 
+export const get_chain_id = () => {
+  if (process.env.CHAIN_ID) {
+    return parseInt(process.env.CHAIN_ID);
+  } else {
+    return 16; // Coston testnet (Flare Network testnet) chain ID
+  }
+}
+
 export const get_user_addr = () => {
   if (process.env.USER_ADDRESS) {
     return process.env.USER_ADDRESS;
@@ -73,14 +81,6 @@ export const get_user_private_account = () => {
     return process.env.USER_PRIVATE_ACCOUNT;
   } else {
     return "2763537251e2f27dc6a30179e7bf1747239180f45b92db059456b7da8194995a";
-  }
-}
-
-export const get_chain_id = () => {
-  if (process.env.CHAIN_ID) {
-    return process.env.CHAIN_ID;
-  } else {
-    return 16;
   }
 }
 
