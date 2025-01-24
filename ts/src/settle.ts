@@ -277,8 +277,74 @@ async function trySettle() {
   }
 }
 
-// start monitoring and settle
+async function setup() {
+  console.log("Running setup...");
+  
+  try {
+    // Get task info from environment variable
+    const taskId = process.env.TASK_ID;
+    if (!taskId) {
+      throw new Error("TASK_ID environment variable is required for setup");
+    }
+
+    // Get task details
+    const task = await getTaskWithTimeout(taskId, 60000);
+    if (!task) {
+      throw new Error("Failed to fetch task information");
+    }
+
+    // Connect to contract
+    const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
+
+    // Get instances array and convert to numbers
+    const instances = new U8ArrayUtil(task.instances).toNumber();
+    
+    // Calculate merkle root from instances array (matching contract format)
+    // instances[0-3] represent the old root in 64-bit chunks
+    const merkleRoot = (BigInt(instances[0]) << 192n) +
+                      (BigInt(instances[1]) << 128n) +
+                      (BigInt(instances[2]) << 64n) +
+                      BigInt(instances[3]);
+    
+    console.log("Setting merkle root:", merkleRoot.toString());
+    await proxy.setMerkle(merkleRoot);
+
+    // Get verify instances array
+    const verifyInstances = task.shadow_instances.length === 0
+      ? new U8ArrayUtil(task.batch_instances).toNumber()
+      : new U8ArrayUtil(task.shadow_instances).toNumber();
+
+    // Image commitments are in verify_instance[1-3]
+    if (verifyInstances.length >= 4) {
+      console.log("Setting verifier image commitments:", [
+        verifyInstances[1],
+        verifyInstances[2],
+        verifyInstances[3]
+      ]);
+      
+      await proxy.setVerifierImageCommitments([
+        verifyInstances[1],
+        verifyInstances[2],
+        verifyInstances[3]
+      ]);
+    } else {
+      console.warn("Verify instances array too short for image commitments");
+    }
+
+    console.log("Setup completed successfully");
+  } catch (error) {
+    console.error("Setup failed:", error);
+    throw error;
+  }
+}
+
+// Modify main function to conditionally run setup
 async function main() {
+  if (process.env.SETUP) {
+    console.log("Running contract setup...");
+    await setup();
+  }
+  
   while (true) {
     try {
       await trySettle();
