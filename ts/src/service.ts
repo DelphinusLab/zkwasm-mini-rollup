@@ -24,26 +24,37 @@ let remote = false;
 let migrate = false;
 let redisHost = 'localhost';
 
+console.log("mogoose_db", get_mongoose_db())
+console.log("server_admin_key", get_server_admin_key())
+console.log("service_port", get_service_port())
+console.log("redis_host", redisHost)
+
+
 if (process.env.DEPLOY) {
   deploymode = true;
+  console.log(process.env.DEPLOY)
 }
 
 if (process.env.REMOTE) {
   remote = true;
+  console.log(process.env.REMOTE)
 }
 
 if (process.env.MIGRATE) {
   migrate = true;
+  console.log(process.env.MIGRATE)
 }
 
 if (process.env.REDISHOST) {
   redisHost = process.env.REDISHOST;
+  console.log(process.env.REDISHOST)
 }
 
 let taskid: string | null = null;
 
 if (process.env.TASKID) {
   taskid = process.env.TASKID;
+  console.log(process.env.TASKID)
 }
 
 /* Global Params */
