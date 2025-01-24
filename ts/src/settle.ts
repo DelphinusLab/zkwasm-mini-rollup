@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { ServiceHelper, get_mongoose_db, get_contract_addr, get_image_md5, modelBundle, get_settle_private_account, get_chain_id } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
-import { ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams, AutoSubmitStatus, Round1Status, Round1Info } from "zkwasm-service-helper";
+import { ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams, AutoSubmitStatus, Round1Status, Round1Info, Image } from "zkwasm-service-helper";
 import { U8ArrayUtil } from './lib.js';
 import { submitRawProof} from "./prover.js";
 import { decodeWithdraw} from "./convention.js";
@@ -44,6 +44,20 @@ export async function getMerkleArray(): Promise<BigUint64Array>{
   return convertToBigUint64Array(oldRoot);
 }
 
+export async function queryImage(md5: string, enable_logs : boolean = true) : Promise<Image> {
+  return ServiceHelper.queryImage(md5).then((res) => {
+    if (enable_logs) {
+      console.log("queryImage Success", res);
+    }
+    return res;
+  }).catch((err) => {
+    if (enable_logs) {
+      console.log("queryTask Error", err);
+    }
+    return err;
+  });
+}
+
 mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
@@ -53,13 +67,30 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function() {console.log("Connected to the database")});
 
-async function getTask(taskid: string, d_state: string|null): Promise<Task> {
+export async function getTask(taskid: string, d_state: string|null): Promise<Task> {
   const queryParams: QueryParams = {
     id: taskid,
     tasktype: "Prove",
     taskstatus: d_state,
     user_address: null,
     md5: get_image_md5(),
+    total: 1,
+  };
+
+  const response: PaginationResult<Task[]> = await ServiceHelper.loadTasks(
+    queryParams
+  );
+
+  return response.data[0];
+}
+
+export async function getTaskWithMD5(taskid: string, md5: string, d_state: string|null): Promise<Task> {
+  const queryParams: QueryParams = {
+    id: taskid,
+    tasktype: "Prove",
+    taskstatus: d_state,
+    user_address: null,
+    md5: md5,
     total: 1,
   };
 
@@ -281,14 +312,22 @@ async function setup() {
   console.log("Running setup...");
   
   try {
-    // Get task info from environment variable
-    const taskId = process.env.TASK_ID;
-    if (!taskId) {
-      throw new Error("TASK_ID environment variable is required for setup");
+    // Get image MD5 from environment variable
+    const imageMd5 = get_image_md5();
+    if (!imageMd5) {
+      throw new Error("IMAGE_MD5 environment variable is required for setup");
     }
 
-    // Get task details
-    const task = await getTaskWithTimeout(taskId, 60000);
+    // Query image to get proof task id
+    const imageResult = await queryImage(imageMd5, true);
+    const imageInfo = imageResult as Image & { proof_task_id?: string };
+    
+    if (!imageInfo.proof_task_id) {
+      throw new Error("No proof task ID found for the image");
+    }
+
+    // Get task details using the proof task id
+    const task = await getTaskWithMD5(imageInfo.proof_task_id, imageMd5, "Done");
     if (!task) {
       throw new Error("Failed to fetch task information");
     }
