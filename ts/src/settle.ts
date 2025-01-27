@@ -4,7 +4,6 @@ import abiData from './Proxy.json' assert { type: 'json' };
 import mongoose from 'mongoose';
 import { ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams, AutoSubmitStatus, Round1Status, Round1Info, Image } from "zkwasm-service-helper";
 import { U8ArrayUtil } from './lib.js';
-import { submitRawProof} from "./prover.js";
 import { decodeWithdraw} from "./convention.js";
 import dotenv from 'dotenv';
 import { provider, getMerkle } from "./contract.js";
@@ -44,20 +43,6 @@ export async function getMerkleArray(): Promise<BigUint64Array>{
   return convertToBigUint64Array(oldRoot);
 }
 
-export async function queryImage(md5: string, enable_logs : boolean = true) : Promise<Image> {
-  return ServiceHelper.queryImage(md5).then((res) => {
-    if (enable_logs) {
-      console.log("queryImage Success", res);
-    }
-    return res;
-  }).catch((err) => {
-    if (enable_logs) {
-      console.log("queryTask Error", err);
-    }
-    return err;
-  });
-}
-
 mongoose.connect(get_mongoose_db(), {
     //useNewUrlParser: true,
     //useUnifiedTopology: true,
@@ -84,9 +69,9 @@ export async function getTask(taskid: string, d_state: string|null): Promise<Tas
   return response.data[0];
 }
 
-export async function getTaskWithMD5(taskid: string, md5: string, d_state: string|null): Promise<Task> {
+export async function getTaskByStateAndImage(md5: string, d_state: string|null): Promise<Task> {
   const queryParams: QueryParams = {
-    id: taskid,
+    id: null,
     tasktype: "Prove",
     taskstatus: d_state,
     user_address: null,
@@ -253,7 +238,7 @@ async function trySettle() {
         }
       }
 
-      let attributes = await prepareVerifyAttributesSingle(task!);
+      let attributes = await prepareVerifyAttributes(task!);
 
       const tx = await proxy.verify(
         attributes.txData,
@@ -309,80 +294,74 @@ async function trySettle() {
 }
 
 async function setup(retryDelay: number = 10000) {
-  console.log("Running setup...");
-  
-  while (true) {
-    try {
-      // Get image MD5
-      const imageMd5 = get_image_md5();
-      if (!imageMd5) {
-        throw new Error("IMAGE_MD5 not configured");
-      }
+    console.log("Running setup...");
+    
+    while (true) {
+        try {
+            // Get image MD5
+            const imageMd5 = get_image_md5();
+            if (!imageMd5) {
+                throw new Error("IMAGE_MD5 not configured");
+            }
 
-      // Query image to get proof task id
-      const imageResult = await queryImage(imageMd5, true);
-      const imageInfo = imageResult as Image & { proof_task_id?: string };
-      
-      if (!imageInfo.proof_task_id) {
-        console.log(`No proof task ID yet, retrying in ${retryDelay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        continue;
-      }
+            console.log("Testing queryImage with MD5:", imageMd5);
+            
+            // 使用 getTask 获取任务信息
+            const task = await getTaskByStateAndImage(imageMd5, "Done");
+            if (!task) {
+                console.log(`Task not ready yet, retrying in ${retryDelay/1000} seconds...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                continue;
+            }
+            console.log("Task info:", task);
 
-      // Get task details using the proof task id
-      const task = await getTaskWithMD5(imageInfo.proof_task_id, imageMd5, "Done");
-      if (!task) {
-        console.log(`Task not ready yet, retrying in ${retryDelay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        continue;
-      }
+            // Connect to contract
+            const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
 
-      // Connect to contract
-      const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, signer);
+            // 从 instances 中获取 merkle root
+            if (task.instances) {
+                const instances = new U8ArrayUtil(task.instances).toNumber();
+                // instances[0-3] represent the old root in 64-bit chunks
+                const merkleRoot = (BigInt(instances[0]) << 192n) +
+                                 (BigInt(instances[1]) << 128n) +
+                                 (BigInt(instances[2]) << 64n) +
+                                 BigInt(instances[3]);
+                
+                console.log("Setting merkle root:", merkleRoot.toString());
+                await proxy.setMerkle(merkleRoot);
+            }
 
-      // Get instances array and convert to numbers
-      const instances = new U8ArrayUtil(task.instances).toNumber();
-      
-      // Calculate merkle root from instances array
-      const merkleRoot = (BigInt(instances[0]) << 192n) +
-                        (BigInt(instances[1]) << 128n) +
-                        (BigInt(instances[2]) << 64n) +
-                        BigInt(instances[3]);
-      
-      console.log("Setting merkle root:", merkleRoot.toString());
-      await proxy.setMerkle(merkleRoot);
+            // Get verify instances array
+            const verifyInstances = task.shadow_instances.length === 0
+                ? new U8ArrayUtil(task.batch_instances).toNumber()
+                : new U8ArrayUtil(task.shadow_instances).toNumber();
 
-      // Get verify instances array
-      const verifyInstances = task.shadow_instances.length === 0
-        ? new U8ArrayUtil(task.batch_instances).toNumber()
-        : new U8ArrayUtil(task.shadow_instances).toNumber();
+            // Image commitments are in verify_instance[1-3]
+            if (verifyInstances.length >= 4) {
+                console.log("Setting verifier image commitments:", [
+                    verifyInstances[1],
+                    verifyInstances[2],
+                    verifyInstances[3]
+                ]);
+                
+                await proxy.setVerifierImageCommitments([
+                    verifyInstances[1],
+                    verifyInstances[2],
+                    verifyInstances[3]
+                ]);
+            } else {
+                console.warn("Verify instances array too short for image commitments");
+            }
 
-      // Image commitments are in verify_instance[1-3]
-      if (verifyInstances.length >= 4) {
-        console.log("Setting verifier image commitments:", [
-          verifyInstances[1],
-          verifyInstances[2],
-          verifyInstances[3]
-        ]);
-        
-        await proxy.setVerifierImageCommitments([
-          verifyInstances[1],
-          verifyInstances[2],
-          verifyInstances[3]
-        ]);
-      } else {
-        console.warn("Verify instances array too short for image commitments");
-      }
-
-      console.log("Setup completed successfully");
-      return; // 成功完成，退出函数
-      
-    } catch (error) {
-      console.log(`Setup attempt failed, retrying in ${retryDelay/1000} seconds...`);
-      console.error(error);
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
+            console.log("Setup completed successfully");
+            return;
+            
+        } catch (error) {
+            console.log(`Setup attempt failed, retrying in ${retryDelay/1000} seconds...`);
+            console.error(error);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
     }
-  }
 }
 
 // Modify main function to conditionally run setup
