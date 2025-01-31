@@ -343,7 +343,7 @@ export class Service {
         console.log("updated merkle root", this.merkleRoot, this.bundleIndex);
       }
     } else {
-      this.syncToLatestMerkelRoot();
+      await this.syncToLatestMerkelRoot();
     }
 
     console.log("initialize sequener queue ...");
@@ -441,8 +441,8 @@ export class Service {
 
   async serve() {
     console.log("install bootstrap txs");
-    for (const tx of await this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
-      this.queue!.add('transaction', { tx });
+    for (const value of await this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
+      this.queue!.add('transaction', { value });
     }
     console.log("start express server");
     const app = express();
