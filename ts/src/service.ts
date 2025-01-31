@@ -79,7 +79,7 @@ export class Service {
   worker: null | Worker;
   queue: null | Queue;
   txCallback: (arg: TxWitness, events: BigUint64Array) => void;
-  txBatched: (arg: TxWitness[], merkleHexRoot: string) => void;
+  txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => void;
   registerAPICallback: (app: Express) => void;
   bootstrapCallback: (merkleRootHex: string) => TxWitness[];
   merkleRoot: BigUint64Array;
@@ -88,7 +88,7 @@ export class Service {
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => void = (arg: TxWitness, events: BigUint64Array) => {},
-      txBatched: (arg: TxWitness[], merkleHexRoot: string)=> void = (arg: TxWitness[], merkleHexRoot: string) => {},
+      txBatched: (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string)=> void = (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string) => {},
       registerAPICallback: (app: Express) => void = (app: Express) => {},
       bootstrapCallback: (merkleRootHex: string) => TxWitness[] = (merkleRoot: string) => {return []}
   ) {
@@ -240,8 +240,6 @@ export class Service {
 
         this.trackBundle(task_id);
 
-        // record all the txs externally so that the external db can preserve a snap shot
-        this.txBatched(transactions_witness, merkleRootToBeHexString(this.merkleRoot));
 
         // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
@@ -249,6 +247,11 @@ export class Service {
 
         // need to update merkle_root as the input of next proof
         this.merkleRoot = application.query_root();
+
+
+        // record all the txs externally so that the external db can preserve a snap shot
+        this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
+
         // reset application here
         console.log("restore root:", this.merkleRoot);
         await (initApplication as any)(bootstrap);
