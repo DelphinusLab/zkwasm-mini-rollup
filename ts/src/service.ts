@@ -230,8 +230,7 @@ export class Service {
         console.log("proving task submitted at:", task_id);
         console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
 
-        this.trackBundle(task_id);
-
+        await this.trackBundle(task_id);
 
         // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
