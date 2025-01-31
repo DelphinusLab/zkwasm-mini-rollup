@@ -79,16 +79,18 @@ export class Service {
   worker: null | Worker;
   queue: null | Queue;
   txCallback: (arg: TxWitness, events: BigUint64Array) => void;
-  txBatched: (arg: TxWitness, task_id: string) => void;
+  txBatched: (arg: TxWitness[], merkleHexRoot: string) => void;
   registerAPICallback: (app: Express) => void;
+  bootstrapCallback: (merkleRootHex: string) => TxWitness[];
   merkleRoot: BigUint64Array;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => void = (arg: TxWitness, events: BigUint64Array) => {},
-      txBatched: (arg: TxWitness, task_id: string)=> void = (arg: TxWitness, task_id: string) => {},
-      registerAPICallback: (app: Express) => void = (app: Express) => {}
+      txBatched: (arg: TxWitness[], merkleHexRoot: string)=> void = (arg: TxWitness[], merkleHexRoot: string) => {},
+      registerAPICallback: (app: Express) => void = (app: Express) => {},
+      bootstrapCallback: (merkleRootHex: string) => TxWitness[] = (merkleRoot: string) => {return []}
   ) {
     this.worker = null;
     this.queue = null;
@@ -103,6 +105,29 @@ export class Service {
     ]);
     this.bundleIndex = 0;
     this.preMerkleRoot = null;
+    this.bootstrapCallback = bootstrapCallback;
+  }
+
+  async syncToLatestMerkelRoot() {
+    let bundle = await this.findBundleByMerkle(merkleRootToBeHexString(this.merkleRoot));
+    while (bundle != null && bundle.postMerkleRoot!=null) {
+      this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(bundle.merkleRoot));
+      console.log("sync merkle:", this.merkleRoot, "taskId:", bundle.taskId);
+      bundle = await this.findBundleByMerkle(merkleRootToBeHexString(this.merkleRoot));
+    }
+    if (bundle != null) {
+      console.log("sync merkle:", this.merkleRoot, "taskId:", bundle.taskId);
+      this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(bundle.merkleRoot));
+    }
+  }
+
+  async findBundleByMerkle(merkleHexRoot: string) {
+    const prevBundle = await modelBundle.findOne(
+      {
+        merkleRoot: merkleHexRoot
+      },
+    );
+    return prevBundle;
   }
 
   async findBundleIndex(merkleRoot: BigUint64Array) {
@@ -123,6 +148,67 @@ export class Service {
       }
   }
 
+  async trackBundle(taskId: string) {
+    let preMerkleRootStr = "";
+    if (this.preMerkleRoot != null) {
+      preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
+    };
+
+    if (this.preMerkleRoot != null) {
+      console.log("update merkle chain ...", merkleRootToBeHexString(this.preMerkleRoot));
+      try {
+        const prevBundle = await modelBundle.findOneAndUpdate(
+          {
+            merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
+          },
+          {
+            postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
+          },
+          {}
+        );
+        if (this.bundleIndex != prevBundle!.bundleIndex) {
+          console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
+          throw Error(`Bundle Index does not match: current index is ${this.bundleIndex}, previous index is ${prevBundle!.bundleIndex}`);
+        }
+        console.log("merkle chain prev is", prevBundle);
+      } catch (e) {
+        console.log(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
+        throw Error(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
+      }
+    }
+    this.bundleIndex += 1;
+
+    console.log("add transaction bundle:", this.bundleIndex);
+    const bundleRecord = new modelBundle({
+      merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+      preMerkleRoot: preMerkleRootStr,
+      taskId: taskId,
+      bundleIndex: this.bundleIndex,
+    });
+
+    try {
+      await bundleRecord.save();
+      console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
+    } catch (e) {
+      let record = await modelBundle.findOneAndUpdate(
+        {
+          merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+        },
+        {
+          taskId: taskId,
+          postMerkleRoot: "",
+          preMerkleRoot: preMerkleRootStr,
+          bundleIndex: this.bundleIndex,
+        },
+        {}
+      );
+      console.log("fatal: conflict db merkle");
+      // TODO: do we need to trim the corrputed branch?
+      console.log(record);
+      //throw e
+    }
+  }
+
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
@@ -139,75 +225,23 @@ export class Service {
       console.log("rollup reach its preemption point, generating proof:");
       let txdata = application.finalize();
       console.log("txdata is:", txdata);
-      try {
-        let task_id = null;
-        if (deploymode) {
+      let task_id = null;
+      if (deploymode) {
+        try {
           task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
-          console.log("proving task submitted at:", task_id);
-          console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
-          let preMerkleRootStr = "";
-          if (this.preMerkleRoot != null) {
-            preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
-          };
-
-          if (this.preMerkleRoot != null) {
-            console.log("update merkle chain ...", merkleRootToBeHexString(this.preMerkleRoot));
-            try {
-              const prevBundle = await modelBundle.findOneAndUpdate(
-                {
-                  merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
-                },
-                {
-                  postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
-                },
-                {}
-              );
-              if (this.bundleIndex != prevBundle!.bundleIndex) {
-                console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
-              }
-              console.log("merkle chain prev is", prevBundle);
-            } catch (e) {
-              console.log(`fatal: can not find bundle for previous MerkleRoot: ${merkleRootToBeHexString(this.preMerkleRoot)}`);
-              //throw e
-            }
-          }
-
-          this.bundleIndex += 1;
-
-          console.log("add transaction bundle:", this.bundleIndex);
-          const bundleRecord = new modelBundle({
-            merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-            preMerkleRoot: preMerkleRootStr,
-            taskId: task_id,
-            bundleIndex: this.bundleIndex,
-          });
-
-          try {
-            await bundleRecord.save();
-            console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
-          } catch (e) {
-            let record = await modelBundle.findOneAndUpdate(
-              {
-                merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-              },
-              {
-                taskId: task_id,
-                postMerkleRoot: "",
-                preMerkleRoot: preMerkleRootStr,
-                bundleIndex: this.bundleIndex,
-              },
-              {}
-            );
-            console.log("fatal: conflict db merkle");
-            // TODO: do we need to trim the corrputed branch?
-            console.log(record);
-            //throw e
-          }
-          // update the merkel chain if necessary
+        } catch (e) {
+          console.log(e);
+          process.exit(1); // this should never happen and we stop the whole process
         }
-        for (let tx of transactions_witness) {
-          this.txBatched(tx, task_id);
-        }
+      }
+      try {
+        console.log("proving task submitted at:", task_id);
+        console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
+
+        this.trackBundle(task_id);
+
+        // record all the txs externally so that the external db can preserve a snap shot
+        this.txBatched(transactions_witness, merkleRootToBeHexString(this.merkleRoot));
 
         // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
@@ -275,12 +309,13 @@ export class Service {
     test_merkle_db_service();
 
     if (migrate) {
-      if (remote) {throw Error("Can't migrate in remote mode");}
+      if (remote) {
+        throw Error("Can't migrate in remote mode");
+      }
       this.merkleRoot = await getMerkleArray();
       console.log("Migrate: updated merkle root", this.merkleRoot);
-    }
+    } else if(remote) {
     //initialize merkle_root based on the latest task
-    if (remote) {
       while (true) {
         const hasTasks = await has_uncomplete_task();
         if (hasTasks) {
@@ -313,6 +348,8 @@ export class Service {
         this.bundleIndex = await this.findBundleIndex(this.preMerkleRoot);
         console.log("updated merkle root", this.merkleRoot, this.bundleIndex);
       }
+    } else {
+      this.syncToLatestMerkelRoot();
     }
 
     console.log("initialize sequener queue ...");
@@ -341,8 +378,6 @@ export class Service {
         }
       }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
     }
-
-    let admin = new PlayerConvention(get_server_admin_key(), new ZKWasmAppRpc(""), 0n, 0n);
 
     this.worker = new Worker('sequencer', async job => {
       if (job.name == 'autoJob') {
@@ -411,7 +446,10 @@ export class Service {
   }
 
   async serve() {
-
+    console.log("install bootstrap txs");
+    for (const tx of this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
+      this.queue!.add('transaction', { tx });
+    }
     console.log("start express server");
     const app = express();
     const port = get_service_port();
@@ -489,22 +527,22 @@ export class Service {
       }
     });
 
-  app.get('/prooftask/:root', async (req, res) => {
-    try {
-      let merkleRootString = req.params.root;
-      let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
-      let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
-      if (record) {
-        return res.status(201).json(record);
-      } else {
-        throw Error("TaskNotFound");
+    app.get('/prooftask/:root', async (req, res) => {
+      try {
+        let merkleRootString = req.params.root;
+        let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
+        let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+        if (record) {
+          return res.status(201).json(record);
+        } else {
+          throw Error("TaskNotFound");
+        }
+      } catch (err) {
+        // job not tracked
+        console.log(err);
+        res.status(500).json({ message: (err as Error).toString()});
       }
-    } catch (err) {
-      // job not tracked
-      console.log(err);
-      res.status(500).json({ message: (err as Error).toString()});
-    }
-  });
+    });
 
 
     app.post('/config', async (req, res) => {
@@ -521,7 +559,7 @@ export class Service {
     });
 
     this.registerAPICallback(app);
-    
+
     // Start the server
     app.listen(port, () => {
       console.log(`Server is running on http://0.0.0.0:${port}`);
