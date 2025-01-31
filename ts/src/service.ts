@@ -78,19 +78,19 @@ async function generateRandomSeed() {
 export class Service {
   worker: null | Worker;
   queue: null | Queue;
-  txCallback: (arg: TxWitness, events: BigUint64Array) => void;
-  txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => void;
+  txCallback: (arg: TxWitness, events: BigUint64Array) => Promise<void>;
+  txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => Promise<void>;
   registerAPICallback: (app: Express) => void;
-  bootstrapCallback: (merkleRootHex: string) => TxWitness[];
+  bootstrapCallback: (merkleRootHex: string) => Promise<TxWitness[]>;
   merkleRoot: BigUint64Array;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
 
   constructor(
-      cb: (arg: TxWitness, events: BigUint64Array) => void = (arg: TxWitness, events: BigUint64Array) => {},
-      txBatched: (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string)=> void = (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string) => {},
+      cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
+      txBatched: (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string)=> Promise<void> = async (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string) => {},
       registerAPICallback: (app: Express) => void = (app: Express) => {},
-      bootstrapCallback: (merkleRootHex: string) => TxWitness[] = (merkleRoot: string) => {return []}
+      bootstrapCallback: (merkleRootHex: string) => Promise<TxWitness[]> = async (merkleRoot: string) => {return []}
   ) {
     this.worker = null;
     this.queue = null;
@@ -212,7 +212,7 @@ export class Service {
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
-    this.txCallback(tx, events);
+    await this.txCallback(tx, events);
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
     try {
@@ -250,7 +250,7 @@ export class Service {
 
 
         // record all the txs externally so that the external db can preserve a snap shot
-        this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
+        await this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
 
         // reset application here
         console.log("restore root:", this.merkleRoot);
@@ -450,7 +450,7 @@ export class Service {
 
   async serve() {
     console.log("install bootstrap txs");
-    for (const tx of this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
+    for (const tx of await this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
       this.queue!.add('transaction', { tx });
     }
     console.log("start express server");
