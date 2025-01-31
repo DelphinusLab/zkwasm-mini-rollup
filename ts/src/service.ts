@@ -109,16 +109,18 @@ export class Service {
   }
 
   async syncToLatestMerkelRoot() {
-    let bundle = await this.findBundleByMerkle(merkleRootToBeHexString(this.merkleRoot));
-    while (bundle != null && bundle.postMerkleRoot!=null) {
-      this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(bundle.merkleRoot));
-      console.log("sync merkle:", this.merkleRoot, "taskId:", bundle.taskId);
-      bundle = await this.findBundleByMerkle(merkleRootToBeHexString(this.merkleRoot));
+    let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
+    let bundle = await this.findBundleByMerkle(currentMerkle);
+    while (bundle != null && bundle.postMerkleRoot != null) {
+      const postMerkle = new BigUint64Array(hexStringToMerkleRoot(bundle.postMerkleRoot));
+      console.log("sync merkle:", currentMerkle, "taskId:", bundle.taskId);
+      bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle));
+      if(bundle != null) {
+        currentMerkle = bundle.merkleRoot;
+      }
     }
-    if (bundle != null) {
-      console.log("sync merkle:", this.merkleRoot, "taskId:", bundle.taskId);
-      this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(bundle.merkleRoot));
-    }
+    console.log("final merkle:", currentMerkle);
+    this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(currentMerkle));
   }
 
   async findBundleByMerkle(merkleHexRoot: string) {
@@ -152,21 +154,14 @@ export class Service {
     console.log("track bundle:", this.bundleIndex);
     let preMerkleRootStr = "";
     if (this.preMerkleRoot != null) {
-      preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
-    };
-
-    if (this.preMerkleRoot != null) {
-      console.log("update merkle chain ...", merkleRootToBeHexString(this.preMerkleRoot));
+      preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot);
+      console.log("update merkle chain ...", preMerkleRootStr);
       try {
-        const prevBundle = await modelBundle.findOneAndUpdate(
-          {
-            merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
-          },
-          {
-            postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
-          },
-          {}
-        );
+        const prevBundle = await modelBundle.findOneAndUpdate({
+          merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
+        }, {
+          postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
+        }, {});
         if (this.bundleIndex != prevBundle!.bundleIndex) {
           console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
           throw Error(`Bundle Index does not match: current index is ${this.bundleIndex}, previous index is ${prevBundle!.bundleIndex}`);
@@ -178,7 +173,6 @@ export class Service {
       }
     }
     this.bundleIndex += 1;
-
     console.log("add transaction bundle:", this.bundleIndex, merkleRootToBeHexString(this.merkleRoot));
     const bundleRecord = new modelBundle({
       merkleRoot: merkleRootToBeHexString(this.merkleRoot),
@@ -186,29 +180,26 @@ export class Service {
       taskId: taskId,
       bundleIndex: this.bundleIndex,
     });
-
     try {
       await bundleRecord.save();
       console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
-    } catch (e) {
-      let record = await modelBundle.findOneAndUpdate(
-        {
-          merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-        },
-        {
-          taskId: taskId,
-          postMerkleRoot: "",
-          preMerkleRoot: preMerkleRootStr,
-          bundleIndex: this.bundleIndex,
-        },
-        {}
-      );
+    }
+    catch (e) {
+      let record = await modelBundle.findOneAndUpdate({
+        merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+      }, {
+        taskId: taskId,
+        postMerkleRoot: "",
+        preMerkleRoot: preMerkleRootStr,
+        bundleIndex: this.bundleIndex,
+      }, {});
       console.log("fatal: conflict db merkle");
       // TODO: do we need to trim the corrputed branch?
       console.log(record);
       //throw e
     }
   }
+
 
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
     console.log("installing transaction into rollup ...");
