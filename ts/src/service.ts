@@ -149,6 +149,7 @@ export class Service {
   }
 
   async trackBundle(taskId: string) {
+    console.log("track bundle:", this.bundleIndex);
     let preMerkleRootStr = "";
     if (this.preMerkleRoot != null) {
       preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!)
@@ -178,7 +179,7 @@ export class Service {
     }
     this.bundleIndex += 1;
 
-    console.log("add transaction bundle:", this.bundleIndex);
+    console.log("add transaction bundle:", this.bundleIndex, merkleRootToBeHexString(this.merkleRoot));
     const bundleRecord = new modelBundle({
       merkleRoot: merkleRootToBeHexString(this.merkleRoot),
       preMerkleRoot: preMerkleRootStr,

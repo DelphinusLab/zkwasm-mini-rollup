@@ -53,7 +53,7 @@ export function get_leaf(root, index) {
   let data = async_get_leaf(root, index);
   const end = performance.now();
   let lag = end - start;
-  console.log("bench-log: get_leaf", lag);
+  //console.log("bench-log: get_leaf", lag);
   return data;
 }
 
@@ -83,7 +83,7 @@ export function update_leaf(root, index, data) {
   let r = async_update_leaf(root, index, data);
   const end = performance.now();
   let lag = end - start;
-  console.log("bench-log: update_leaf", lag);
+  //console.log("bench-log: update_leaf", lag);
   return r;
 }
 
@@ -112,7 +112,7 @@ export function update_record(hash, data) {
   let r = async_update_record(hash, data);
   const end = performance.now();
   let lag = end - start;
-  console.log("bench-log: update_record", lag);
+  //console.log("bench-log: update_record", lag);
   return r;
 }
 
@@ -142,7 +142,7 @@ export function get_record(hash) {
   let r = async_get_record(hash);
   const end = performance.now();
   let lag = end - start;
-  console.log("bench-log: update_record", lag);
+  //console.log("bench-log: update_record", lag);
   return r;
 
 }
