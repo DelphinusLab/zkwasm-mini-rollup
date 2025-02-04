@@ -15,8 +15,13 @@ import {
   get_user_addr,
 } from "./config.js";
 
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 export interface TxWitness {
   msg: string,
+
   pkx: string,
   pky: string,
   sigx: string,
@@ -27,8 +32,12 @@ export interface TxWitness {
 export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Array<string>, txdata: Uint8Array) {
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
 
-  let proofSubmitMode = ProofSubmitMode.Manual; // Auto
-  //let proofSubmitMode = ProofSubmitMode.Auto;
+  let proofSubmitMode = ProofSubmitMode.Manual;
+
+  if (process.env.AUTO_SUBMIT) {
+    proofSubmitMode = ProofSubmitMode.Auto;
+  }
+
   let info: ProvingParams = {
     user_address: get_user_addr().toLowerCase(),
     md5: get_image_md5(),
@@ -85,7 +94,11 @@ export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>,
   //console.log(priv_inputs);
 
   let proofSubmitMode = ProofSubmitMode.Manual; // Auto
+  if (process.env.AUTO_SUBMIT) {
+    proofSubmitMode = ProofSubmitMode.Auto;
+  }
   //let proofSubmitMode = ProofSubmitMode.Auto;
+
   let info: ProvingParams = {
     user_address: get_user_addr().toLowerCase(),
     md5: get_image_md5(),
