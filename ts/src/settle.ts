@@ -165,12 +165,18 @@ async function prepareVerifyAttributesBatch(task: Task): Promise<ProofArgs> {
 
   const round_1_output: Round1Info = round_1_info_response.data[0];
 
-  let verifyInstancesArr =  shadowInstances.length === 0
+  let verifyInstancesArr = shadowInstances.length === 0
     ? new U8ArrayUtil(batchInstances).toNumber()
     : new U8ArrayUtil(shadowInstances).toNumber();
 
-  const siblingInstances = new U8ArrayUtil(new Uint8Array(round_1_output.target_instances[0])).toNumber();
+  let proofArr: string[] = [];
+  for (const targetInstance of round_1_output.target_instances) {
+    const siblingInstance = new U8ArrayUtil(new Uint8Array(targetInstance)).toNumber();
+    proofArr.push(...siblingInstance);
+  }
+  
   const r1ShadowInstance = new U8ArrayUtil(new Uint8Array(round_1_output.shadow_instances!)).toNumber()[0];
+  proofArr.push(r1ShadowInstance);
 
   let instArr = new U8ArrayUtil(task.instances).toNumber();
 
@@ -180,9 +186,6 @@ async function prepareVerifyAttributesBatch(task: Task): Promise<ProofArgs> {
   const index = round_1_output.task_ids.findIndex(
     (id:any) => id === task._id["$oid"]
   );
-
-  let proofArr = siblingInstances;
-  proofArr.push(r1ShadowInstance);
 
   return {
     txData: txData,
