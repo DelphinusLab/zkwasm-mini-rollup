@@ -5,4 +5,4 @@ import { TxWitness } from "./prover.js";
 import { TxStateManager }  from "./commit.js";
 import { hexStringToMerkleRoot, merkleRootToBeHexString } from "./lib.js";
 
-export {sign, query, ZKWasmAppRpc, TxWitness, LeHexBN, composeWithdrawParams, Service, merkleRootToBeHexString, hexStringToMerkleRoot}
+export {sign, query, ZKWasmAppRpc, TxWitness, LeHexBN, composeWithdrawParams, Service, merkleRootToBeHexString, hexStringToMerkleRoot, TxStateManager}
