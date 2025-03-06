@@ -59,7 +59,7 @@ async fn update_leaf(Params(request): Params<UpdateLeafRequest>) -> Result<[u8; 
     .await
     .map_err(|_| Error::INTERNAL_ERROR)?;
     let duration = start.elapsed();
-    println!("time taken for update_leaf is {:?}", duration);
+    //println!("time taken for update_leaf is {:?}", duration);
     hash
 }
 

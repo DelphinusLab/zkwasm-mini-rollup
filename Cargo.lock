@@ -4095,7 +4095,7 @@ dependencies = [
 [[package]]
 name = "zkwasm-host-circuits"
 version = "0.1.0"
-source = "git+https://github.com/DelphinusLab/zkWasm-host-circuits.git?branch=xgao/refactor#07a25420c13d5a4a765a8a9fc75b9c8a958d02d0"
+source = "git+https://github.com/DelphinusLab/zkWasm-host-circuits.git?branch=xgao/refactor#13b76f15c700c87194f6f4e4e2d6665b63922d5f"
 dependencies = [
  "anyhow",
  "ark-std",

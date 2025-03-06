@@ -28,11 +28,11 @@ if (process.env.DEPLOY) {
   deploymode = true;
 }
 
-if (process.env.REMOTE) {
+if (process.env.REMOTE=="TRUE") {
   remote = true;
 }
 
-if (process.env.MIGRATE) {
+if (process.env.MIGRATE=="TRUE") {
   migrate = true;
 }
 
