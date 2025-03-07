@@ -68,13 +68,11 @@ impl<T: StorageData + Default> Player<T> {
     }
 
     pub fn store(&self) {
-        zkwasm_rust_sdk::dbg!("store player\n");
         let mut data = Vec::new();
         data.push(self.nonce);
         self.data.to_data(&mut data);
         let kvpair = unsafe { &mut MERKLE_MAP };
         kvpair.set(&Self::to_key(&self.player_id), data.as_slice());
-        zkwasm_rust_sdk::dbg!("end store player\n");
     }
 
     pub fn new_from_pid(pid: [u64; 2]) -> Self {
