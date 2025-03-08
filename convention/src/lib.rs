@@ -89,7 +89,7 @@ impl<E: EventHandler> EventQueue<E> {
         }
     }
 
-    fn dump(&self, counter: u64) {
+    pub fn dump(&self, counter: u64) {
         zkwasm_rust_sdk::dbg!("dump queue: {}, ", counter);
         for m in self.list.iter() {
             let delta = m.get_delta();
@@ -104,8 +104,9 @@ impl<E: EventHandler> EventQueue<E> {
     /// 3. handle all events whose counter are zero
     /// 4. insert new generated envets into the event queue
     pub fn tick(&mut self) {
+        let trace = unsafe { zkwasm_rust_sdk::wasm_trace_size() };
         let counter = self.counter;
-        self.dump(counter);
+        //self.dump(counter);
         let mut entries_data = self.get_old_entries(counter);
         let entries_nb = entries_data.len() / E::u64size();
         let mut dataiter = entries_data.iter_mut();
@@ -114,9 +115,10 @@ impl<E: EventHandler> EventQueue<E> {
             entries.push(E::from_data(&mut dataiter));
         }
 
-        // zkwasm_rust_sdk::dbg!("entries from storage: {} at counter {}\n", entries_nb, {
-        //     self.counter
-        // });
+        zkwasm_rust_sdk::dbg!("trace: {}\n", trace);
+        zkwasm_rust_sdk::dbg!("entries from storage: {} at counter {}\n", entries_nb, {
+             self.counter
+        });
         // perform activities from existing entries
         for mut e in entries {
             let m = e.handle(counter);
@@ -125,6 +127,9 @@ impl<E: EventHandler> EventQueue<E> {
                 self.insert(event);
             }
         }
+
+        let trace = unsafe { zkwasm_rust_sdk::wasm_trace_size() };
+        zkwasm_rust_sdk::dbg!("trace after handle loaded event: {}\n", trace);
 
         while let Some(head) = self.list.front_mut() {
             if head.get_delta() == 0 {
@@ -138,6 +143,9 @@ impl<E: EventHandler> EventQueue<E> {
                 break;
             }
         }
+
+        let trace = unsafe { zkwasm_rust_sdk::wasm_trace_size() };
+        zkwasm_rust_sdk::dbg!("trace after handle queued event: {}\n", trace);
         self.counter += 1;
     }
 
