@@ -1,1 +1,1 @@
-cargo run --release -- --uri mongodb://localhost:27017
+cargo run --release -- --uri merkledb

@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use zkwasm_host_circuits::host::datahash::DataHashRecord;
 use zkwasm_host_circuits::host::datahash::MongoDataHash;
-use zkwasm_host_circuits::host::db::MongoDB;
+use zkwasm_host_circuits::host::db::RocksDB;
 use zkwasm_host_circuits::host::db::TreeDB;
 use zkwasm_host_circuits::host::merkle::MerkleTree;
 use zkwasm_host_circuits::host::mongomerkle::MongoMerkle;
@@ -59,7 +59,7 @@ async fn update_leaf(Params(request): Params<UpdateLeafRequest>) -> Result<[u8; 
     .await
     .map_err(|_| Error::INTERNAL_ERROR)?;
     let duration = start.elapsed();
-    //println!("time taken for update_leaf is {:?}", duration);
+    println!("time taken for update_leaf is {:?}", duration);
     hash
 }
 
@@ -135,7 +135,7 @@ struct Args {
 
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
-    unsafe { DB = Some(Rc::new(RefCell::new(MongoDB::new([0; 32], Some(args.uri))))) };
+    unsafe { DB = Some(Rc::new(RefCell::new(RocksDB::new(args.uri).unwrap()))) };
     let rpc = Server::new()
         .with_data(Data::new(String::from("Hello!")))
         .with_method("update_leaf", update_leaf)
