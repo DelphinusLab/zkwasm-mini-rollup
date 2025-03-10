@@ -15,6 +15,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
+import {TxStateManager} from "./commit.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -81,16 +82,15 @@ export class Service {
   txCallback: (arg: TxWitness, events: BigUint64Array) => Promise<void>;
   txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => Promise<void>;
   registerAPICallback: (app: Express) => void;
-  bootstrapCallback: (merkleRootHex: string) => Promise<TxWitness[]>;
   merkleRoot: BigUint64Array;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
+  txManager: TxStateManager;
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
       txBatched: (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string)=> Promise<void> = async (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string) => {},
       registerAPICallback: (app: Express) => void = (app: Express) => {},
-      bootstrapCallback: (merkleRootHex: string) => Promise<TxWitness[]> = async (merkleRoot: string) => {return []}
   ) {
     this.worker = null;
     this.queue = null;
@@ -105,7 +105,7 @@ export class Service {
     ]);
     this.bundleIndex = 0;
     this.preMerkleRoot = null;
-    this.bootstrapCallback = bootstrapCallback;
+    this.txManager = new TxStateManager(merkleRootToBeHexString(this.merkleRoot));
   }
 
   async syncToLatestMerkelRoot() {
@@ -204,6 +204,7 @@ export class Service {
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
+    await this.txManager.insertTxIntoCommit(tx);
     await this.txCallback(tx, events);
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
@@ -247,6 +248,7 @@ export class Service {
         console.log("restore root:", this.merkleRoot);
         await (initApplication as any)(bootstrap);
         application.initialize(this.merkleRoot);
+        await this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
       } catch (e) {
         console.log(e);
         process.exit(1); // this should never happen and we stop the whole process
@@ -440,8 +442,9 @@ export class Service {
   }
 
   async serve() {
+    // replay uncommitted transactions
     console.log("install bootstrap txs");
-    for (const value of await this.bootstrapCallback(merkleRootToBeHexString(this.merkleRoot))) {
+    for (const value of await this.txManager.getTxFromCommit(merkleRootToBeHexString(this.merkleRoot))) {
       this.queue!.add('transaction', { value });
     }
     console.log("start express server");

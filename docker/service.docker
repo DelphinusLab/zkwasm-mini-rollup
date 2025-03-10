@@ -17,12 +17,14 @@ RUN apt-get update && apt-get install -y \
     libclang-dev \
     curl
 
+# Setup the rocks db directory
+RUN mkdir -p /usr/rocksdb
 
 # Set the working directory inside the container
 WORKDIR /usr/src/
 
 # Clone the GitHub repository
-RUN git clone https://github.com/DelphinusLab/zkwasm-typescript-mini-server --branch release-v1
+RUN git clone https://github.com/DelphinusLab/zkwasm-typescript-mini-server --branch main
 
 WORKDIR /usr/src/zkwasm-typescript-mini-server/dbservice
 
