@@ -485,12 +485,11 @@ export class Service {
     });
 
     app.post('/query', async (req, res) => {
-      console.log("receive query command");
       const value = req.body;
-      console.log("value is", value);
       if (!value) {
         return res.status(400).send('Value is required');
       }
+      console.log("receive query command on: ", value.pkx);
 
       try {
         const pkx = new LeHexBN(value.pkx).toU64Array();
@@ -523,6 +522,11 @@ export class Service {
         res.status(500).json({ message: (err as Error).toString()});
       }
     });
+
+    app.get('/global', async (req, res) => {
+      return res.status(201).json(snapshot);
+    });
+
 
     app.get('/prooftask/:root', async (req, res) => {
       try {
