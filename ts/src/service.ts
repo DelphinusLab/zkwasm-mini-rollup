@@ -514,7 +514,7 @@ export class Service {
     });
 
     app.get('/data/players', async(req:any, res) => {
-      let data = queryAccounts();
+      let data = await queryAccounts();
       res.status(201).send({
         success: true,
         data: data,
