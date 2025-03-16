@@ -16,6 +16,7 @@ import mongoose from 'mongoose';
 import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 import {TxStateManager} from "./commit.js";
+import {queryAccounts, storeAccount} from "./account.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -501,6 +502,7 @@ export class Service {
           player: player,
           state: snapshot
         }
+        await storeAccount(value.pkx, player);
         res.status(201).send({
           success: true,
           data: JSON.stringify(result),
@@ -510,6 +512,15 @@ export class Service {
         res.status(500).send('Get Status Error');
       }
     });
+
+    app.get('/data/players', async(req:any, res) => {
+      let data = queryAccounts();
+      res.status(201).send({
+        success: true,
+        data: data,
+      });
+    });
+
 
     app.get('/job/:id', async (req, res) => {
       try {
