@@ -205,10 +205,10 @@ export class Service {
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array, isReplay = false) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
-    if (!isReplay) {
+    // if (!isReplay) {
       await this.txManager.insertTxIntoCommit(tx);
       await this.txCallback(tx, events);
-    }
+    // }
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
     try {
@@ -414,6 +414,10 @@ export class Service {
             // make sure install transaction will succeed
             await this.install_transactions(signature, job.id, txResult, job.name=='replay');
             try {
+              // If this is the first time of running this tx, the store should work.
+              // If the store does not work (jobId conflict) then either there is a jobid
+              // conflict error in transaction mode or this is the second time running this
+              // transcation thus should in replay mode.
               const jobRecord = new modelJob({
                 jobId: signature.sigx,
                 message: signature.message,
@@ -421,7 +425,8 @@ export class Service {
               });
               await jobRecord.save();
             } catch (e) {
-              if (job.name == 'replay') {
+              if (job.name != 'replay') {
+                // if in replay mode, the tx can not been stored twice thus the error is expected
                 console.log("Error: store transaction job error");
                 throw e
               }

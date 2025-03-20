@@ -86,7 +86,7 @@ export class TxStateManager {
             return false; // new tx, needs track
           } else {
             let trackedTx = commit.items[counter];
-            console.assert(tx == trackedTx);
+            console.assert(tx.sigx == trackedTx.sigx);
             return true; // event already tracked
           }
         } else {
