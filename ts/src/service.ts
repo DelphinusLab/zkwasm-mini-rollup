@@ -421,8 +421,10 @@ export class Service {
               });
               await jobRecord.save();
             } catch (e) {
-              console.log("Error: store transaction job error");
-              throw e
+              if (job.name == 'replay') {
+                console.log("Error: store transaction job error");
+                throw e
+              }
             }
           } else {
             let errorMsg = application.decode_error(Number(errorCode));
