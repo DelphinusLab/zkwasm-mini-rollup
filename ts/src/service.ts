@@ -202,11 +202,13 @@ export class Service {
   }
 
 
-  async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array) {
+  async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array, isReplay = false) {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
-    await this.txManager.insertTxIntoCommit(tx);
-    await this.txCallback(tx, events);
+    if (!isReplay) {
+      await this.txManager.insertTxIntoCommit(tx);
+      await this.txCallback(tx, events);
+    }
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
     try {
@@ -399,7 +401,7 @@ export class Service {
           console.log("fatal: handling auto tick error, process will terminate.", error);
           process.exit(1);
         }
-      } else if (job.name == 'transaction') {
+      } else if (job.name == 'transaction' || job.name == 'replay') {
         console.log("handle transaction ...");
         try {
           let signature = job.data.value;
@@ -410,7 +412,7 @@ export class Service {
           let errorCode = txResult[0];
           if (errorCode == 0n) {
             // make sure install transaction will succeed
-            await this.install_transactions(signature, job.id, txResult);
+            await this.install_transactions(signature, job.id, txResult, job.name=='replay');
             try {
               const jobRecord = new modelJob({
                 jobId: signature.sigx,
@@ -446,7 +448,7 @@ export class Service {
     // replay uncommitted transactions
     console.log("install bootstrap txs");
     for (const value of await this.txManager.getTxFromCommit(merkleRootToBeHexString(this.merkleRoot))) {
-      this.queue!.add('transaction', { value });
+      this.queue!.add('replay', { value });
     }
     console.log("start express server");
     const app = express();
