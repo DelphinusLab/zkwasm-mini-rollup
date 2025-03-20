@@ -69,7 +69,7 @@ async function generateRandomSeed() {
   });
   try {
     await randRecord.save();
-    console.log("Generated Rand Seed:", randSeed, shaCommitment);
+    //console.log("Generated Rand Seed:", randSeed, shaCommitment);
     return shaCommitment;
   } catch (e) {
     console.log("Generating random seed error!");
@@ -380,7 +380,7 @@ export class Service {
 
     this.worker = new Worker('sequencer', async job => {
       if (job.name == 'autoJob') {
-        console.log("handle auto", job.data);
+        //console.log("handle auto", job.data);
         try {
           let rand = await generateRandomSeed();
           let oldSeed = application.randSeed();
@@ -392,7 +392,7 @@ export class Service {
             seed = randRecord[0].seed!.readBigInt64LE();
           };
           let signature = sign(createCommand(0n, 0n, [seed, rand, 0n, 0n]), get_server_admin_key());
-          console.log("signautre is", signature);
+          //console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
           application.verify_tx_signature(u64array);
           application.handle_tx(u64array);
@@ -406,7 +406,7 @@ export class Service {
         try {
           let signature = job.data.value;
           let u64array = signature_to_u64array(signature);
-          console.log("tx data", signature);
+          //console.log("tx data", signature);
           application.verify_tx_signature(u64array);
           let txResult = application.handle_tx(u64array);
           let errorCode = txResult[0];
@@ -492,7 +492,7 @@ export class Service {
       if (!value) {
         return res.status(400).send('Value is required');
       }
-      console.log("receive query command on: ", value.pkx);
+      //console.log("receive query command on: ", value.pkx);
 
       try {
         const pkx = new LeHexBN(value.pkx).toU64Array();
