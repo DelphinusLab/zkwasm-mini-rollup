@@ -522,12 +522,20 @@ export class Service {
       }
     });
 
-    app.get('/data/players', async(req:any, res) => {
-      let data = await queryAccounts();
-      res.status(201).send({
-        success: true,
-        data: data,
-      });
+    app.get('/data/players/:start?', async(req:any, res) => {
+      let start = req.params.start;
+      if (Number.isNaN(start)) {
+        res.status(201).send({
+          success: false,
+          data: [],
+        });
+      } else {
+        let data = await queryAccounts(Number(start));
+        res.status(201).send({
+          success: true,
+          data: data,
+        });
+      }
     });
 
 

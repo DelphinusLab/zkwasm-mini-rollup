@@ -17,7 +17,7 @@ export async function storeAccount(pkx: string, data: JSON) {
   );
 }
 
-export async function queryAccounts() {
-    let doc = await accountModel.find().limit(100);
+export async function queryAccounts(start: number) {
+    let doc = await accountModel.find().skip(start).limit(100);
     return doc;
 }
