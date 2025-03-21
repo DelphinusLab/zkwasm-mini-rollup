@@ -109,7 +109,7 @@ export class Service {
     this.txManager = new TxStateManager(merkleRootToBeHexString(this.merkleRoot));
   }
 
-  async syncToLatestMerkelRoot() {
+  async syncToLatestMerkleRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
     let bundle = await this.findBundleByMerkle(currentMerkle);
     while (bundle != null && bundle.postMerkleRoot != null) {
