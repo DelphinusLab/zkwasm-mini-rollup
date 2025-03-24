@@ -567,7 +567,7 @@ export class Service {
         while (bundle != null && bundles.length < len + 10) {
           bundles.push(bundle);
           bundle = await modelBundle.findOne({
-            merkleRoot: (bundle.preMerkleRoot),
+            merkleRoot: (bundle.postMerkleRoot),
           });
         }
         return res.status(201).json({
