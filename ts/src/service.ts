@@ -111,6 +111,7 @@ export class Service {
 
   async syncToLatestMerkelRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
+    let prevMerkle = null;
     let bundle = await this.findBundleByMerkle(currentMerkle);
     while (bundle != null && bundle.postMerkleRoot != null) {
       const postMerkle = new BigUint64Array(hexStringToMerkleRoot(bundle.postMerkleRoot));
@@ -118,10 +119,15 @@ export class Service {
       bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle));
       if(bundle != null) {
         currentMerkle = bundle.merkleRoot;
+        prevMerkle = bundle.preMerkleRoot;
       }
     }
     console.log("final merkle:", currentMerkle);
     this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(currentMerkle));
+    if (prevMerkle) {
+      this.preMerkleRoot = new BigUint64Array(hexStringToMerkleRoot(prevMerkle));
+
+    }
   }
 
   async findBundleByMerkle(merkleHexRoot: string) {
