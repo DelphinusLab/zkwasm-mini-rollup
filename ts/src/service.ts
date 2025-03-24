@@ -441,7 +441,8 @@ export class Service {
           let player = JSON.parse(jstr);
           let result = {
             player: player,
-            state: snapshot
+            state: snapshot,
+            bundle: this.txManager.currentUncommitMerkleRoot,
           };
           return result
         } catch (e) {
@@ -538,6 +539,40 @@ export class Service {
       }
     });
 
+    app.get('/data/bundles/:merkleroot?', async(req:any, res) => {
+      let merkleRootStr = req.params.merkleroot;
+      if (merkleRootStr == 'latest') {
+        merkleRootStr = this.preMerkleRoot;
+      }
+      try {
+        let bundle = await modelBundle.findOne({
+          merkleRoot: merkleRootStr,
+        });
+        let after = bundle;
+        const bundles = [];
+        while (bundle != null && bundles.length < 10) {
+          bundles.unshift(bundle);
+          bundle = await modelBundle.findOne({
+            merkleRoot: (bundle.preMerkleRoot),
+          });
+        }
+        bundle = after;
+        const len = bundles.length;
+        if (bundle) {
+          bundle = await modelBundle.findOne({
+            merkleRoot: (bundle.postMerkleRoot),
+          });
+        }
+        while (bundle != null && bundles.length < len + 10) {
+          bundles.push(bundle);
+          bundle = await modelBundle.findOne({
+            merkleRoot: (bundle.preMerkleRoot),
+          });
+        }
+      } catch (e) {
+        return [];
+      }
+    });
 
     app.get('/job/:id', async (req, res) => {
       try {
