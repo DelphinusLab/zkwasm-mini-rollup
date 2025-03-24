@@ -542,7 +542,7 @@ export class Service {
     app.get('/data/bundles/:merkleroot?', async(req:any, res) => {
       let merkleRootStr = req.params.merkleroot;
       if (merkleRootStr == 'latest') {
-        merkleRootStr = this.preMerkleRoot;
+        merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
       }
       try {
         let bundle = await modelBundle.findOne({
@@ -569,8 +569,16 @@ export class Service {
             merkleRoot: (bundle.preMerkleRoot),
           });
         }
-      } catch (e) {
-        return [];
+        return res.status(201).json({
+          success: true,
+          data: bundles
+        });
+      } catch (e: any) {
+        return res.status(201).json({
+          success: false,
+          error: e.toString(),
+          data: []
+        });
       }
     });
 
