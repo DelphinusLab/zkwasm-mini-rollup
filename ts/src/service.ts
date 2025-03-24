@@ -446,6 +446,7 @@ export class Service {
           };
           return result
         } catch (e) {
+          console.log("error handle_tx", e);
           throw e
         }
       }
