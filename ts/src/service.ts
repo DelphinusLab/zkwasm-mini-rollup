@@ -548,10 +548,10 @@ export class Service {
 
     app.get('/data/bundles/:merkleroot?', async(req:any, res) => {
       let merkleRootStr = req.params.merkleroot;
-      if (merkleRootStr == 'latest') {
-        merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
-      }
       try {
+        if (merkleRootStr == 'latest') {
+          merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
+        }
         let bundle = await modelBundle.findOne({
           merkleRoot: merkleRootStr,
         });
