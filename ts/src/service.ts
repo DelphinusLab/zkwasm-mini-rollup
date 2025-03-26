@@ -120,6 +120,7 @@ export class Service {
       if(bundle != null) {
         currentMerkle = bundle.merkleRoot;
         prevMerkle = bundle.preMerkleRoot;
+        this.bundleIndex += 1;
       }
     }
     console.log("final merkle:", currentMerkle);
