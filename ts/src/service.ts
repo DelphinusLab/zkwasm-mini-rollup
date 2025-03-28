@@ -664,7 +664,7 @@ function signature_to_u64array(value: any) {
   u64array.set(sigr, 16);
   u64array.set(msg, 20);
   let cmdLength = (msg[0] >> 8n) % 256n;
-  if (Number(cmdLength) != msg.length - 1) {
+  if (Number(cmdLength) != msg.length) {
     throw Error("Wrong Command Size");
   }
   return u64array;
