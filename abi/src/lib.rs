@@ -133,6 +133,15 @@ pub fn query_root() -> Vec<u64> {
     }
 }
 
+pub fn enforce(x: bool, hint: &str) {
+    if !x {
+        unsafe {
+          zkwasm_rust_sdk::dbg!("{} failure\n", hint);
+          zkwasm_rust_sdk::require(x);
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub fn verify_tx_signature(inputs: Vec<u64>) {
     let pk = BabyJubjubPoint {
@@ -280,7 +289,7 @@ macro_rules! create_zkwasm_apis {
                 }
                 let command = unsafe {wasm_input(0)};
                 let command_length = ((command & 0xff00) >> 8)  as usize;
-                unsafe { zkwasm_rust_sdk::require(command_length < 16) };
+                enforce(command_length < 16, "check command length");
                 params.push(command);
                 for _  in 0..command_length - 1 {
                     params.push(unsafe {wasm_input(0)});
@@ -291,10 +300,9 @@ macro_rules! create_zkwasm_apis {
                 zkwasm_rust_sdk::dbg!("trace track: {}\n", trace);
             }
 
-            unsafe { zkwasm_rust_sdk::require(preempt()) };
+            enforce(preempt(), "check preempt");
 
             let bytes = finalize();
-
             let txdata = conclude_tx_info(bytes.as_slice());
 
             let root = merkle_ref.merkle.root;
