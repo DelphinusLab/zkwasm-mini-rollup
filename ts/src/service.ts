@@ -503,6 +503,26 @@ export class Service {
       }
     });
 
+    app.post('/querytx', async (req, res) => {
+      const value = req.body;
+      if (!value) {
+        return res.status(400).send('Value is required');
+      }
+      //console.log("receive query command on: ", value.pkx);
+      try {
+        const sigx = value.sigx;
+        let job = await modelJob.findOne({
+            jobId: sigx,
+        });
+        res.status(201).send({
+          success: true,
+          data: JSON.stringify(job),
+        });
+      } catch(e) {
+        res.status(500).send('Get Tx Info Error');
+      }
+    });
+
     app.post('/query', async (req, res) => {
       const value = req.body;
       if (!value) {
