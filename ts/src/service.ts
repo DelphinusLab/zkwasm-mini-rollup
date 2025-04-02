@@ -432,7 +432,7 @@ export class Service {
               // conflict error in transaction mode or this is the second time running this
               // transcation thus should in replay mode.
               const jobRecord = new modelJob({
-                jobId: signature.sigx,
+                jobId: signature.hash,
                 message: signature.message,
                 result: "succeed",
               });
@@ -524,9 +524,9 @@ export class Service {
       }
       //console.log("receive query command on: ", value.pkx);
       try {
-        const sigx = value.sigx;
+        const hash = value.hash;
         let job = await modelJob.findOne({
-            jobId: sigx,
+            jobId: hash,
         });
         res.status(201).send({
           success: true,
