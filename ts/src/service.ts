@@ -87,6 +87,7 @@ export class Service {
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
   txManager: TxStateManager;
+  blocklist: Map<string, number>;
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
@@ -107,6 +108,7 @@ export class Service {
     this.bundleIndex = 0;
     this.preMerkleRoot = null;
     this.txManager = new TxStateManager(merkleRootToBeHexString(this.merkleRoot));
+    this.blocklist = new Map();
   }
 
   async syncToLatestMerkelRoot() {
@@ -385,6 +387,10 @@ export class Service {
       }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
     }
 
+    setInterval(() => {
+      this.blocklist.clear();
+    }, 30000);
+
     this.worker = new Worker('sequencer', async job => {
       if (job.name == 'autoJob') {
         //console.log("handle auto", job.data);
@@ -453,6 +459,9 @@ export class Service {
           };
           return result
         } catch (e) {
+          let pkx = job.data.value.pkx;
+          let fc = this.blocklist.get(pkx) || 0;
+          this.blocklist.set(pkx, fc + 1);
           console.log("error handle_tx", e);
           throw e
         }
@@ -491,11 +500,16 @@ export class Service {
           console.error('Invalid signature:');
           res.status(500).send('Invalid signature');
         } else {
-          const job = await this.queue!.add('transaction', { value });
-          res.status(201).send({
-            success: true,
-            jobid: job.id
-          });
+          const fc = this.blocklist.get(value.pkx) || 0;
+          if (fc > 3) {
+            res.status(500).send('This account is blocked for 1 minutes for multiple incorrect arguments');
+          } else {
+            const job = await this.queue!.add('transaction', { value });
+            res.status(201).send({
+              success: true,
+              jobid: job.id
+            });
+          }
         }
       } catch (error) {
         console.error('Error adding job to the queue:', error);
