@@ -530,7 +530,7 @@ export class Service {
         });
         res.status(201).send({
           success: true,
-          data: JSON.stringify(job),
+          data: job,
         });
       } catch(e) {
         res.status(500).send('Get Tx Info Error');
