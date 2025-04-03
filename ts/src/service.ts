@@ -431,12 +431,14 @@ export class Service {
               // If the store does not work (jobId conflict) then either there is a jobid
               // conflict error in transaction mode or this is the second time running this
               // transcation thus should in replay mode.
-              const jobRecord = new modelJob({
-                jobId: signature.hash,
-                message: signature.message,
-                result: "succeed",
-              });
-              await jobRecord.save();
+              if (job.name != 'replay') {
+                  const jobRecord = new modelJob({
+                    jobId: signature.hash,
+                    message: signature.message,
+                    result: "succeed",
+                  });
+                  await jobRecord.save();
+              }
             } catch (e) {
               if (job.name != 'replay') {
                 // if in replay mode, the tx can not been stored twice thus the error is expected
