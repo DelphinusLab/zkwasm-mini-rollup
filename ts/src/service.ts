@@ -450,10 +450,16 @@ export class Service {
             let errorMsg = application.decode_error(Number(errorCode));
             throw Error(errorMsg)
           }
+
           console.log("done");
-          const pkx = new LeHexBN(job.data.value.pkx).toU64Array();
-          let jstr = application.get_state(pkx);
-          let player = JSON.parse(jstr);
+          let player = null;
+
+          if (job.name != "replay") {
+            // in replay mode we do not need the return value for player
+            const pkx = new LeHexBN(job.data.value.pkx).toU64Array();
+            let jstr = application.get_state(pkx);
+            player = JSON.parse(jstr);
+          }
           let result = {
             player: player,
             state: snapshot,
