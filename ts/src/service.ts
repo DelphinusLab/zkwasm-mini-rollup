@@ -433,7 +433,7 @@ export class Service {
               // transcation thus should in replay mode.
               if (job.name != 'replay') {
                   const jobRecord = new modelJob({
-                    jobId: signature.hash,
+                    jobId: signature.hash + signature.pkx,
                     message: signature.message,
                     result: "succeed",
                   });
@@ -533,8 +533,9 @@ export class Service {
       //console.log("receive query command on: ", value.pkx);
       try {
         const hash = value.hash;
+        const pkx = value.pkx;
         let job = await modelJob.findOne({
-            jobId: hash,
+            jobId: hash + pkx,
         });
         res.status(201).send({
           success: true,
