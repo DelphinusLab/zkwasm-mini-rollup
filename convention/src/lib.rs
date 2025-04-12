@@ -352,6 +352,30 @@ pub struct BidInfo {
     pub bidder: [u64; 2],
 }
 
+pub fn bidinfo_from_data(u64data: &mut IterMut<u64>) -> Option<BidInfo> {
+    let bid = *u64data.next().unwrap();
+    let mut bidder = None;
+    if bid != 0 {
+        bidder =  Some(BidInfo {
+            bidprice: bid,
+            bidder: [*u64data.next().unwrap(), *u64data.next().unwrap()]
+        })
+    }
+    bidder
+}
+
+
+pub fn to_bidinfo_data(b: &Option<BidInfo>, data: &mut Vec<u64>) {
+    match b {
+        None => data.push(0),
+        Some(b) => {
+            data.push(b.bidprice);
+            data.push(b.bidder[0]);
+            data.push(b.bidder[1]);
+        },
+    }
+}
+
 pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
     const INSUFF: u32;
     fn get_bidder(&self) -> Option<BidInfo>;
