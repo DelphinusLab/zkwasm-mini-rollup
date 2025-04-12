@@ -341,4 +341,46 @@ pub fn insert_event(typ: u64, data: &mut Vec<u64>) {
     }
 }
 
+pub trait WithBalance {
+    fn cost_balance(&mut self, amount: u64) -> Result<(), u32>;
+    fn inc_balance(&mut self, amount: u64);
+}
+
+#[derive(Clone, Serialize, Default, Copy)]
+pub struct BidInfo {
+    pub bidprice: u64,
+    pub bidder: [u64; 2],
+}
+
+pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
+    const INSUFF: u32;
+    fn get_bidder(&self) -> Option<BidInfo>;
+    fn set_bidder(&mut self, bidder: Option<BidInfo>);
+    fn clear_bidder(&mut self) -> Option<Player<PlayerData>> {
+         let player = self.get_bidder().map(|c| {
+            let mut player = Player::<PlayerData>::get_from_pid(&c.bidder).unwrap();
+            player.data.inc_balance(c.bidprice);
+            player
+        });
+        self.set_bidder(None); 
+        player
+    }
+    fn replace_bidder(&mut self, player: &mut Player<PlayerData>, amount: u64) -> Result<Option<Player<PlayerData>>, u32> {
+        self.get_bidder().map_or(Ok(()), |x| {
+            let bidprice = x.bidprice;
+            if bidprice >= amount {
+                Err(Self::INSUFF)
+            } else {
+                Ok(())
+            }
+        })?;
+        let old_bidder = self.clear_bidder();
+        self.set_bidder(Some (BidInfo {
+            bidprice: amount,
+            bidder: player.player_id.clone(),
+        }));
+        player.data.cost_balance(amount)?;
+        Ok(old_bidder)
+    }
+}
 
