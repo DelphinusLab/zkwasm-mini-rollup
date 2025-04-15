@@ -6,9 +6,9 @@ import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc, createComman
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express, {Express} from 'express';
-import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof } from "./prover.js";
+import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
 import cors from "cors";
-import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx } from "./config.js";
+import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id } from "./config.js";
 import { getMerkleArray } from "./contract.js";
 import { ZkWasmUtil } from "zkwasm-service-helper";
 import dotenv from 'dotenv';
@@ -26,16 +26,26 @@ let remote = false;
 let migrate = false;
 let redisHost = 'localhost';
 
+//if md5 is invalid, this will throw an error; if unspecified, this will return false
+let hasTask = await has_task();
+let contractAddr = get_contract_addr();
+
 if (process.env.DEPLOY) {
   deploymode = true;
 }
 
-if (process.env.REMOTE=="TRUE") {
+if (hasTask) {
   remote = true;
 }
 
-if (process.env.MIGRATE=="TRUE") {
-  migrate = true;
+if (!hasTask && contractAddr != "unspecified") {
+  try {
+    let merkleRoot = await getMerkleArray();
+    console.log('migrate merkle root:', merkleRoot);
+    migrate = true;
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 if (process.env.REDISHOST) {

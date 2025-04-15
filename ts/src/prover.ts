@@ -204,3 +204,22 @@ export async function has_uncomplete_task(): Promise<boolean> {
   // Return true if there are any uncompleted tasks, false otherwise
   return tasks.data.length > 0;
 }
+
+export async function has_task(): Promise<boolean> {
+  if (get_image_md5() == "unspecified") {
+    console.log("md5 is unspecified");
+    return false;
+  }
+  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  let query = {
+    md5: get_image_md5(),
+    user_address: null,
+    id: null,
+    tasktype: "Prove",
+    taskstatus: "",
+    total: 1,
+  };
+  let tasks = await helper.loadTasks(query);
+  console.log(tasks);
+  return tasks.data.length > 0;
+}
