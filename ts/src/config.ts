@@ -22,6 +22,14 @@ export const get_server_admin_pubkey = () => {
   return pubkey
 }
 
+export const get_rpc_provider = () => {
+  if (process.env.RPC_PROVIDER) {
+    return process.env.RPC_PROVIDER;
+  } else {
+    return "https://ethereum-sepolia-rpc.publicnode.com";
+  }
+}
+
 export const get_mongodb_uri = () => {
   if (process.env.URI) {
     return process.env.URI;
@@ -56,7 +64,7 @@ export const get_contract_addr = () => {
   if (process.env.SETTLEMENT_CONTRACT_ADDRESS) {
     return process.env.SETTLEMENT_CONTRACT_ADDRESS;
   } else {
-    return "0x73E717cf6288A657e1a881742aD0BA50fcf846Ba";
+    return "unspecified";
   }
 }
 
@@ -64,7 +72,7 @@ export const get_chain_id = () => {
   if (process.env.CHAIN_ID) {
     return parseInt(process.env.CHAIN_ID);
   } else {
-    return 16; // Coston testnet (Flare Network testnet) chain ID
+    return "unspecified"; // Coston testnet (Flare Network testnet) chain ID
   }
 }
 

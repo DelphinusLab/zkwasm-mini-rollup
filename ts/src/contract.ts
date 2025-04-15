@@ -1,12 +1,9 @@
 import BN from "bn.js";
 import { ethers } from "ethers";
-import { get_contract_addr} from "./config.js";
+import { get_contract_addr, get_rpc_provider} from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 
-export let provider = new ethers.JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
-if (process.env.RPC_PROVIDER) {
-  provider = new ethers.JsonRpcProvider(process.env.RPC_PROVIDER);
-}
+export let provider = new ethers.JsonRpcProvider(get_rpc_provider());
 
 const constants = {
   proxyAddress: get_contract_addr(),
@@ -24,6 +21,9 @@ function convertToBigUint64Array(combinedRoot: bigint): BigUint64Array {
 }
 
 export async function getMerkleArray(): Promise<BigUint64Array>{
+  if (constants.proxyAddress == "unspecified") {
+    console.log("proxy address is unspecified");
+  }
   // Connect to the Proxy contract
   const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
   // Fetch the proxy information
@@ -39,6 +39,9 @@ export async function getMerkleArray(): Promise<BigUint64Array>{
 }
 
 export async function getMerkle(): Promise<String>{
+  if (constants.proxyAddress == "unspecified") {
+    console.log("proxy address is unspecified");
+  }
   // Connect to the Proxy contract
   const proxy = new ethers.Contract(constants.proxyAddress, abiData.abi, provider);
   // Fetch the proxy information
