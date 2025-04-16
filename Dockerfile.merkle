@@ -1,0 +1,49 @@
+# Use the official Rust image from the Docker Hub
+FROM rust:latest AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    cmake \
+    pkg-config \
+    libssl-dev \
+    libclang-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory inside the container
+WORKDIR /usr/src/
+
+# Clone the GitHub repository
+RUN git clone https://github.com/DelphinusLab/zkwasm-mini-rollup.git --branch main
+
+WORKDIR /usr/src/zkwasm-mini-rollup
+
+# Build the application
+RUN cargo build --release
+
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    ca-certificates \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup the rocks db directory
+RUN mkdir -p /usr/rocksdb
+
+# Copy the binary from the builder stage
+COPY --from=builder /usr/src/zkwasm-mini-rollup/target/release/csm_service /target/release/csm_service
+RUN chmod +x /target/release/csm_service
+
+# Create a non-root user to run the service
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN chown -R appuser:appuser /usr/rocksdb
+
+# Switch to non-root user
+USER appuser
+
+# No need to specify CMD or EXPOSE as these are handled in docker-compose.yml
