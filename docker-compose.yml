@@ -1,6 +1,6 @@
 services:
     merkleservice:
-        image: ghcr.io/jupiterxiaoxiaoyu/zkwasm-mini-rollup/zkwasm-merkleservice:latest # the zkwasm merkle db service from GitHub Container Registry
+        image: ghcr.io/delphinuslab/zkwasm-mini-rollup/zkwasm-merkleservice:latest # the zkwasm merkle db service from GitHub Container Registry
         command: ["./target/release/csm_service", "--uri", "/usr/rocksdb"]
         volumes:
             - rocks-data:/usr/rocksdb
