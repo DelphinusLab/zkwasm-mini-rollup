@@ -11,6 +11,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Setup the rocks db directory in builder stage
+RUN mkdir -p /usr/rocksdb
+
 # Set the working directory inside the container
 WORKDIR /usr/src/
 
@@ -37,19 +40,15 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Setup the rocks db directory with proper permissions
 RUN mkdir -p /usr/rocksdb && \
-    chown -R appuser:appuser /usr/rocksdb && \
-    chmod 777 /usr/rocksdb
+    chmod 777 /usr/rocksdb && \
+    chown -R appuser:appuser /usr/rocksdb
 
-# Touch log file and set permissions to prevent permission issues
-RUN touch /usr/rocksdb/LOG && \
-    chown appuser:appuser /usr/rocksdb/LOG && \
-    chmod 666 /usr/rocksdb/LOG
+# Copy RocksDB directory from builder stage (if needed)
+COPY --from=builder /usr/rocksdb /usr/rocksdb
 
-# Copy the binary from the builder stage
+# Copy the binary from the builder stage to match docker-compose path
 COPY --from=builder /usr/src/zkwasm-mini-rollup/target/release/csm_service /target/release/csm_service
 RUN chmod +x /target/release/csm_service
 
 # Switch to non-root user
 USER appuser
-
-# No need to specify CMD or EXPOSE as these are handled in docker-compose.yml
