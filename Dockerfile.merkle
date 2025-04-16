@@ -32,16 +32,22 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Setup the rocks db directory
-RUN mkdir -p /usr/rocksdb
+# Create a non-root user to run the service
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Setup the rocks db directory with proper permissions
+RUN mkdir -p /usr/rocksdb && \
+    chown -R appuser:appuser /usr/rocksdb && \
+    chmod 777 /usr/rocksdb
+
+# Touch log file and set permissions to prevent permission issues
+RUN touch /usr/rocksdb/LOG && \
+    chown appuser:appuser /usr/rocksdb/LOG && \
+    chmod 666 /usr/rocksdb/LOG
 
 # Copy the binary from the builder stage
 COPY --from=builder /usr/src/zkwasm-mini-rollup/target/release/csm_service /target/release/csm_service
 RUN chmod +x /target/release/csm_service
-
-# Create a non-root user to run the service
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /usr/rocksdb
 
 # Switch to non-root user
 USER appuser

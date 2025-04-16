@@ -1,15 +1,15 @@
 services:
     merkleservice:
-        image: sinka2022/zkwasm-merkleservice:latest # the zkwasm merkle db service
+        image: ghcr.io/jupiterxiaoxiaoyu/zkwasm-mini-rollup/zkwasm-merkleservice:latest # the zkwasm merkle db service from GitHub Container Registry
         command: ["./target/release/csm_service", "--uri", "/usr/rocksdb"]
         volumes:
             - rocks-data:/usr/rocksdb
         ports:
-            - "3030:3030"  # Map MongoDB port
+            - "3030:3030"  # Map service port
     redis:
         image: redis:latest  # Use the latest Redis image from Docker Hub
         ports:
-            - "6379:6379"  # Map MongoDB port
+            - "6379:6379"  # Map Redis port
           #  networks:
           #  - my-network
 
