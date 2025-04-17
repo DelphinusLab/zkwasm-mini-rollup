@@ -92,6 +92,7 @@ export class Service {
   queue: null | Queue;
   txCallback: (arg: TxWitness, events: BigUint64Array) => Promise<void>;
   txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => Promise<void>;
+  playerIndexer: (arg: any) => number;
   registerAPICallback: (app: Express) => void;
   merkleRoot: BigUint64Array;
   bundleIndex: number;
@@ -103,12 +104,14 @@ export class Service {
       cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
       txBatched: (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string)=> Promise<void> = async (arg: TxWitness[], merkleHexRoot: string, postMerkleRoot: string) => {},
       registerAPICallback: (app: Express) => void = (app: Express) => {},
+      registerPlayerIndexer: (player: any) => number = (player: any) => {return 0},
   ) {
     this.worker = null;
     this.queue = null;
     this.txCallback = cb;
     this.txBatched = txBatched;
     this.registerAPICallback = registerAPICallback;
+    this.playerIndexer = registerPlayerIndexer;
     this.merkleRoot = new BigUint64Array([
       14789582351289948625n,
       10919489180071018470n,
@@ -225,8 +228,10 @@ export class Service {
     console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
     // if (!isReplay) {
-      await this.txManager.insertTxIntoCommit(tx);
-      await this.txCallback(tx, events);
+    const handled = await this.txManager.insertTxIntoCommit(tx);
+    if (handled == false) {
+        await this.txCallback(tx, events);
+    }
     // }
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
@@ -573,7 +578,7 @@ export class Service {
           player: player,
           state: snapshot
         }
-        await storeAccount(value.pkx, player);
+        await storeAccount(value.pkx, player, this.playerIndexer);
         res.status(201).send({
           success: true,
           data: JSON.stringify(result),
