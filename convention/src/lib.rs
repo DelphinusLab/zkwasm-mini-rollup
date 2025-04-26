@@ -354,7 +354,7 @@ pub struct MarketInfo<Object: StorageData, PlayerData: StorageData + Default + W
     pub settleinfo: u64,
     pub bid: Option<BidInfo>,
     pub object: Object,
-    user: PhantomData<PlayerData>,
+    pub user: PhantomData<PlayerData>,
 }
 
 impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData for MarketInfo<O, Player> {
