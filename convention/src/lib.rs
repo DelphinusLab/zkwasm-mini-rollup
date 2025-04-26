@@ -397,7 +397,7 @@ pub struct BidInfo {
     pub bidder: [u64; 2]
 }
 
-trait BidObject<PlayerData: StorageData + Default + WithBalance> {
+pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
     const INSUFF: u32;
     fn get_bidder(&self) -> Option<BidInfo>;
     fn set_bidder(&mut self, bidder: Option<BidInfo>);
