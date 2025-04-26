@@ -4,6 +4,7 @@ use serde::Serialize;
 use std::cell::{Ref, RefMut};
 use std::collections::LinkedList;
 use zkwasm_rest_abi::{Player, StorageData, MERKLE_MAP};
+use std::marker::PhantomData;
 
 pub trait CommonState: Serialize + StorageData + Sized {
     type PlayerData: StorageData + Default + Serialize;
@@ -347,36 +348,56 @@ pub trait WithBalance {
 }
 
 #[derive(Clone, Serialize, Default, Copy)]
+pub struct MarketInfo<Object: StorageData, PlayerData: StorageData + Default + WithBalance> {
+    pub marketid: u64, 
+    pub askprice: u64,
+    pub bidprice: u64,
+    pub settleinfo: u64,
+    pub bidder: Option<[u64; 2]>,
+    pub object: Object,
+    user: PhantomData<PlayerData>,
+}
+
+impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData for MarketInfo<O, Player> {
+    fn from_data(u64data: &mut IterMut<u64>) -> MarketInfo<O, Player> {
+        let marketid= *u64data.next().unwrap();
+        let askprice = *u64data.next().unwrap();
+        let bidprice = *u64data.next().unwrap();
+        let settleinfo = *u64data.next().unwrap();
+        let mut bidder = None;
+        if settleinfo != 0 {
+            bidder = Some([*u64data.next().unwrap(), *u64data.next().unwrap()]);
+        }
+        let object = O::from_data(u64data);
+        MarketInfo {
+            marketid,
+            askprice,
+            settleinfo,
+            bidprice,
+            bidder,
+            object,
+            user: PhantomData
+        }
+    }
+    fn to_data(&self, data: &mut Vec<u64>) {
+        data.push(self.marketid);
+        data.push(self.askprice);
+        data.push(self.bidprice);
+        data.push(self.settleinfo);
+        if self.settleinfo != 0 {
+            data.push(self.bidder.unwrap()[0]);
+            data.push(self.bidder.unwrap()[1]);
+        }
+        self.object.to_data(data)
+    }
+}
+
 pub struct BidInfo {
     pub bidprice: u64,
-    pub bidder: [u64; 2],
+    pub bidder: [u64; 2]
 }
 
-pub fn bidinfo_from_data(u64data: &mut IterMut<u64>) -> Option<BidInfo> {
-    let bid = *u64data.next().unwrap();
-    let mut bidder = None;
-    if bid != 0 {
-        bidder =  Some(BidInfo {
-            bidprice: bid,
-            bidder: [*u64data.next().unwrap(), *u64data.next().unwrap()]
-        })
-    }
-    bidder
-}
-
-
-pub fn to_bidinfo_data(b: &Option<BidInfo>, data: &mut Vec<u64>) {
-    match b {
-        None => data.push(0),
-        Some(b) => {
-            data.push(b.bidprice);
-            data.push(b.bidder[0]);
-            data.push(b.bidder[1]);
-        },
-    }
-}
-
-pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
+trait BidObject<PlayerData: StorageData + Default + WithBalance> {
     const INSUFF: u32;
     fn get_bidder(&self) -> Option<BidInfo>;
     fn set_bidder(&mut self, bidder: Option<BidInfo>);
