@@ -351,9 +351,8 @@ pub trait WithBalance {
 pub struct MarketInfo<Object: StorageData, PlayerData: StorageData + Default + WithBalance> {
     pub marketid: u64, 
     pub askprice: u64,
-    pub bidprice: u64,
     pub settleinfo: u64,
-    pub bidder: Option<[u64; 2]>,
+    pub bid: Option<BidInfo>,
     pub object: Object,
     user: PhantomData<PlayerData>,
 }
@@ -362,19 +361,21 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
     fn from_data(u64data: &mut IterMut<u64>) -> MarketInfo<O, Player> {
         let marketid= *u64data.next().unwrap();
         let askprice = *u64data.next().unwrap();
-        let bidprice = *u64data.next().unwrap();
         let settleinfo = *u64data.next().unwrap();
         let mut bidder = None;
         if settleinfo != 0 {
-            bidder = Some([*u64data.next().unwrap(), *u64data.next().unwrap()]);
+            let bidprice = *u64data.next().unwrap();
+            bidder = Some(BidInfo {
+                bidprice,
+                bidder: [*u64data.next().unwrap(), *u64data.next().unwrap()]
+            })
         }
         let object = O::from_data(u64data);
         MarketInfo {
             marketid,
             askprice,
             settleinfo,
-            bidprice,
-            bidder,
+            bid: bidder,
             object,
             user: PhantomData
         }
@@ -382,16 +383,18 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
     fn to_data(&self, data: &mut Vec<u64>) {
         data.push(self.marketid);
         data.push(self.askprice);
-        data.push(self.bidprice);
         data.push(self.settleinfo);
         if self.settleinfo != 0 {
-            data.push(self.bidder.unwrap()[0]);
-            data.push(self.bidder.unwrap()[1]);
+            let bid = self.bid.unwrap();
+            data.push(bid.bidprice);
+            data.push(bid.bidder[0]);
+            data.push(bid.bidder[1]);
         }
         self.object.to_data(data)
     }
 }
 
+#[derive(Clone, Serialize, Default, Copy)]
 pub struct BidInfo {
     pub bidprice: u64,
     pub bidder: [u64; 2]
