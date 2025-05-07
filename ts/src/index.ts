@@ -4,6 +4,7 @@ import { Service } from "./service.js";
 import { TxWitness } from "./prover.js";
 import { TxStateManager }  from "./commit.js";
 import { Event, EventModel }  from "./event.js";
+import * as Market from './storage/market.js';
 import { hexStringToMerkleRoot, merkleRootToBeHexString } from "./lib.js";
 
-export {sign, query, ZKWasmAppRpc, Event, EventModel, TxWitness, LeHexBN, composeWithdrawParams, Service, merkleRootToBeHexString, hexStringToMerkleRoot, TxStateManager}
+export {sign, query, ZKWasmAppRpc, Event, EventModel, TxWitness, LeHexBN, composeWithdrawParams, Service, merkleRootToBeHexString, hexStringToMerkleRoot, TxStateManager, Market}
