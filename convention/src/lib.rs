@@ -353,6 +353,7 @@ pub struct MarketInfo<Object: StorageData, PlayerData: StorageData + Default + W
     pub askprice: u64,
     pub settleinfo: u64,
     pub bid: Option<BidInfo>,
+    pub owner: [u64; 2],
     pub object: Object,
     pub user: PhantomData<PlayerData>,
 }
@@ -370,12 +371,14 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
                 bidder: [*u64data.next().unwrap(), *u64data.next().unwrap()]
             })
         }
+        let owner = [*u64data.next().unwrap(), *u64data.next().unwrap()];
         let object = O::from_data(u64data);
         MarketInfo {
             marketid,
             askprice,
             settleinfo,
             bid: bidder,
+            owner,
             object,
             user: PhantomData
         }
@@ -390,6 +393,8 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
             data.push(bid.bidder[0]);
             data.push(bid.bidder[1]);
         }
+        data.push(self.owner[0]);
+        data.push(self.owner[1]);
         self.object.to_data(data)
     }
 }
@@ -400,18 +405,52 @@ pub struct BidInfo {
     pub bidder: [u64; 2]
 }
 
+impl<O: StorageData, PlayerData: StorageData + Default + WithBalance> MarketInfo<O, PlayerData> {
+    pub fn get_bidder(&self) -> Option<BidInfo> {
+        self.bid
+    }
+    pub fn set_bidder(&mut self, bidder: Option<BidInfo>) {
+        self.bid = bidder
+    }
+    pub fn get_owner(&self) -> [u64; 2] {
+        self.owner
+    }
+    pub fn set_owner(&mut self, owner: [u64; 2]) {
+        self.owner = owner;
+    }
+}
+
 pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
     const INSUFF: u32;
+    const NOBID: u32;
     fn get_bidder(&self) -> Option<BidInfo>;
     fn set_bidder(&mut self, bidder: Option<BidInfo>);
+    fn get_owner(&self) -> [u64; 2];
+    fn set_owner(&mut self, owner: [u64; 2]);
     fn clear_bidder(&mut self) -> Option<Player<PlayerData>> {
-         let player = self.get_bidder().map(|c| {
+        let player = self.get_bidder().map(|c| {
             let mut player = Player::<PlayerData>::get_from_pid(&c.bidder).unwrap();
             player.data.inc_balance(c.bidprice);
             player
         });
         self.set_bidder(None); 
         player
+    }
+    fn deal(&mut self) -> Result<Player<PlayerData>, u32> {
+        let bidder = self.get_bidder();
+        match bidder {
+            Some(c) => {
+                let pid = &c.bidder;
+                let mut owner = Player::<PlayerData>::get_from_pid(&self.get_owner()).unwrap();
+                owner.data.inc_balance(c.bidprice);
+                self.set_owner(pid.clone());
+                Ok(owner)
+            },
+            None => {
+                Err(Self::NOBID)
+            }
+        }
+
     }
     fn replace_bidder(&mut self, player: &mut Player<PlayerData>, amount: u64) -> Result<Option<Player<PlayerData>>, u32> {
         self.get_bidder().map_or(Ok(()), |x| {
