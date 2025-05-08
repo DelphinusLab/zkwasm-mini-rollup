@@ -9,6 +9,7 @@ export interface MarketInfo<O> {
     askprice: bigint;
     settleinfo: bigint;
     bidder: Bidder | null;
+    owner: bigint[];
     object: O;
 }
 
@@ -41,6 +42,9 @@ export function fromData<O>(u64datasource: bigint[], decoder: Decodable<O>): Mar
     }
   }
 
+  const owner = [u64data.shift()!, u64data.shift()!];
+
+
   // Consume data from the beginning of the array.
   const object = decoder.fromData(u64data);
 
@@ -50,6 +54,7 @@ export function fromData<O>(u64datasource: bigint[], decoder: Decodable<O>): Mar
     askprice: askprice,
     settleinfo: settleinfo,
     bidder: bidder,
+    owner: owner,
     object: object,
 
   };
