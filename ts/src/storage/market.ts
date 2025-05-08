@@ -77,7 +77,7 @@ function maskUint64(v: any): any {
     return v;
 }
 
-function uint64FetchPlugin(next: any, rawDoc: any) {
+export function uint64FetchPlugin(next: any, rawDoc: any) {
     return maskUint64(rawDoc);
 }
 
