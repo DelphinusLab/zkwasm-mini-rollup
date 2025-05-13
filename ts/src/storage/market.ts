@@ -93,6 +93,7 @@ export const marketObjectSchema = new mongoose.Schema({
     askprice: { type: BigInt, require: true},
     settleinfo: { type: BigInt, require: true},
     bidder: { type: BidderSchema, require: false},
+    owner: { type: [BigInt], require: true},
     object: { type: Schema.Types.Mixed, require: true},
 });
 
