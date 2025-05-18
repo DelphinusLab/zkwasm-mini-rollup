@@ -26,7 +26,7 @@ pub enum Command<Activity: SubCommand> {
     Tick,
 }
 
-pub struct Transaction<Activity: SubCommand> {
+pub struct TransactionData<Activity: SubCommand> {
     pub command: Command<Activity>,
     pub nonce: u64,
 }
@@ -92,7 +92,7 @@ impl CommandHandler for Deposit {
     }
 }
 
-impl<Activity: SubCommand> Transaction<Activity> {
+impl<Activity: SubCommand> TransactionData<Activity> {
     pub fn decode(params: &[u64]) -> Self {
         let command = params[0] & 0xff;
         let nonce = params[0] >> 16;
@@ -113,7 +113,7 @@ impl<Activity: SubCommand> Transaction<Activity> {
             unsafe {zkwasm_rust_sdk::require(command == TICK)};
             Command::Tick
         };
-        Transaction {
+        TransactionData {
             command,
             nonce,
         }
