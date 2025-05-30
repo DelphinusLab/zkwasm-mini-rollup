@@ -3,8 +3,126 @@ use core::slice::IterMut;
 use serde::Serialize;
 use std::cell::{Ref, RefMut};
 use std::collections::LinkedList;
-use zkwasm_rest_abi::{Player, StorageData, MERKLE_MAP};
+use zkwasm_rest_abi::{Player, StorageData, MERKLE_MAP, enforce};
 use std::marker::PhantomData;
+
+pub trait SubCommand: Sized {
+    fn decode(command: u64, params: &[u64]) -> Option<Self>;
+}
+
+pub trait CommandHandler {
+    fn handle<P: StorageData + WithBalance + Default>(&self, pid: &[u64; 2], nonce: u64, rand: &[u64; 4], counter: u64) -> Result<(), u32>;
+}
+
+#[derive (Clone)]
+pub enum Command<Activity: SubCommand> {
+    // standard activities
+    Activity(Activity),
+    // standard withdraw and deposit
+    Withdraw(Withdraw),
+    Deposit(Deposit),
+    // standard player install and timer
+    InstallPlayer,
+    Tick,
+}
+
+pub struct TransactionData<Activity: SubCommand> {
+    pub command: Command<Activity>,
+    pub nonce: u64,
+}
+
+/* 0 for tick
+ * 1 for InstallPlayer
+ * 2 for Withdraw
+ * 3 for Deposit
+ * 4 customize commands
+ */
+const TICK: u64 = 0;
+const INSTALL_PLAYER: u64 = 1;
+const WITHDRAW: u64 = 2;
+const DEPOSIT: u64 = 3;
+pub const COMMAND_BASE:u64 = 4;
+
+pub const ERROR_PLAYER_ALREADY_EXIST: u32 = 1;
+pub const ERROR_PLAYER_NOT_EXIST: u32 = 2;
+
+#[derive (Clone)]
+pub struct Withdraw {
+    pub data: [u64; 3],
+}
+
+impl CommandHandler for Withdraw {
+    fn handle<P: StorageData + WithBalance + Default>(&self, pid: &[u64; 2], nonce: u64, _rand: &[u64; 4], _counter: u64) -> Result<(), u32> {
+        let mut player = Player::<P>::get_from_pid(pid);
+        match player.as_mut() {
+            None => Err(ERROR_PLAYER_NOT_EXIST),
+            Some(player) => {
+                player.check_and_inc_nonce(nonce);
+                let amount = self.data[0] & 0xffffffff;
+                player.data.cost_balance(amount)?;
+                let withdrawinfo =
+                    WithdrawInfo::new(&[self.data[0], self.data[1], self.data[2]], 0);
+                SettlementInfo::append_settlement(withdrawinfo);
+                player.store();
+                Ok(())
+            }
+        }
+    }
+}
+
+#[derive (Clone)]
+pub struct Deposit {
+    pub data: [u64; 3],
+}
+
+impl CommandHandler for Deposit {
+    fn handle<P: StorageData + WithBalance + Default>(&self, pid: &[u64; 2], nonce: u64, _rand: &[u64; 4], _counter: u64) -> Result<(), u32> {
+        let mut admin = Player::<P>::get_from_pid(pid).unwrap();
+        admin.check_and_inc_nonce(nonce);
+        let mut player = Player::<P>::get_from_pid(&[self.data[0], self.data[1]]);
+        match player.as_mut() {
+            None => Err(ERROR_PLAYER_NOT_EXIST),
+            Some(player) => {
+                player.data.inc_balance(self.data[2]);
+                player.store();
+                admin.store();
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<Activity: SubCommand> TransactionData<Activity> {
+    pub fn decode(params: &[u64]) -> Self {
+        let command = params[0] & 0xff;
+        let nonce = params[0] >> 16;
+        let command = if command == WITHDRAW {
+            Command::Withdraw (Withdraw {
+                data: [params[2], params[3], params[4]]
+            })
+        } else if command == DEPOSIT {
+            enforce(params[3] == 0, "check deposit index"); // only token index 0 is supported
+            Command::Deposit (Deposit {
+                data: [params[1], params[2], params[4]]
+            })
+        } else if command == INSTALL_PLAYER {
+            Command::InstallPlayer
+        } else if let Some(activity) = Activity::decode(command, &params[1..]) {
+            Command::Activity(activity)
+        } else {
+            unsafe {zkwasm_rust_sdk::require(command == TICK)};
+            Command::Tick
+        };
+        TransactionData {
+            command,
+            nonce,
+        }
+    }
+
+
+}
+
+
 
 pub trait CommonState: Serialize + StorageData + Sized {
     type PlayerData: StorageData + Default + Serialize;
@@ -49,6 +167,10 @@ pub trait CommonState: Serialize + StorageData + Sized {
     }
 }
 
+/* Settlement is flushed at the end of each bundle
+ * 1. The application transactions will push withdraw into settlement
+ * 2. All withdraw will get flushed at the end of each bundle (at the preemption point)
+ */
 use zkwasm_rest_abi::WithdrawInfo;
 
 pub struct SettlementInfo(Vec<WithdrawInfo>);
@@ -353,6 +475,7 @@ pub struct MarketInfo<Object: StorageData, PlayerData: StorageData + Default + W
     pub askprice: u64,
     pub settleinfo: u64,
     pub bid: Option<BidInfo>,
+    pub owner: [u64; 2],
     pub object: Object,
     pub user: PhantomData<PlayerData>,
 }
@@ -370,12 +493,14 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
                 bidder: [*u64data.next().unwrap(), *u64data.next().unwrap()]
             })
         }
+        let owner = [*u64data.next().unwrap(), *u64data.next().unwrap()];
         let object = O::from_data(u64data);
         MarketInfo {
             marketid,
             askprice,
             settleinfo,
             bid: bidder,
+            owner,
             object,
             user: PhantomData
         }
@@ -390,6 +515,8 @@ impl<O: StorageData, Player: StorageData + Default + WithBalance> StorageData fo
             data.push(bid.bidder[0]);
             data.push(bid.bidder[1]);
         }
+        data.push(self.owner[0]);
+        data.push(self.owner[1]);
         self.object.to_data(data)
     }
 }
@@ -400,18 +527,52 @@ pub struct BidInfo {
     pub bidder: [u64; 2]
 }
 
+impl<O: StorageData, PlayerData: StorageData + Default + WithBalance> MarketInfo<O, PlayerData> {
+    pub fn get_bidder(&self) -> Option<BidInfo> {
+        self.bid
+    }
+    pub fn set_bidder(&mut self, bidder: Option<BidInfo>) {
+        self.bid = bidder
+    }
+    pub fn get_owner(&self) -> [u64; 2] {
+        self.owner
+    }
+    pub fn set_owner(&mut self, owner: [u64; 2]) {
+        self.owner = owner;
+    }
+}
+
 pub trait BidObject<PlayerData: StorageData + Default + WithBalance> {
     const INSUFF: u32;
+    const NOBID: u32;
     fn get_bidder(&self) -> Option<BidInfo>;
     fn set_bidder(&mut self, bidder: Option<BidInfo>);
+    fn get_owner(&self) -> [u64; 2];
+    fn set_owner(&mut self, owner: [u64; 2]);
     fn clear_bidder(&mut self) -> Option<Player<PlayerData>> {
-         let player = self.get_bidder().map(|c| {
+        let player = self.get_bidder().map(|c| {
             let mut player = Player::<PlayerData>::get_from_pid(&c.bidder).unwrap();
             player.data.inc_balance(c.bidprice);
             player
         });
         self.set_bidder(None); 
         player
+    }
+    fn deal(&mut self) -> Result<Player<PlayerData>, u32> {
+        let bidder = self.get_bidder();
+        match bidder {
+            Some(c) => {
+                let pid = &c.bidder;
+                let mut owner = Player::<PlayerData>::get_from_pid(&self.get_owner()).unwrap();
+                owner.data.inc_balance(c.bidprice);
+                self.set_owner(pid.clone());
+                Ok(owner)
+            },
+            None => {
+                Err(Self::NOBID)
+            }
+        }
+
     }
     fn replace_bidder(&mut self, player: &mut Player<PlayerData>, amount: u64) -> Result<Option<Player<PlayerData>>, u32> {
         self.get_bidder().map_or(Ok(()), |x| {

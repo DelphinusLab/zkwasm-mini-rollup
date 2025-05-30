@@ -423,8 +423,8 @@ export class Service {
           //console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
           application.verify_tx_signature(u64array);
-          application.handle_tx(u64array);
-          await this.install_transactions(signature, job.id, new BigUint64Array([]));
+          let txResult = application.handle_tx(u64array);
+          await this.install_transactions(signature, job.id, txResult);
         } catch (error) {
           console.log("fatal: handling auto tick error, process will terminate.", error);
           process.exit(1);
