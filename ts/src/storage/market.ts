@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { Decodable, uint64FetchPlugin } from './object.js';
 export interface Bidder {
   bidprice: bigint;
   bidder: bigint[];
@@ -13,15 +14,11 @@ export interface MarketInfo<O> {
     object: O;
 }
 
-export interface Decodable<O> {
-    fromData(u64datasource: bigint[]): O
-}
-
 export function fromData<O>(u64datasource: bigint[], decoder: Decodable<O>): MarketInfo<O> {
   const u64data = u64datasource.slice();
   // Ensure there are at least three elements.
   if (u64data.length < 3) {
-    throw new Error("Not enough data to construct a Card");
+    throw new Error("Not enough data to construct a MarketInfo");
   }
 
   const marketid: bigint = u64data.shift()!;
@@ -59,28 +56,6 @@ export function fromData<O>(u64datasource: bigint[], decoder: Decodable<O>): Mar
 
   };
 }
-
-// recursive masker that applies to bigints or arrays of bigints
-function maskUint64(v: any): any {
-    if (typeof v === 'bigint') {
-        return BigInt.asUintN(64, v);
-    }
-    if (Array.isArray(v)) {
-        return v.map(maskUint64);
-    }
-    // if you have nested plain objects you also want to walk, you could:
-    if (v !== null && typeof v === 'object') {
-        for (const k of Object.keys(v)) {
-            v[k] = maskUint64(v[k]);
-        }
-    }
-    return v;
-}
-
-export function uint64FetchPlugin(next: any, rawDoc: any) {
-    return maskUint64(rawDoc);
-}
-
 
 const BidderSchema = new mongoose.Schema<Bidder>({
   bidprice:  { type: BigInt, required: true },
