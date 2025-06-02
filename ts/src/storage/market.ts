@@ -62,8 +62,7 @@ const BidderSchema = new mongoose.Schema<Bidder>({
   bidder:    { type: [BigInt], required: true }
 });
 
-
-export function createMarketSchema(ObjectSchema: SchemaType) {
+export function createMarketSchema(ObjectSchema: Schema) {
     // Define the schema for the Token model
     const marketObjectSchema = new mongoose.Schema({
         marketid: { type: BigInt, required: true, unique: true},
@@ -76,7 +75,6 @@ export function createMarketSchema(ObjectSchema: SchemaType) {
     marketObjectSchema.pre('init', uint64FetchPlugin);
     return marketObjectSchema
 }
-
 
 // Utility function to convert a bigint to an array of 8 bytes in little-endian order.
 function toLEBytes(num: bigint): number[] {
