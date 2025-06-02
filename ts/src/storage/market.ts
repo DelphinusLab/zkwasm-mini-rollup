@@ -1,4 +1,4 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema, SchemaType } from 'mongoose';
 import { Decodable, uint64FetchPlugin } from './object.js';
 export interface Bidder {
   bidprice: bigint;
@@ -62,17 +62,21 @@ const BidderSchema = new mongoose.Schema<Bidder>({
   bidder:    { type: [BigInt], required: true }
 });
 
-// Define the schema for the Token model
-export const marketObjectSchema = new mongoose.Schema({
-    marketid: { type: BigInt, required: true, unique: true},
-    askprice: { type: BigInt, require: true},
-    settleinfo: { type: BigInt, require: true},
-    bidder: { type: BidderSchema, require: false},
-    owner: { type: [BigInt], require: true},
-    object: { type: Schema.Types.Mixed, require: true},
-});
 
-marketObjectSchema.pre('init', uint64FetchPlugin);
+export function createMarketSchema(ObjectSchema: SchemaType) {
+    // Define the schema for the Token model
+    const marketObjectSchema = new mongoose.Schema({
+        marketid: { type: BigInt, required: true, unique: true},
+        askprice: { type: BigInt, require: true},
+        settleinfo: { type: BigInt, require: true},
+        bidder: { type: BidderSchema, require: false},
+        owner: { type: [BigInt], require: true},
+        object: { type: ObjectSchema, require: true},
+    });
+    marketObjectSchema.pre('init', uint64FetchPlugin);
+    return marketObjectSchema
+}
+
 
 // Utility function to convert a bigint to an array of 8 bytes in little-endian order.
 function toLEBytes(num: bigint): number[] {
