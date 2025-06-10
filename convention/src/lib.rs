@@ -7,6 +7,8 @@ pub mod player;
 pub mod settlement;
 pub mod event;
 pub mod objects;
+pub mod err;
+pub mod market;
 
 use settlement::*;
 

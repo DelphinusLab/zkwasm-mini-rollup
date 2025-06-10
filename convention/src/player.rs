@@ -1,6 +1,7 @@
 use zkwasm_rest_abi::{Player, StorageData, enforce};
 use zkwasm_rest_abi::WithdrawInfo;
 use crate::SettlementInfo;
+use crate::err::ErrorEncoder;
 
 pub trait WithBalance {
     fn cost_balance(&mut self, amount: u64) -> Result<(), u32>;
@@ -10,6 +11,8 @@ pub trait WithBalance {
 pub trait SubCommand: Sized {
     fn decode(command: u64, params: &[u64]) -> Option<Self>;
 }
+
+pub trait PlayerData: StorageData + WithBalance + Default {}
 
 pub trait CommandHandler {
     fn handle<P: StorageData + WithBalance + Default>(&self, pid: &[u64; 2], nonce: u64, rand: &[u64; 4], counter: u64) -> Result<(), u32>;
@@ -44,19 +47,31 @@ const WITHDRAW: u64 = 2;
 const DEPOSIT: u64 = 3;
 pub const COMMAND_BASE:u64 = 4;
 
-pub const ERROR_PLAYER_ALREADY_EXIST: u32 = 1;
-pub const ERROR_PLAYER_NOT_EXIST: u32 = 2;
-
 #[derive (Clone)]
 pub struct Withdraw {
     pub data: [u64; 3],
+}
+
+const PLAYER_MODULE: u32 = 1;
+const PLAYER_ERROR: [&'static str; 2] = ["PlayerAlreadyExist", "PlayerNotExist"];
+pub struct PlayerError ();
+
+
+impl ErrorEncoder for PlayerError {
+    const MODULE_ID: u32 = PLAYER_MODULE;
+    const ERROR_STR: &'static [&'static str] = &PLAYER_ERROR;
+}
+
+impl PlayerError {
+    pub const ERROR_PLAYER_ALREADY_EXIST: u32 = 0;
+    pub const ERROR_PLAYER_NOT_EXIST: u32 = 1;
 }
 
 impl CommandHandler for Withdraw {
     fn handle<P: StorageData + WithBalance + Default>(&self, pid: &[u64; 2], nonce: u64, _rand: &[u64; 4], _counter: u64) -> Result<(), u32> {
         let mut player = Player::<P>::get_from_pid(pid);
         match player.as_mut() {
-            None => Err(ERROR_PLAYER_NOT_EXIST),
+            None => Err(PlayerError::encode(PlayerError::ERROR_PLAYER_NOT_EXIST)),
             Some(player) => {
                 player.check_and_inc_nonce(nonce);
                 let amount = self.data[0] & 0xffffffff;
@@ -82,7 +97,7 @@ impl CommandHandler for Deposit {
         admin.check_and_inc_nonce(nonce);
         let mut player = Player::<P>::get_from_pid(&[self.data[0], self.data[1]]);
         match player.as_mut() {
-            None => Err(ERROR_PLAYER_NOT_EXIST),
+            None => Err(PlayerError::encode(PlayerError::ERROR_PLAYER_NOT_EXIST)),
             Some(player) => {
                 player.data.inc_balance(self.data[2]);
                 player.store();
@@ -119,11 +134,4 @@ impl<Activity: SubCommand> TransactionData<Activity> {
             nonce,
         }
     }
-
-
 }
-
-
-
-
-
