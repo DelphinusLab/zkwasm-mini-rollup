@@ -385,6 +385,9 @@ export class Service {
     this.queue = myQueue;
 
     console.log("initialize application merkle db ...");
+
+
+    this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
     application.initialize(this.merkleRoot);
 
     // update the merkle root variable
