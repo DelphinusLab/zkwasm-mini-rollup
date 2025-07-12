@@ -221,6 +221,7 @@ export class Service {
       console.log(record);
       //throw e
     }
+    return bundleRecord;
   }
 
 
@@ -246,6 +247,9 @@ export class Service {
       let txdata = application.finalize();
       console.log("txdata is:", txdata);
       let task_id = null;
+
+      // TODO: store a bundle before we fail
+      // let bundle = await this.trackBundle('');
       if (deploymode) {
         try {
           task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
