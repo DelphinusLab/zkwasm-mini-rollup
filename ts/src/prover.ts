@@ -6,13 +6,14 @@ import {
   ZkWasmServiceHelper,
   InputContextType,
   Task,
+  TaskStatus,
 } from "zkwasm-service-helper";
 
 import {
   get_user_private_account,
-  endpoint,
   get_image_md5,
   get_user_addr,
+  get_zkwasm_hub_endpoint,
 } from "./config.js";
 
 import dotenv from 'dotenv';
@@ -30,7 +31,7 @@ export interface TxWitness {
 }
 
 export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Array<string>, txdata: Uint8Array) {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
 
   let proofSubmitMode = ProofSubmitMode.Manual;
 
@@ -78,7 +79,7 @@ export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Arr
 }
 
 export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
   const priv_inputs: Array<string> = [];
   priv_inputs.push(`${txs.length}:i64`);
@@ -166,7 +167,7 @@ export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<Tx
 }
 
 export async function get_latest_proof(taskid: string | null): Promise<Task | null> {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
@@ -184,7 +185,7 @@ export async function get_latest_proof(taskid: string | null): Promise<Task | nu
 }
 
 export async function has_uncomplete_task(): Promise<boolean> {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
@@ -210,7 +211,7 @@ export async function has_task(): Promise<boolean> {
     console.log("md5 is unspecified");
     return false;
   }
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,

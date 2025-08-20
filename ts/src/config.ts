@@ -5,8 +5,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-
-export const endpoint = "https://rpc.zkwasmhub.com:8090";
+export const get_zkwasm_hub_endpoint = () => {
+  if (process.env.ZKWASM_HUB_ENDPOINT) {
+    return process.env.ZKWASM_HUB_ENDPOINT;
+  } else {
+    return "https://rpc.zkwasmhub.com:8090";
+  }
+}
 
 export const get_server_admin_key = () => {
   if (process.env.SERVER_ADMIN_KEY) {
@@ -186,6 +191,4 @@ export const modelJob = mongoose.model('Job', jobSchema);
 export const modelBundle = mongoose.model('Bundle', bundleSchema);
 export const modelRand = mongoose.model('Rand', randSchema);
 
-export const ServiceHelper = new ZkWasmServiceHelper(endpoint, "", "");
-
-
+export const ServiceHelper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
