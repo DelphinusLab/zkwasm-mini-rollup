@@ -6,7 +6,6 @@ import {
   ZkWasmServiceHelper,
   InputContextType,
   Task,
-  TaskStatus,
 } from "zkwasm-service-helper";
 
 import {

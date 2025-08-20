@@ -6,8 +6,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const get_zkwasm_hub_endpoint = () => {
-  if (process.env.ZKWASM_HUB_ENDPOINT) {
-    return process.env.ZKWASM_HUB_ENDPOINT;
+  if (process.env.ZKWASM_HUB_URL) {
+    return process.env.ZKWASM_HUB_URL;
   } else {
     return "https://rpc.zkwasmhub.com:8090";
   }
