@@ -1,6 +1,5 @@
 import { ZkWasmServiceHelper, ZkWasmUtil } from "zkwasm-service-helper";
-
-export const endpoint = "https://rpc.zkwasmhub.com:8090";
+import { get_zkwasm_hub_endpoint } from "./config";
 
 export function commitmentHexToHexString(x: string, y: string): string[] {
     const hexString1 = "0x" + x.slice(12, 66);
@@ -11,7 +10,7 @@ export function commitmentHexToHexString(x: string, y: string): string[] {
 
 
 export async function getImageCommitmentHexStrings(imageHash: string): Promise<string[]> {
-    const helper = new ZkWasmServiceHelper(endpoint, "", "");
+    const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
     const imageInfo = await helper.queryImage(imageHash);
     
     if (!imageInfo || !imageInfo.checksum) {

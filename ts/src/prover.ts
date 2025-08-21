@@ -4,20 +4,32 @@ import {
   ZkWasmUtil,
   ProofSubmitMode,
   ZkWasmServiceHelper,
+  ZkWasmServiceEndpointError,
   InputContextType,
   Task,
 } from "zkwasm-service-helper";
 
 import {
   get_user_private_account,
-  endpoint,
   get_image_md5,
   get_user_addr,
+  get_zkwasm_hub_endpoint,
 } from "./config.js";
 
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+export const HttpStatus = {
+  REQUEST_TIMEOUT: 408,
+  TOO_MANY_REQUESTS: 429,
+  INTERNAL_SERVER_ERROR: 500,
+  BAD_GATEWAY: 502,
+  SERVICE_UNAVAILABLE: 503,
+  GATEWAY_TIMEOUT: 504,
+} as const;
+
+export type HttpStatus = typeof HttpStatus[keyof typeof HttpStatus];
 
 export interface TxWitness {
   msg: string,
@@ -30,7 +42,7 @@ export interface TxWitness {
 }
 
 export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Array<string>, txdata: Uint8Array) {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
 
   let proofSubmitMode = ProofSubmitMode.Manual;
 
@@ -78,7 +90,7 @@ export async function submitRawProof(pub_inputs: Array<string>, priv_inputs: Arr
 }
 
 export async function submitProof(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   const pub_inputs: Array<string> = [merkle[0], merkle[1], merkle[2], merkle[3]].map((x) => {return `${x}:i64`});
   const priv_inputs: Array<string> = [];
   priv_inputs.push(`${txs.length}:i64`);
@@ -149,24 +161,52 @@ function wait(ms: number): Promise<void> {
       return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function submitProofWithRetry(merkle: BigUint64Array, txs: Array<TxWitness>, txdata: Uint8Array) {
-  for (let i=0; i<10; i++) {
+export async function submitProofWithRetry(
+  merkle: BigUint64Array,
+  txs: Array<TxWitness>,
+  txdata: Uint8Array,
+  retries: number = 10,
+  base_backoff: number = 1000,
+) {
+  let backoff = base_backoff;
+  for (let i = 0; i < retries; i++) {
     try {
       let response = await timeout(submitProof(merkle, txs, txdata), 10000);
       return response;
     } catch (e) {
-      console.log("submit proof error:", e);
-      console.log("retrying ...");
-      await wait(10000);
+      if (!(e instanceof ZkWasmServiceEndpointError)) {
+        console.log(e);
+        console.log("Unexpected error, exiting ...");
+        break;
+      }
+      console.log(`Submit proof error, code: ${e.code}, message: ${e.message}`);
+      if (
+        [
+          HttpStatus.REQUEST_TIMEOUT,
+          HttpStatus.TOO_MANY_REQUESTS,
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          HttpStatus.BAD_GATEWAY,
+          HttpStatus.SERVICE_UNAVAILABLE,
+          HttpStatus.GATEWAY_TIMEOUT,
+        ].every((it) => it !== e.code)
+      ) {
+        console.log("Unrecoverable error, exiting ...");
+        break;
+      }
+
+      console.log("Retrying ...");
+      console.log(`Attempt ${retries}. Waiting for ${backoff}`);
+      await wait(backoff + Math.random() * 100);
+      backoff *= 2;
       continue;
     }
   }
-  console.log("can not generating proof ...");
+  console.log("Failed submitting proof ...");
   process.exit(1);
 }
 
 export async function get_latest_proof(taskid: string | null): Promise<Task | null> {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
@@ -184,7 +224,7 @@ export async function get_latest_proof(taskid: string | null): Promise<Task | nu
 }
 
 export async function has_uncomplete_task(): Promise<boolean> {
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
@@ -210,7 +250,7 @@ export async function has_task(): Promise<boolean> {
     console.log("md5 is unspecified");
     return false;
   }
-  const helper = new ZkWasmServiceHelper(endpoint, "", "");
+  const helper = new ZkWasmServiceHelper(get_zkwasm_hub_endpoint(), "", "");
   let query = {
     md5: get_image_md5(),
     user_address: null,
