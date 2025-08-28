@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
 
+// System collections that should be excluded from snapshots
+const SYSTEM_COLLECTIONS = [
+  'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
+];
+
 export class StateSnapshotService {
   private currentMerkleRoot: string;
   private static readonly MAX_SNAPSHOTS = 100;
@@ -11,75 +16,84 @@ export class StateSnapshotService {
   async createCompleteSnapshot() {
     console.log(`Creating state snapshot for merkleRoot: ${this.currentMerkleRoot}`);
     
-    // Dynamically detect all IndexedObject collections
-    const indexedObjectCollections = await this.detectIndexedObjectCollections();
-    console.log(`Detected IndexedObject collections: ${indexedObjectCollections.join(', ')}`);
+    // Use setImmediate to ensure snapshot creation doesn't block the main event loop
+    return new Promise<void>((resolve, reject) => {
+      setImmediate(async () => {
+        try {
+          await this.performSnapshotCreation();
+          resolve();
+        } catch (error) {
+          console.error(`Failed to create complete snapshot for ${this.currentMerkleRoot}:`, error);
+          reject(error);
+        }
+      });
+    });
+  }
+  
+  private async performSnapshotCreation() {
+    // Dynamically detect all business collections
+    const businessCollections = await this.detectBusinessCollections();
+    console.log(`Detected business collections: ${businessCollections.join(', ')}`);
     
-    // Create snapshots for all detected collections
-    const snapshotTasks = indexedObjectCollections.map(collectionName => 
+    if (businessCollections.length === 0) {
+      console.log(`No business collections found, snapshot creation skipped for merkleRoot: ${this.currentMerkleRoot}`);
+      return;
+    }
+    
+    // Create snapshots for all detected collections with individual error handling
+    const snapshotTasks = businessCollections.map(collectionName => 
       this.createSnapshotForCollection(collectionName)
     );
     
-    await Promise.all(snapshotTasks);
+    const results = await Promise.allSettled(snapshotTasks);
+    
+    // Analyze results
+    const failed: string[] = [];
+    const succeeded: string[] = [];
+    
+    results.forEach((result, index) => {
+      const collectionName = businessCollections[index];
+      if (result.status === 'rejected') {
+        failed.push(collectionName);
+        console.error(`Snapshot failed for ${collectionName}:`, result.reason);
+      } else {
+        succeeded.push(collectionName);
+      }
+    });
+    
+    if (failed.length > 0) {
+      console.warn(`Snapshot creation partially failed: ${failed.length}/${businessCollections.length} collections failed`);
+      console.warn(`Failed collections: ${failed.join(', ')}`);
+      console.log(`Succeeded collections: ${succeeded.join(', ')}`);
+      // Continue with cleanup even if some snapshots failed
+    } else {
+      console.log(`Snapshot creation successful for all ${succeeded.length} collections`);
+    }
     
     // Cleanup excessive snapshots after creation
-    await this.cleanupExcessiveSnapshots()
+    await this.cleanupExcessiveSnapshots(businessCollections);
   }
   
-  private indexedObjectCollectionsCache: string[] | null = null;
-  
-  private async detectIndexedObjectCollections(): Promise<string[]> {
-    // Use cache to avoid repeated detection
-    if (this.indexedObjectCollectionsCache !== null) {
-      return this.indexedObjectCollectionsCache;
-    }
+  private async detectBusinessCollections(): Promise<string[]> {
     
     try {
       const collections = await mongoose.connection.db.listCollections().toArray();
       const collectionNames = collections.map(c => c.name);
       
-      // Exclude system collections and snapshot collections
-      const systemCollections = [
-        'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes',
-        ...collectionNames.filter(name => name.endsWith('_snapshots'))
-      ];
+      // Use predefined system collections list
       
-      const candidateCollections = collectionNames.filter(name => 
-        !systemCollections.includes(name)
+      // Business collections = all collections - system collections - existing snapshots
+      const businessCollections = collectionNames.filter(name => 
+        !SYSTEM_COLLECTIONS.includes(name) &&
+        !name.endsWith('_snapshots')
       );
       
-      console.log(`Candidate IndexedObject collections: ${candidateCollections.join(', ')}`);
-      
-      // Verify if it matches IndexedObject interface: {oid: bigint, object: O}
-      const indexedObjectCollections: string[] = [];
-      
-      for (const collectionName of candidateCollections) {
-        try {
-          const sampleDoc = await mongoose.connection.collection(collectionName).findOne({});
-          
-          // Check if it matches IndexedObject interface pattern
-          if (sampleDoc && this.hasIndexedObjectInterface(sampleDoc)) {
-            indexedObjectCollections.push(collectionName);
-            console.log(`Confirmed IndexedObject collection: ${collectionName}`);
-          }
-        } catch (error) {
-          console.warn(`Failed to check collection ${collectionName}:`, error);
-        }
-      }
-      
-      // Cache results
-      this.indexedObjectCollectionsCache = indexedObjectCollections;
-      return indexedObjectCollections;
+      return businessCollections;
       
     } catch (error) {
-      console.warn(`Failed to detect IndexedObject collections:`, error);
-      this.indexedObjectCollectionsCache = [];
+      console.warn(`Failed to detect business collections:`, error);
       return [];
     }
-  }
-  
-  private hasIndexedObjectInterface(doc: any): boolean {
-    return doc.oid !== undefined && doc.object !== undefined;
   }
   
   private async createSnapshotForCollection(collectionName: string) {
@@ -92,10 +106,11 @@ export class StateSnapshotService {
         return;
       }
       
-      // Create snapshot copies for current state
+      // Create snapshot copies for current state with timestamp
       const snapshots = activeObjects.map(obj => ({
         ...obj,
         merkleRoot: this.currentMerkleRoot,
+        snapshotTimestamp: new Date(),
         _id: undefined
       }));
       
@@ -108,18 +123,23 @@ export class StateSnapshotService {
     }
   }
   
-  private async cleanupExcessiveSnapshots() {
-    const indexedObjectCollections = await this.detectIndexedObjectCollections();
+  private async cleanupExcessiveSnapshots(businessCollections: string[]) {
     
-    for (const collectionName of indexedObjectCollections) {
+    for (const collectionName of businessCollections) {
       const snapshotCollectionName = `${collectionName}_snapshots`;
       
       try {
-        // Get all snapshots grouped by merkleRoot
+        // Get all snapshots grouped by merkleRoot, sorted by timestamp
         const allSnapshots = await mongoose.connection.collection(snapshotCollectionName)
           .aggregate([
-            { $group: { _id: "$merkleRoot", count: { $sum: 1 }, firstDoc: { $first: "$$ROOT" } } },
-            { $sort: { "firstDoc._id": -1 } }
+            { 
+              $group: { 
+                _id: "$merkleRoot", 
+                count: { $sum: 1 }, 
+                latestTimestamp: { $max: "$snapshotTimestamp" }
+              } 
+            },
+            { $sort: { "latestTimestamp": -1 } } // Sort by actual timestamp, newest first
           ]).toArray();
         
         if (allSnapshots.length > StateSnapshotService.MAX_SNAPSHOTS) {

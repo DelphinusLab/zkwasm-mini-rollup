@@ -230,18 +230,24 @@ export class Service {
       console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
       
       // New: Also store to global Bundle registry
-      await this.globalBundleService.createBundle({
-        merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-        preMerkleRoot: preMerkleRootStr,
-        postMerkleRoot: '',
-        taskId: taskId,
-        bundleIndex: this.bundleIndex,
-        settleStatus: 'waiting',
-        settleTxHash: '',
-        withdrawArray: []
-      }, this.currentMD5);
-      
-      console.log(`Bundle tracked globally for MD5: ${this.currentMD5}`);
+      try {
+        await this.globalBundleService.createBundle({
+          merkleRoot: merkleRootToBeHexString(this.merkleRoot),
+          preMerkleRoot: preMerkleRootStr,
+          postMerkleRoot: '',
+          taskId: taskId,
+          bundleIndex: this.bundleIndex,
+          settleStatus: 'waiting',
+          settleTxHash: '',
+          withdrawArray: []
+        }, this.currentMD5);
+        
+        console.log(`Bundle tracked globally for MD5: ${this.currentMD5}`);
+      } catch (globalError) {
+        console.error(`Failed to track bundle globally:`, globalError);
+        // Continue execution as local bundle was successfully saved
+        console.warn(`Bundle tracking continued with local storage only`);
+      }
     }
     catch (e) {
       // Maintain original error handling logic
@@ -322,13 +328,14 @@ export class Service {
         const bundleEndMerkleRoot = merkleRootToBeHexString(this.merkleRoot);
         this.stateSnapshotService.updateMerkleRoot(bundleEndMerkleRoot);
         
-        try {
-          // Create state snapshot directly, no ObjectSchema parameter needed
-          await this.stateSnapshotService.createCompleteSnapshot();
-          console.log(`Bundle completed, state snapshot created for: ${bundleEndMerkleRoot}`);
-        } catch (snapshotError) {
-          console.warn(`Failed to create state snapshot for ${bundleEndMerkleRoot}:`, snapshotError);
-        }
+        // Create state snapshot asynchronously without blocking Bundle processing
+        this.stateSnapshotService.createCompleteSnapshot()
+          .then(() => {
+            console.log(`State snapshot created for: ${bundleEndMerkleRoot}`);
+          })
+          .catch((snapshotError) => {
+            console.warn(`Failed to create state snapshot for ${bundleEndMerkleRoot}:`, snapshotError);
+          });
 
 
         // record all the txs externally so that the external db can preserve a snap shot

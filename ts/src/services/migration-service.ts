@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 import { get_mongodb_uri } from '../config.js';
 import { GlobalBundleService } from './global-bundle-service.js';
 
+// System collections that should be excluded from business data operations
+const SYSTEM_COLLECTIONS = [
+  'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
+];
+
 export class StateMigrationService {
   private globalBundleService: GlobalBundleService;
   
@@ -13,12 +18,12 @@ export class StateMigrationService {
     console.log(`Migrating business state to merkleRoot: ${targetMerkleRoot}`);
     
     // Verify target Bundle exists
-    const bundleChain = await this.globalBundleService.findBundleChain(targetMerkleRoot);
-    if (bundleChain.length === 0) {
-      throw new Error(`No bundle chain found for merkleRoot: ${targetMerkleRoot}`);
+    const targetBundle = await this.globalBundleService.findBundleByMerkle(targetMerkleRoot);
+    if (!targetBundle) {
+      throw new Error(`No bundle found for merkleRoot: ${targetMerkleRoot}`);
     }
     
-    console.log(`Found bundle chain with ${bundleChain.length} bundles`);
+    console.log(`Found target bundle: ${targetMerkleRoot}`);
     
     // Migrate state snapshot data to specified merkleRoot
     await this.migrateStateSnapshot(targetMerkleRoot, newMD5);
@@ -31,89 +36,109 @@ export class StateMigrationService {
   private async migrateStateSnapshot(targetMerkleRoot: string, newMD5: string) {
     console.log(`Migrating state snapshot for merkleRoot: ${targetMerkleRoot}`);
     
-    const usedMD5s = await this.globalBundleService.getAllUsedMD5s();
-    const targetDbUri = `${get_mongodb_uri()}/${newMD5}_job-tracker`;
-    const targetConn = mongoose.createConnection(targetDbUri);
-    
-    let foundSnapshots = false;
-    
-    for (const sourceMD5 of usedMD5s) {
-      const sourceDbUri = `${get_mongodb_uri()}/${sourceMD5}_job-tracker`;
-      const sourceConn = mongoose.createConnection(sourceDbUri);
-      
-      try {
-        // Dynamically detect IndexedObject snapshot collections
-        const snapshotCollections = await this.detectSnapshotCollections(sourceConn);
-        console.log(`Detected snapshot collections in ${sourceMD5}: ${snapshotCollections.join(', ')}`);
-        
-        const allSnapshots: Record<string, any[]> = {};
-        let hasAnySnapshots = false;
-        
-        // Find state snapshots for target merkleRoot
-        for (const snapshotCollection of snapshotCollections) {
-          const snapshots = await sourceConn.collection(snapshotCollection)
-            .find({ merkleRoot: targetMerkleRoot }).toArray();
-          
-          if (snapshots.length > 0) {
-            allSnapshots[snapshotCollection] = snapshots;
-            hasAnySnapshots = true;
-          }
-        }
-        
-        // Event snapshots removed, no need to migrate event data
-        
-        if (hasAnySnapshots) {
-          foundSnapshots = true;
-          
-          const snapshotCounts = Object.entries(allSnapshots)
-            .map(([collection, snapshots]) => `${snapshots.length} ${collection.replace('_snapshots', '')}`)
-            .join(', ');
-          console.log(`Found snapshots in ${sourceMD5}: ${snapshotCounts}`);
-          
-          // Restore snapshot data to active state
-          for (const [snapshotCollection, snapshots] of Object.entries(allSnapshots)) {
-            // All snapshots are IndexedObject snapshots, restore to active state
-            const activeCollectionName = snapshotCollection.replace('_snapshots', '');
-            
-            const activeObjects = snapshots.map(doc => {
-              const { merkleRoot, _id, ...activeData } = doc;
-              return activeData;
-            });
-            
-            // Restore to active state
-            await targetConn.collection(activeCollectionName).insertMany(activeObjects, { ordered: false });
-            
-            // Also copy snapshot data to maintain versioning capability
-            await targetConn.collection(snapshotCollection).insertMany(snapshots, { ordered: false });
-          }
-        }
-        
-      } catch (error) {
-        console.warn(`Failed to check snapshots in ${sourceMD5}:`, error);
-      } finally {
-        await sourceConn.close();
-      }
+    // Find the specific MD5 database that contains this merkleRoot
+    const targetBundle = await this.globalBundleService.findBundleByMerkle(targetMerkleRoot);
+    if (!targetBundle) {
+      console.warn(`No bundle found for merkleRoot: ${targetMerkleRoot}`);
+      console.warn(`This might be expected if this is the genesis state`);
+      return;
     }
     
-    await targetConn.close();
+    const sourceMD5 = targetBundle.imageMD5;
+    console.log(`Found merkleRoot ${targetMerkleRoot} in MD5 database: ${sourceMD5}`);
     
-    if (!foundSnapshots) {
-      console.warn(`No state snapshots found for merkleRoot: ${targetMerkleRoot}`);
-      console.warn(`This might be expected if this is the genesis state`);
-    } else {
-      console.log(`State snapshot migration completed for merkleRoot: ${targetMerkleRoot}`);
+    const sourceDbUri = `${get_mongodb_uri()}/${sourceMD5}_job-tracker`;
+    const targetDbUri = `${get_mongodb_uri()}/${newMD5}_job-tracker`;
+    const sourceConn = mongoose.createConnection(sourceDbUri);
+    const targetConn = mongoose.createConnection(targetDbUri);
+    
+    try {
+      // Dynamically detect business snapshot collections
+      const snapshotCollections = await this.detectSnapshotCollections(sourceConn);
+      console.log(`Detected snapshot collections in ${sourceMD5}: ${snapshotCollections.join(', ')}`);
+      
+      const allSnapshots: Record<string, any[]> = {};
+      let hasAnySnapshots = false;
+      
+      // Find state snapshots for target merkleRoot
+      for (const snapshotCollection of snapshotCollections) {
+        const snapshots = await sourceConn.collection(snapshotCollection)
+          .find({ merkleRoot: targetMerkleRoot }).toArray();
+        
+        if (snapshots.length > 0) {
+          allSnapshots[snapshotCollection] = snapshots;
+          hasAnySnapshots = true;
+        }
+      }
+      
+      if (hasAnySnapshots) {
+        const snapshotCounts = Object.entries(allSnapshots)
+          .map(([collection, snapshots]) => `${snapshots.length} ${collection.replace('_snapshots', '')}`)
+          .join(', ');
+        console.log(`Found snapshots in ${sourceMD5}: ${snapshotCounts}`);
+        
+        // Restore snapshot data to active state
+        for (const [snapshotCollection, snapshots] of Object.entries(allSnapshots)) {
+          // Restore business snapshots to active state
+          const activeCollectionName = snapshotCollection.replace('_snapshots', '');
+          
+          const activeObjects = snapshots.map(doc => {
+            const { merkleRoot, snapshotTimestamp, ...activeData } = doc;
+            // Preserve original _id for reference integrity
+            return activeData;
+          });
+          
+          // Restore to active state only - no snapshot copying needed
+          await targetConn.collection(activeCollectionName).insertMany(activeObjects, { ordered: false });
+        }
+        
+        console.log(`State snapshot migration completed for merkleRoot: ${targetMerkleRoot}`);
+        
+        // Validate migration results before closing connection
+        await this.validateMigrationResults(targetConn, newMD5);
+      } else {
+        console.warn(`No state snapshots found for merkleRoot: ${targetMerkleRoot} in ${sourceMD5}`);
+        console.warn(`This might indicate the snapshot was not created or cleaned up`);
+      }
+      
+    } catch (error) {
+      console.error(`Failed to migrate snapshots from ${sourceMD5}:`, error);
+      throw error;
+    } finally {
+      await sourceConn.close();
+      await targetConn.close();
     }
   }
   
-  private snapshotCollectionsCache: Map<string, string[]> = new Map();
+  private async validateMigrationResults(targetConn: mongoose.Connection, newMD5: string) {
+    try {
+      const collections = await targetConn.db.listCollections().toArray();
+      const businessCollections = collections.filter(c => 
+        !c.name.endsWith('_snapshots') && 
+        !SYSTEM_COLLECTIONS.includes(c.name)
+      );
+      
+      console.log(`Migration validation for ${newMD5}:`);
+      let totalRecords = 0;
+      
+      for (const collection of businessCollections) {
+        const count = await targetConn.collection(collection.name).countDocuments({});
+        console.log(`  ${collection.name}: ${count} records`);
+        totalRecords += count;
+      }
+      
+      console.log(`Total migrated records: ${totalRecords} across ${businessCollections.length} collections`);
+      
+      if (businessCollections.length === 0) {
+        console.warn(`Warning: No business collections found after migration. This might indicate a problem.`);
+      }
+      
+    } catch (error) {
+      console.error('Failed to validate migration results:', error);
+    }
+  }
   
   private async detectSnapshotCollections(connection: mongoose.Connection): Promise<string[]> {
-    const dbName = connection.db.databaseName;
-    
-    // Use cache to avoid repeated detection
-    if (this.snapshotCollectionsCache.has(dbName)) {
-      return this.snapshotCollectionsCache.get(dbName)!;
-    }
     
     try {
       const collections = await connection.db.listCollections().toArray();
@@ -124,39 +149,14 @@ export class StateMigrationService {
         name.endsWith('_snapshots')
       );
       
-      console.log(`Snapshot collections in ${dbName}: ${snapshotCollections.join(', ')}`);
-      
-      // Verify IndexedObject snapshot pattern: has merkleRoot + IndexedObject interface
-      const verifiedSnapshots: string[] = [];
-      
-      for (const collectionName of snapshotCollections) {
-        try {
-          const sampleDoc = await connection.collection(collectionName).findOne({});
-          
-          // Check if it's IndexedObject snapshot: merkleRoot + {oid, object} pattern
-          if (sampleDoc && this.isIndexedObjectSnapshot(sampleDoc)) {
-            verifiedSnapshots.push(collectionName);
-            console.log(`Verified IndexedObject snapshot: ${collectionName}`);
-          }
-        } catch (error) {
-          console.warn(`Failed to verify snapshot collection ${collectionName}:`, error);
-        }
-      }
-      
-      // Cache results
-      this.snapshotCollectionsCache.set(dbName, verifiedSnapshots);
-      return verifiedSnapshots;
+      return snapshotCollections;
       
     } catch (error) {
+      const dbName = connection.db.databaseName;
       console.warn(`Failed to detect snapshot collections in ${dbName}:`, error);
-      this.snapshotCollectionsCache.set(dbName, []);
       return [];
     }
   }
   
-  private isIndexedObjectSnapshot(doc: any): boolean {
-    return doc.merkleRoot !== undefined && 
-           doc.oid !== undefined && 
-           doc.object !== undefined;
-  }
+  // Removed - no longer need to verify specific data structure patterns
 }

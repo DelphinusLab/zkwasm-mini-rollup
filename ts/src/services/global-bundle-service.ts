@@ -9,31 +9,12 @@ export class GlobalBundleService {
   constructor() {
     const globalDbUri = `${get_mongodb_uri()}/zkwasm_global_bundles`;
     this.globalConnection = mongoose.createConnection(globalDbUri);
+    
     this.globalBundleModel = this.globalConnection.model<IGlobalBundle>('GlobalBundle', globalBundleSchema);
   }
   
   async getAllUsedMD5s(): Promise<string[]> {
     return await this.globalBundleModel.find().distinct('imageMD5');
-  }
-  
-  async findBundleChain(targetMerkleRoot: string): Promise<IGlobalBundle[]> {
-    console.log(`Finding bundle chain for merkleRoot: ${targetMerkleRoot}`);
-    
-    const bundles: IGlobalBundle[] = [];
-    let currentMerkleRoot = targetMerkleRoot;
-    
-    while (currentMerkleRoot) {
-      const bundle = await this.globalBundleModel.findOne({
-        merkleRoot: currentMerkleRoot
-      });
-      
-      if (!bundle) break;
-      
-      bundles.unshift(bundle);
-      currentMerkleRoot = bundle.preMerkleRoot;
-    }
-    
-    return bundles;
   }
   
   
