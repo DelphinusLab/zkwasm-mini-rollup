@@ -7,6 +7,9 @@ const SYSTEM_COLLECTIONS = [
   'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
 ];
 
+// The initial/genesis merkle root that has no corresponding bundle
+const GENESIS_MERKLE_ROOT = '0xcd3f26ca390619d19789d18e2adabfe68f13f959da813b0327683708583d5ede';
+
 export class StateMigrationService {
   private globalBundleService: GlobalBundleService;
   
@@ -17,10 +20,17 @@ export class StateMigrationService {
   async migrateDataToMerkleRoot(targetMerkleRoot: string, newMD5: string) {
     console.log(`Migrating business state to merkleRoot: ${targetMerkleRoot}`);
     
-    // Verify target Bundle exists
+    // Check if this is the known genesis merkle root
+    if (targetMerkleRoot === GENESIS_MERKLE_ROOT) {
+      console.log(`Target merkleRoot is the genesis state: ${GENESIS_MERKLE_ROOT}`);
+      console.log(`No migration needed - new MD5 database ${newMD5} will start with empty state`);
+      return;
+    }
+    
+    // For non-genesis roots, verify target Bundle exists
     const targetBundle = await this.globalBundleService.findBundleByMerkle(targetMerkleRoot);
     if (!targetBundle) {
-      throw new Error(`No bundle found for merkleRoot: ${targetMerkleRoot}`);
+      throw new Error(`No bundle found for merkleRoot: ${targetMerkleRoot}. This should not happen for non-genesis roots.`);
     }
     
     console.log(`Found target bundle: ${targetMerkleRoot}`);
