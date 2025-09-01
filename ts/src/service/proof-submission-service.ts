@@ -106,13 +106,11 @@ export class ProofSubmissionService {
     }
     
     console.log(`[ProofService] Processing task ${task.id} (merkle: ${merkleRootToBeHexString(task.merkleRoot)})`);
-    const success = await this.processCurrentTask(task, stackKey);
-    if (!success) {
-      console.log(`[ProofService] Task ${task.id} processing failed, keeping in stack`);
-    }
+    await this.processCurrentTask(task, stackKey);
     
-    // Continue processing next task if any
-    setTimeout(() => this.processNextTask(), 1000);
+    // If we reach here, the task was completed successfully and removed from stack
+    console.log(`[ProofService] Task ${task.id} completed successfully, processing next task`);
+    setTimeout(() => this.processNextTask(), 100);
   }
   
   private async processCurrentTask(task: ProofTask, stackKey: string): Promise<boolean> {
