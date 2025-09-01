@@ -335,7 +335,7 @@ export class ProofSubmissionService {
   private serializeTask(task: ProofTask): Record<string, string> {
     return {
       id: task.id,
-      merkleRoot: JSON.stringify(Array.from(task.merkleRoot)),
+      merkleRoot: JSON.stringify(Array.from(task.merkleRoot).map(x => x.toString())),
       transactions: JSON.stringify(task.transactions),
       txdata: JSON.stringify(Array.from(task.txdata)),
       status: task.status,
@@ -349,7 +349,7 @@ export class ProofSubmissionService {
   private deserializeTask(data: Record<string, string>): ProofTask {
     return {
       id: data.id,
-      merkleRoot: new BigUint64Array(JSON.parse(data.merkleRoot)),
+      merkleRoot: new BigUint64Array(JSON.parse(data.merkleRoot).map(x => BigInt(x))),
       transactions: JSON.parse(data.transactions),
       txdata: new Uint8Array(JSON.parse(data.txdata)),
       status: data.status as ProofTask['status'],
