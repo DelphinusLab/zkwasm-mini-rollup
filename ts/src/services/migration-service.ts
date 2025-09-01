@@ -4,7 +4,7 @@ import { GlobalBundleService } from './global-bundle-service.js';
 
 // System collections that should be excluded from business data operations
 const SYSTEM_COLLECTIONS = [
-  'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
+  'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
 ];
 
 // The initial/genesis merkle root that has no corresponding bundle
@@ -61,6 +61,10 @@ export class StateMigrationService {
     const targetDbUri = `${get_mongodb_uri()}/${newMD5}_job-tracker`;
     const sourceConn = mongoose.createConnection(sourceDbUri);
     const targetConn = mongoose.createConnection(targetDbUri);
+    
+    // Wait for connections to be ready
+    await sourceConn.asPromise();
+    await targetConn.asPromise();
     
     try {
       // Dynamically detect business snapshot collections
@@ -162,8 +166,7 @@ export class StateMigrationService {
       return snapshotCollections;
       
     } catch (error) {
-      const dbName = connection.db.databaseName;
-      console.warn(`Failed to detect snapshot collections in ${dbName}:`, error);
+      console.warn(`Failed to detect snapshot collections:`, error);
       return [];
     }
   }
