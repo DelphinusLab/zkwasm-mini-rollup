@@ -189,9 +189,11 @@ export class ProofSubmissionService {
   }
   
   private async queryUntilConfirmed(task: ProofTask): Promise<QueryResult> {
-    const MAX_QUERY_DURATION = 10 * 60 * 1000;
+    const MAX_QUERY_DURATION = 3 * 60 * 1000; // Reduced to 3 minutes
     const QUERY_INTERVAL = 15000;
+    const MAX_CONSECUTIVE_FAILURES = 3; // Exit early after 3 consecutive empty results
     const startTime = Date.now();
+    let consecutiveEmptyResults = 0;
     
     while (Date.now() - startTime < MAX_QUERY_DURATION) {
       try {
@@ -203,6 +205,19 @@ export class ProofSubmissionService {
           taskstatus: "",
           total: 30
         });
+        
+        // If no tasks returned, increment empty result counter
+        if (!recentTasks.data || recentTasks.data.length === 0) {
+          consecutiveEmptyResults++;
+          console.log(`No tasks returned (${consecutiveEmptyResults}/${MAX_CONSECUTIVE_FAILURES})`);
+          
+          if (consecutiveEmptyResults >= MAX_CONSECUTIVE_FAILURES) {
+            console.log(`Exiting early: ${MAX_CONSECUTIVE_FAILURES} consecutive empty results`);
+            return { taskFound: false };
+          }
+        } else {
+          consecutiveEmptyResults = 0; // Reset counter when we get results
+        }
         
         const expectedInputs = [task.merkleRoot[0], task.merkleRoot[1], task.merkleRoot[2], task.merkleRoot[3]]
           .map(x => `${x}:i64`);
@@ -224,6 +239,7 @@ export class ProofSubmissionService {
         
       } catch (error: any) {
         console.log("Query failed, retrying:", error);
+        consecutiveEmptyResults++; // Treat query failures as empty results
       }
       
       await this.wait(QUERY_INTERVAL);
