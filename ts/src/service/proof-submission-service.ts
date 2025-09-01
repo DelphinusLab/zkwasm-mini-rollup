@@ -151,23 +151,24 @@ export class ProofSubmissionService {
         return true;
         
       } catch (error: any) {
+        console.log(`Task ${task.id} failed with error: ${error.message}, entering query confirmation mode...`);
+        
+        const queryResult = await this.queryUntilConfirmed(task);
+        
+        if (queryResult.taskFound) {
+          task.realTaskId = queryResult.taskId;
+          task.status = 'confirmed';
+          await this.updateBundleTaskId(task.merkleRoot, queryResult.taskId!);
+          await this.redis.lpop(stackKey);
+          await this.removeTaskFromRedis(task.id);
+          return true;
+        }
+        
+        console.log(`Task ${task.id} confirmed not submitted, proceeding with retry logic...`);
+        
         if (error.message === "Timeout exceeded") {
-          console.log(`Task ${task.id} timed out, entering query confirmation mode...`);
-          
-          const queryResult = await this.queryUntilConfirmed(task);
-          
-          if (queryResult.taskFound) {
-            task.realTaskId = queryResult.taskId;
-            task.status = 'confirmed';
-            await this.updateBundleTaskId(task.merkleRoot, queryResult.taskId!);
-            await this.redis.lpop(stackKey);
-            await this.removeTaskFromRedis(task.id);
-            return true;
-          }
-          
-          console.log(`Task ${task.id} confirmed not submitted, resubmitting...`);
+          console.log(`Task ${task.id} was timeout error, retrying immediately...`);
           continue;
-          
         } else {
           nonTimeoutAttempts++;
           console.log(`[ProofService] Task ${task.id} failed with non-timeout error (attempt ${nonTimeoutAttempts}/${MAX_NON_TIMEOUT_ATTEMPTS}):`, error);
