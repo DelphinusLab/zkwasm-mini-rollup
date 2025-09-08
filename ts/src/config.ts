@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 
-export const endpoint = "https://rpc.zkwasmhub.com:8090";
+export const endpoint = "https://rpc.zkwasmhub.com:80";
 
 export const get_server_admin_key = () => {
   if (process.env.SERVER_ADMIN_KEY) {
