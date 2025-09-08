@@ -1,6 +1,6 @@
 import { ZkWasmServiceHelper, ZkWasmUtil } from "zkwasm-service-helper";
 
-export const endpoint = "https://rpc.zkwasmhub.com:80";
+export const endpoint = "https://rpc.zkwasmhub.com:443";
 
 export function commitmentHexToHexString(x: string, y: string): string[] {
     const hexString1 = "0x" + x.slice(12, 66);
