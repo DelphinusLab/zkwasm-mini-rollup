@@ -117,6 +117,11 @@ export class ProofSubmissionService {
     const MAX_NON_TIMEOUT_ATTEMPTS = 3;
     let nonTimeoutAttempts = 0;
     
+    // Check merkle continuity with previous completed task
+    await this.validateMerkleContinuity(task);
+    
+    console.log(`[ProofService] Processing task ${task.id} with validated merkle continuity`);
+    
     if (task.submissionTimestamp) {
       console.log(`Resuming task ${task.id} from previous submission, entering query mode...`);
       const queryResult = await this.queryUntilConfirmed(task);
@@ -336,6 +341,35 @@ export class ProofSubmissionService {
     }
     
     return false;
+  }
+  
+  private async validateMerkleContinuity(currentTask: ProofTask): Promise<void> {
+    // All tasks should connect to the most recent completed bundle
+    // since completed tasks are removed from Redis queue
+    const lastCompletedBundle = await modelBundle.findOne({ 
+      postMerkleRoot: { $nin: [null, ""] }
+    }).sort({ _id: -1 });
+    
+    if (!lastCompletedBundle) {
+      console.log(`[ProofService] No previous completed bundle, assuming this is the first task`);
+      return;
+    }
+    
+    // Check continuity: last completed bundle's postMerkleRoot == current task's merkleRoot
+    const prevEndingMerkleStr = lastCompletedBundle.postMerkleRoot;
+    const currentStartingMerkleStr = merkleRootToBeHexString(currentTask.merkleRoot);
+    
+    console.log(`[ProofService] Merkle continuity check for task ${currentTask.id}`);
+    console.log(`[ProofService] Last completed bundle ending merkle: ${prevEndingMerkleStr}`);
+    console.log(`[ProofService] Current task starting merkle: ${currentStartingMerkleStr}`);
+    
+    if (prevEndingMerkleStr !== currentStartingMerkleStr) {
+      const error = `Merkle continuity broken! Last completed bundle ending: ${prevEndingMerkleStr} != Current task starting: ${currentStartingMerkleStr}`;
+      console.error(`[ProofService] ${error}`);
+      throw new Error(error);
+    }
+    
+    console.log(`[ProofService] ✓ Merkle continuity validated for task ${currentTask.id}`);
   }
   
   private wait(ms: number): Promise<void> {
