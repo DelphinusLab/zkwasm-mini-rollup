@@ -65,7 +65,7 @@ export class ProofSubmissionService {
     const stackKey = `proof-task-stack:${this.imageMd5}`;
     const taskKey = `proof-task:${this.imageMd5}:${task.id}`;
     
-    await this.redis.lpush(stackKey, task.id);
+    await this.redis.rpush(stackKey, task.id);
     await this.redis.hset(taskKey, this.serializeTask(task));
     
     console.log(`[ProofService] Added task ${task.id} to stack for merkle ${merkleRootToBeHexString(merkleRoot)} (${txs.length} txs, ${txdata.length} bytes)`);
