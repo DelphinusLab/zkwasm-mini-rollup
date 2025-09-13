@@ -21,7 +21,6 @@ import {sha256} from "ethers";
 import {TxStateManager} from "./commit.js";
 import {queryAccounts, storeAccount} from "./account.js";
 import {ProofSubmissionService, handleNullTaskIdBundles} from "./service/proof-submission-service.js";
-import { get_image_md5 } from "./config.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -238,7 +237,7 @@ export class Service {
           merkleRoot: merkleRootToBeHexString(this.merkleRoot),
           preMerkleRoot: preMerkleRootStr,
           postMerkleRoot: '',
-          taskId: taskId,
+          taskId: taskId || '',
           bundleIndex: this.bundleIndex,
           settleStatus: 'waiting',
           settleTxHash: '',
@@ -268,7 +267,7 @@ export class Service {
       // Also try to handle conflicts in global registry
       try {
         await this.globalBundleService.updateBundle(merkleRootToBeHexString(this.merkleRoot), {
-          taskId: taskId,
+          taskId: taskId || '',
           postMerkleRoot: '',
           preMerkleRoot: preMerkleRootStr,
           bundleIndex: this.bundleIndex
