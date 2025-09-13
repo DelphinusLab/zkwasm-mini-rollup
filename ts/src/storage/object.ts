@@ -57,7 +57,7 @@ export function fromData<O>(u64datasource: bigint[], decoder: Decodable<O>): Obj
 export function createObjectSchema(ObjectSchema: SchemaType) {
     // Define the schema for the Token model
     const objectSchema = new mongoose.Schema({
-        id: { type: BigInt, required: true, unique: true},
+        oid: { type: BigInt, required: true, unique: true},
         object: { type: ObjectSchema, require: true},
     });
     objectSchema.pre('init', uint64FetchPlugin);
