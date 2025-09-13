@@ -2,4 +2,4 @@
 **/*.js.map
 **/node_modules
 target
-plan.md
+*plan*
