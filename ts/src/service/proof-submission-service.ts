@@ -77,6 +77,12 @@ export class ProofSubmissionService {
   }
   
   private async processNextTask(): Promise<void> {
+    // Prevent concurrent processing
+    if (this.isProcessing) {
+      console.log(`[ProofService] Already processing, skipping duplicate processNextTask call`);
+      return;
+    }
+    
     const stackKey = `proof-task-stack:${this.imageMd5}`;
     const taskId = await this.redis.lindex(stackKey, 0);
     if (!taskId) {
