@@ -26,11 +26,13 @@ export class ProofSubmissionService {
   private isProcessing: boolean = false;
   private imageMd5: string;
   private helper: ZkWasmServiceHelper;
+  private specificTaskId: string | null;
   
-  constructor(redis: Redis, imageMd5: string, helper: ZkWasmServiceHelper) {
+  constructor(redis: Redis, imageMd5: string, helper: ZkWasmServiceHelper, specificTaskId: string | null = null) {
     this.redis = redis;
     this.imageMd5 = imageMd5;
     this.helper = helper;
+    this.specificTaskId = specificTaskId;
   }
   
   async addTaskToStack(merkleRoot: BigUint64Array, txs: TxWitness[], txdata: Uint8Array): Promise<void> {
@@ -352,8 +354,46 @@ export class ProofSubmissionService {
     
     return false;
   }
+
+  async clearRedisQueue(): Promise<void> {
+    const stackKey = `proof-task-stack:${this.imageMd5}`;
+    
+    // Get all task IDs from the queue
+    const taskIds = await this.redis.lrange(stackKey, 0, -1);
+    
+    if (taskIds.length === 0) {
+      console.log(`[ProofService] Redis queue already empty for image ${this.imageMd5}`);
+      return;
+    }
+    
+    console.log(`[ProofService] Clearing ${taskIds.length} tasks from Redis queue for image ${this.imageMd5}`);
+    
+    // Delete all individual task data
+    for (const taskId of taskIds) {
+      const taskKey = `proof-task:${this.imageMd5}:${taskId}`;
+      await this.redis.del(taskKey);
+      console.log(`[ProofService] Deleted task data: ${taskKey}`);
+    }
+    
+    // Clear the task queue
+    await this.redis.del(stackKey);
+    console.log(`[ProofService] Cleared task queue: ${stackKey}`);
+    
+    // Reset processing state
+    this.isProcessing = false;
+    console.log(`[ProofService] Reset processing state`);
+  }
   
   private async validateMerkleContinuity(currentTask: ProofTask): Promise<void> {
+    // Skip merkle continuity check only for the initially specified taskId (rollback scenario)
+    if (this.specificTaskId) {
+      console.log(`[ProofService] Skipping merkle continuity check for task ${currentTask.id} because specific taskId is provided: ${this.specificTaskId}`);
+      // Clear the specificTaskId after first use so subsequent tasks will be checked normally
+      this.specificTaskId = null;
+      console.log(`[ProofService] Cleared specificTaskId, subsequent tasks will use normal merkle continuity validation`);
+      return;
+    }
+    
     // All tasks should connect to the most recent completed bundle
     // since completed tasks are removed from Redis queue
     const lastCompletedBundle = await modelBundle.findOne({ 

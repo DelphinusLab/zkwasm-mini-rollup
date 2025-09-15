@@ -394,7 +394,7 @@ export class Service {
 
     // Initialize ProofSubmissionService
     const helper = new ZkWasmServiceHelper(endpoint, "", "");
-    this.proofService = new ProofSubmissionService(connection, get_image_md5(), helper);
+    this.proofService = new ProofSubmissionService(connection, get_image_md5(), helper, taskid);
     
     // Handle null taskId bundles and recover tasks only if no specific taskid is specified
     if (!taskid) {
@@ -402,6 +402,8 @@ export class Service {
       await this.proofService.recoverTasks();
     } else {
       console.log(`Skipping recovery because taskid is specified: ${taskid}`);
+      // Clear Redis queue to start fresh when specific taskid is provided
+      await this.proofService.clearRedisQueue();
     }
 
     connection.on('end', () => {
