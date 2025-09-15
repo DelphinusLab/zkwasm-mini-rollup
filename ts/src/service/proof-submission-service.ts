@@ -198,13 +198,16 @@ export class ProofSubmissionService {
   }
   
   private async queryUntilConfirmed(task: ProofTask): Promise<QueryResult> {
-    const MAX_QUERY_DURATION = 3 * 60 * 1000; // Reduced to 3 minutes
-    const QUERY_INTERVAL = 15000;
+    const MAX_QUERY_DURATION = 30 * 1000; // Reduced to 30 seconds
+    const QUERY_INTERVAL = 6000; // 6 seconds
     const MAX_CONSECUTIVE_FAILURES = 3; // Exit early after 3 consecutive empty results
+    const MAX_ATTEMPTS = 5; // Maximum 5 attempts
     const startTime = Date.now();
     let consecutiveEmptyResults = 0;
+    let attemptCount = 0;
     
-    while (Date.now() - startTime < MAX_QUERY_DURATION) {
+    while (Date.now() - startTime < MAX_QUERY_DURATION && attemptCount < MAX_ATTEMPTS) {
+      attemptCount++;
       try {
         const recentTasks = await this.helper.loadTaskList({
           md5: this.imageMd5,
@@ -244,7 +247,7 @@ export class ProofSubmissionService {
           return { taskFound: true, taskId: matchingTask._id.toString() };
         }
         
-        console.log(`No matching task found, will retry after ${QUERY_INTERVAL}ms...`);
+        console.log(`No matching task found on attempt ${attemptCount}/${MAX_ATTEMPTS}, will retry after ${QUERY_INTERVAL}ms...`);
         
       } catch (error: any) {
         console.log("Query failed, retrying:", error);
@@ -254,6 +257,7 @@ export class ProofSubmissionService {
       await this.wait(QUERY_INTERVAL);
     }
     
+    console.log(`Query timeout after ${attemptCount} attempts or ${Math.round((Date.now() - startTime) / 1000)}s`);
     return { taskFound: false };
   }
   

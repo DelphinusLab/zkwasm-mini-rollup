@@ -396,9 +396,13 @@ export class Service {
     const helper = new ZkWasmServiceHelper(endpoint, "", "");
     this.proofService = new ProofSubmissionService(connection, get_image_md5(), helper);
     
-    // Handle null taskId bundles and recover tasks
-    await handleNullTaskIdBundles(this.proofService);
-    await this.proofService.recoverTasks();
+    // Handle null taskId bundles and recover tasks only if no specific taskid is specified
+    if (!taskid) {
+      await handleNullTaskIdBundles(this.proofService);
+      await this.proofService.recoverTasks();
+    } else {
+      console.log(`Skipping recovery because taskid is specified: ${taskid}`);
+    }
 
     connection.on('end', () => {
       console.log("fatal: redis disconnected unexpected ...");
