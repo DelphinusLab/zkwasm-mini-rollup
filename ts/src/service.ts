@@ -252,7 +252,7 @@ export class Service {
       }
     }
     catch (e) {
-      // Maintain original error handling logic
+      // Handle Bundle conflicts (common in rollback scenarios with TASKID)
       let record = await modelBundle.findOneAndUpdate({
         merkleRoot: merkleRootToBeHexString(this.merkleRoot),
       }, {
@@ -261,8 +261,14 @@ export class Service {
         preMerkleRoot: preMerkleRootStr,
         bundleIndex: this.bundleIndex,
       }, {});
-      console.log("fatal: conflict db merkle");
-      console.log(record);
+      
+      if (record) {
+        console.log("Bundle already exists, updated existing record (common in rollback scenarios)");
+        console.log(`Updated Bundle: ${merkleRootToBeHexString(this.merkleRoot)}, taskId: ${taskId}`);
+      } else {
+        console.log("fatal: conflict db merkle");
+        console.log(record);
+      }
       
       // Also try to handle conflicts in global registry
       try {
