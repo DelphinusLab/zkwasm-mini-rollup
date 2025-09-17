@@ -75,6 +75,8 @@ export class ProofSubmissionService {
     if (!this.isProcessing) {
       console.log(`[ProofService] Starting background processing for task ${task.id}`);
       this.processNextTask();
+    } else {
+      console.log(`[ProofService] Background processing already active, task ${task.id} will be processed in queue`);
     }
   }
   
@@ -99,6 +101,7 @@ export class ProofSubmissionService {
     if (Object.keys(taskData).length === 0) {
       console.warn(`[ProofService] Task ${taskId} data missing, removing from stack`);
       await this.redis.lpop(stackKey);
+      this.isProcessing = false; // Reset processing state before retry
       setTimeout(() => this.processNextTask(), 100);
       return;
     }
@@ -109,6 +112,7 @@ export class ProofSubmissionService {
     } catch (error) {
       console.error(`[ProofService] Failed to deserialize task ${taskId}:`, error);
       await this.redis.lpop(stackKey);
+      this.isProcessing = false; // Reset processing state before retry
       setTimeout(() => this.processNextTask(), 100);
       return;
     }
@@ -118,6 +122,7 @@ export class ProofSubmissionService {
     
     // If we reach here, the task was completed successfully and removed from stack
     console.log(`[ProofService] Task ${task.id} completed successfully, processing next task`);
+    this.isProcessing = false; // Reset processing state before next task
     setTimeout(() => this.processNextTask(), 100);
   }
   
