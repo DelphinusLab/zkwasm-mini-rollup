@@ -78,6 +78,24 @@ export class TxStateManager {
         return [];
       }
     }
+    async loadCommit(key: string) {
+      this.currentUncommitMerkleRoot = key;
+      this.uncommittedTxs = [];
+      this.preemptcounter = 0;
+      try {
+        const commit = await CommitModel.findOne({ key });
+        if (commit) {
+          console.info(`load commit ${key}: total uncommitted ${commit.items.length}`);
+          this.preemptcounter = commit.items.length;
+        } else {
+          console.info(`non transactions recorded for commit ${key}`);
+        }
+      } catch (error) {
+        console.info(`fatal: can not load target commit`);
+        process.exit(1);
+      }
+    }
+
 
     async moveToCommit(key: string) {
       this.currentUncommitMerkleRoot = key;
