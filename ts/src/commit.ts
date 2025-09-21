@@ -56,6 +56,7 @@ export class TxStateManager {
     async moveToCommit(key: string) {
       this.currentUncommitMerkleRoot = key;
       this.preemptcounter = 0;
+      this.uncommittedTxs = [];
       try {
         await CommitModel.findOneAndUpdate({
           key: key
