@@ -44,6 +44,7 @@ const ensureIndexes = async () => {
 export { ensureIndexes };
 
 export class TxStateManager {
+    // initial merkle root of a bundle
     currentUncommitMerkleRoot: string;
     uncommittedTxs: TxWitness[];
     preemptcounter: number;
@@ -148,5 +149,30 @@ export class TxStateManager {
         throw (error)
       }
     };
+
+    async trackUnprovedBundle(guildMerkle: BigUint64Array) {
+      let bundle = await syncToFirstUnprovedBundle(guideMerkle);
+      if (bundle != null) {
+        try {
+          let query == await this.queryUntilConfirmed();
+          // TODO: assert(query.merkleRoot = bundle.merkleRoot);
+        } catch (e) {
+          if (timeout) {
+            console.log("proving service query timeout ...");
+            return null;
+          }
+        }
+        let merkleRoot = bundle.merkleRoot;
+        let txWitness = this.getTxFromCommit(merkleRootToBeHexString(merkleRoot));
+        try {
+          let id = await submitProof(merkleRoot, postMerkleRoot, txWitness, bundle.txdata);
+          bundle.taskId = id;
+          bundle.save();
+          return merkleRoot;
+        } catch (e) {
+          return null;
+        }
+      }
+    }
 }
 

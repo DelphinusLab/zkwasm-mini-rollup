@@ -223,3 +223,21 @@ export async function has_task(): Promise<boolean> {
   console.log(tasks);
   return tasks.data.length > 0;
 }
+
+export async syncToFirstUnprovedBundle(guideMerkle: BigUint64Array) {
+  let currentMerkle = merkleRootToBeHexString(guideMerkle);
+  let bundle = await this.findBundleByMerkle(currentMerkle);
+  while (bundle != null && bundle.taskId!= "" && bundle.postMerkleRoot != null) {
+    const postMerkle = new BigUint64Array(hexStringToMerkleRoot(bundle.postMerkleRoot));
+    bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle));
+  }
+  if(bundle != null && bundle.taskId == "") {
+    return bundle;
+  } else {
+    // (bundle == null) || (bundle != null && bundle.postMerkleRoot == null); 
+    return null;
+  }
+}
+
+
+

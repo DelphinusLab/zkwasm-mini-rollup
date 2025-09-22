@@ -100,6 +100,7 @@ export class Service {
   playerIndexer: (arg: any) => number;
   registerAPICallback: (app: Express) => void;
   merkleRoot: BigUint64Array;
+  latestSubmittedBundleMerkle: BigUint64Array | null;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
   txManager: TxStateManager;
@@ -127,6 +128,7 @@ export class Service {
       10309858136294505219n,
       2839580074036780766n,
     ]);
+    this.latestSubmittedBundleMerkel = this.merkleRoot;
     this.bundleIndex = 0;
     this.preMerkleRoot = null;
     this.txManager = new TxStateManager(merkleRootToBeHexString(this.merkleRoot));
@@ -141,7 +143,7 @@ export class Service {
     this.migrationService = new StateMigrationService();
   }
 
-  async syncToLatestMerkelRoot() {
+  async syncToLatestMerkleRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
     let prevMerkle = null;
     let bundle = await this.findBundleByMerkle(currentMerkle);
@@ -153,6 +155,9 @@ export class Service {
         currentMerkle = bundle.merkleRoot;
         prevMerkle = bundle.preMerkleRoot;
         this.bundleIndex += 1;
+        if (this.taskId != "") {
+          this.latestSubmittedBundleMerkle = this.merkelRoot;
+        }
       }
     }
     console.log("final merkle:", currentMerkle);
@@ -187,6 +192,7 @@ export class Service {
   async trackBundle(taskId: string, txdata?: Uint8Array) {
     console.log("Tracking bundle in global registry:", this.bundleIndex);
     let preMerkleRootStr = "";
+    // if this.preMerkleRoot == null ==> means this is the first bundle
     if (this.preMerkleRoot != null) {
       preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot);
       console.log("update merkle chain ...", preMerkleRootStr);
@@ -288,17 +294,7 @@ export class Service {
       // console.log(`[${new Date().toISOString()}] application.finalize took: ${finalizeEnd - preemptStart}ms`);
       console.log("txdata is:", txdata);
       let task_id = null;
-
-      // TODO: store a bundle before we fail
-      // let bundle = await this.trackBundle('');
-      if (deploymode) {
-        try {
-          task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
-        } catch (e) {
-          console.log(e);
-          process.exit(1); // this should never happen and we stop the whole process
-        }
-      }
+      // sequence the merkle trace pre -> post merkel root
       try {
         console.log("proving task submitted at:", task_id);
         console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
@@ -453,12 +449,12 @@ export class Service {
           BigInt(instances[2].toString()),
           BigInt(instances[3].toString()),
         ]);
-
+        this.latestSubmittedBundleMerkle = this.merkleRoot;
         this.bundleIndex = await this.findBundleIndex(this.preMerkleRoot);
         console.log("updated merkle root", this.merkleRoot, this.bundleIndex);
       }
     } else {
-      await this.syncToLatestMerkelRoot();
+      await this.syncToLatestMerkleRoot();
     }
 
     console.log("initialize sequener queue ...");
@@ -493,6 +489,12 @@ export class Service {
 
     setInterval(() => {
       this.blocklist.clear();
+      if (deploymode) {
+        const tracked = this.txManager.trackUnprovedBundle(this.latestSubmittedBundleMerkle);
+        if (tracked != null) {
+          this.latestSubmittedBundleMerkle = tracked;
+        }
+      }
     }, 30000);
 
     // Monitor queue length every 2 seconds
