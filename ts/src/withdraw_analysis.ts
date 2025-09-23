@@ -1,6 +1,7 @@
 import BN from "bn.js";
 import { ServiceHelper, get_mongoose_db, get_contract_addr, get_image_md5, get_settle_private_account } from "./config.js";
 import { GlobalBundleService } from "./services/global-bundle-service.js";
+import { decodeWithdraw } from "./convention.js";
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
@@ -29,13 +30,19 @@ async function analyzeWithdrawals() {
 			console.log(`Found ${bundles.length} bundles for this MD5`);
 			
 			bundles.forEach(bundle => {
-				if (bundle.withdrawArray && bundle.withdrawArray.length > 0) {
-					totalWithdrawals += bundle.withdrawArray.length;
+				if (bundle.txdata && bundle.txdata.length > 0) {
+					try {
+						// Parse withdrawals from txdata - convert Buffer to Uint8Array
+						const withdraws = decodeWithdraw(new Uint8Array(bundle.txdata));
+						totalWithdrawals += withdraws.length;
 
-					bundle.withdrawArray.forEach(withdraw => {
-						uniqueAddresses.add(withdraw.address);
-						totalAmount += BigInt(withdraw.amount);
-					});
+						withdraws.forEach(withdraw => {
+							uniqueAddresses.add(withdraw.address);
+							totalAmount += withdraw.amount;
+						});
+					} catch (error) {
+						console.warn(`Failed to parse txdata for bundle ${bundle.merkleRoot}:`, error);
+					}
 				}
 			});
 		}

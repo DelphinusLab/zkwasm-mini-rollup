@@ -32,10 +32,10 @@ export const globalBundleSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  withdrawArray: [{
-    address: { type: String, default: '' },
-    amount: { type: BigInt, default: '' }
-  }],
+  txdata: {
+    type: Buffer,
+    default: null
+  },
   
   // MD5 association field
   imageMD5: {
@@ -60,7 +60,7 @@ export interface IGlobalBundle extends mongoose.Document {
   taskId: string;
   settleStatus: string;
   settleTxHash: string;
-  withdrawArray: Array<{ address: string; amount: string }>;
+  txdata: Buffer | null;
   imageMD5: string;
   bundleIndex: number;
 }

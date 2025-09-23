@@ -213,23 +213,11 @@ export class Service {
     this.bundleIndex += 1;
     console.log("add transaction bundle:", this.bundleIndex, merkleRootToBeHexString(this.merkleRoot));
     
-    // Parse withdraw information from txdata if available
-    let withdrawArray: Array<{ address: string; amount: string }> = [];
-    if (txdata && txdata.length > 0) {
-      try {
-        const withdraws = decodeWithdraw(txdata);
-        withdrawArray = withdraws.map(withdraw => ({
-          address: withdraw.address,
-          amount: withdraw.amount.toString()
-        }));
-        console.log(`Found ${withdrawArray.length} withdrawals in txdata`);
-      } catch (error) {
-        console.warn("Failed to parse withdraw data:", error);
-      }
-    }
+    // Store raw txdata for later parsing
+    console.log(`Storing txdata of length: ${txdata ? txdata.length : 0} bytes`);
     
     try {
-      // Store to global Bundle registry with parsed withdraw data
+      // Store to global Bundle registry with raw txdata as Buffer
       await this.globalBundleService.createBundle({
         merkleRoot: merkleRootToBeHexString(this.merkleRoot),
         preMerkleRoot: preMerkleRootStr,
@@ -238,7 +226,7 @@ export class Service {
         bundleIndex: this.bundleIndex,
         settleStatus: 'waiting',
         settleTxHash: '',
-        withdrawArray: withdrawArray
+        txdata: txdata ? Buffer.from(txdata) : null
       }, this.currentMD5);
       
       console.log(`Bundle tracked globally for MD5: ${this.currentMD5}`);
