@@ -8,7 +8,7 @@ import IORedis from 'ioredis';
 import express, {Express} from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
 import cors from "cors";
-import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id, get_image_md5 } from "./config.js";
+import { get_mongoose_db, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id, get_image_md5 } from "./config.js";
 import { GlobalBundleService } from "./services/global-bundle-service.js";
 import { StateSnapshotService } from "./services/state-snapshot-service.js";
 import { StateMigrationService } from "./services/migration-service.js";
@@ -20,6 +20,7 @@ import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 import {TxStateManager} from "./commit.js";
 import {queryAccounts, storeAccount} from "./account.js";
+import {decodeWithdraw} from "./convention.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -162,20 +163,14 @@ export class Service {
   }
 
   async findBundleByMerkle(merkleHexRoot: string) {
-    const prevBundle = await modelBundle.findOne(
-      {
-        merkleRoot: merkleHexRoot
-      },
-    );
+    const prevBundle = await this.globalBundleService.findBundleByMerkle(merkleHexRoot);
     return prevBundle;
   }
 
   async findBundleIndex(merkleRoot: BigUint64Array) {
       try {
-        const prevBundle = await modelBundle.findOne(
-          {
-            merkleRoot: merkleRootToBeHexString(merkleRoot),
-          },
+        const prevBundle = await this.globalBundleService.findBundleByMerkle(
+          merkleRootToBeHexString(merkleRoot)
         );
         if (prevBundle != null) {
           return prevBundle!.bundleIndex;
@@ -188,25 +183,25 @@ export class Service {
       }
   }
 
-  async trackBundle(taskId: string) {
-    console.log("Tracking bundle in both local and global registry:", this.bundleIndex);
+  async trackBundle(taskId: string, txdata?: Uint8Array) {
+    console.log("Tracking bundle in global registry:", this.bundleIndex);
     let preMerkleRootStr = "";
     if (this.preMerkleRoot != null) {
       preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot);
       console.log("update merkle chain ...", preMerkleRootStr);
       try {
-        const prevBundle = await modelBundle.findOneAndUpdate({
-          merkleRoot: merkleRootToBeHexString(this.preMerkleRoot),
-        }, {
-          postMerkleRoot: merkleRootToBeHexString(this.merkleRoot),
-        }, {});
+        const prevBundle = await this.globalBundleService.findBundleByMerkle(preMerkleRootStr);
+        if (!prevBundle) {
+          throw Error(`fatal: can not find bundle for previous MerkleRoot: ${preMerkleRootStr}`);
+        }
+        
         if (this.bundleIndex != prevBundle!.bundleIndex) {
           console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
           throw Error(`Bundle Index does not match: current index is ${this.bundleIndex}, previous index is ${prevBundle!.bundleIndex}`);
         }
         console.log("merkle chain prev is", prevBundle);
         
-        // Also update chain relationships in global Bundle registry
+        // Update chain relationships in global Bundle registry
         await this.globalBundleService.updateBundle(preMerkleRootStr, {
           postMerkleRoot: merkleRootToBeHexString(this.merkleRoot)
         });
@@ -218,51 +213,37 @@ export class Service {
     this.bundleIndex += 1;
     console.log("add transaction bundle:", this.bundleIndex, merkleRootToBeHexString(this.merkleRoot));
     
-    // Maintain original local Bundle storage logic
-    const bundleRecord = new modelBundle({
-      merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-      preMerkleRoot: preMerkleRootStr,
-      taskId: taskId,
-      bundleIndex: this.bundleIndex,
-    });
-    try {
-      await bundleRecord.save();
-      console.log(`task recorded with key: ${merkleRootToBeHexString(this.merkleRoot)}`);
-      
-      // New: Also store to global Bundle registry
+    // Parse withdraw information from txdata if available
+    let withdrawArray: Array<{ address: string; amount: string }> = [];
+    if (txdata && txdata.length > 0) {
       try {
-        await this.globalBundleService.createBundle({
-          merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-          preMerkleRoot: preMerkleRootStr,
-          postMerkleRoot: '',
-          taskId: taskId,
-          bundleIndex: this.bundleIndex,
-          settleStatus: 'waiting',
-          settleTxHash: '',
-          withdrawArray: []
-        }, this.currentMD5);
-        
-        console.log(`Bundle tracked globally for MD5: ${this.currentMD5}`);
-      } catch (globalError) {
-        console.error(`Failed to track bundle globally:`, globalError);
-        // Continue execution as local bundle was successfully saved
-        console.warn(`Bundle tracking continued with local storage only`);
+        const withdraws = decodeWithdraw(txdata);
+        withdrawArray = withdraws.map(withdraw => ({
+          address: withdraw.address,
+          amount: withdraw.amount.toString()
+        }));
+        console.log(`Found ${withdrawArray.length} withdrawals in txdata`);
+      } catch (error) {
+        console.warn("Failed to parse withdraw data:", error);
       }
     }
-    catch (e) {
-      // Maintain original error handling logic
-      let record = await modelBundle.findOneAndUpdate({
+    
+    try {
+      // Store to global Bundle registry with parsed withdraw data
+      await this.globalBundleService.createBundle({
         merkleRoot: merkleRootToBeHexString(this.merkleRoot),
-      }, {
-        taskId: taskId,
-        postMerkleRoot: "",
         preMerkleRoot: preMerkleRootStr,
+        postMerkleRoot: '',
+        taskId: taskId,
         bundleIndex: this.bundleIndex,
-      }, {});
-      console.log("fatal: conflict db merkle");
-      console.log(record);
+        settleStatus: 'waiting',
+        settleTxHash: '',
+        withdrawArray: withdrawArray
+      }, this.currentMD5);
       
-      // Also try to handle conflicts in global registry
+      console.log(`Bundle tracked globally for MD5: ${this.currentMD5}`);
+    } catch (e) {
+      // Handle conflicts in global registry
       try {
         await this.globalBundleService.updateBundle(merkleRootToBeHexString(this.merkleRoot), {
           taskId: taskId,
@@ -270,8 +251,10 @@ export class Service {
           preMerkleRoot: preMerkleRootStr,
           bundleIndex: this.bundleIndex
         });
+        console.log("Updated existing bundle in global registry");
       } catch (globalError) {
-        console.log("Failed to update global bundle registry:", globalError);
+        console.log("fatal: conflict in global bundle registry");
+        throw globalError;
       }
     }
   }
@@ -315,7 +298,7 @@ export class Service {
         console.log("proving task submitted at:", task_id);
         console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
 
-        await this.trackBundle(task_id);
+        await this.trackBundle(task_id, txdata);
 
         // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
@@ -696,30 +679,7 @@ export class Service {
         if (merkleRootStr == 'latest') {
           merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
         }
-        let bundle = await modelBundle.findOne({
-          merkleRoot: merkleRootStr,
-        });
-        let after = bundle;
-        const bundles = [];
-        while (bundle != null && bundles.length < 10) {
-          bundles.unshift(bundle);
-          bundle = await modelBundle.findOne({
-            merkleRoot: (bundle.preMerkleRoot),
-          });
-        }
-        bundle = after;
-        const len = bundles.length;
-        if (bundle) {
-          bundle = await modelBundle.findOne({
-            merkleRoot: (bundle.postMerkleRoot),
-          });
-        }
-        while (bundle != null && bundles.length < len + 10) {
-          bundles.push(bundle);
-          bundle = await modelBundle.findOne({
-            merkleRoot: (bundle.postMerkleRoot),
-          });
-        }
+        const bundles = await this.globalBundleService.getBundleChain(merkleRootStr, 20);
         return res.status(201).json({
           success: true,
           data: bundles
@@ -753,8 +713,7 @@ export class Service {
     app.get('/prooftask/:root', async (req, res) => {
       try {
         let merkleRootString = req.params.root;
-        let merkleRoot = new BigUint64Array(hexStringToMerkleRoot(merkleRootString));
-        let record = await modelBundle.findOne({ merkleRoot: merkleRoot});
+        let record = await this.globalBundleService.findBundleByMerkle(merkleRootString);
         if (record) {
           return res.status(201).json(record);
         } else {

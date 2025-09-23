@@ -134,41 +134,7 @@ export const jobSchema = new mongoose.Schema({
     },
 });
 
-export const bundleSchema = new mongoose.Schema({
-    merkleRoot: {
-        type: String,
-        required: true,
-        unique: true,
-    },
-    preMerkleRoot: {
-        type: String,
-        default: '',
-    },
-    postMerkleRoot: {
-        type: String,
-        default: '',
-    },
-    taskId: {
-        type: String,
-        default: '',
-    },
-    withdrawArray: [{
-          address: { type: String, default:'' },
-          amount: { type: BigInt, default:'' },
-    }],
-    settleStatus: {
-        type: String,
-        default: 'waiting',  // wait-for settle, settle failed, settle done
-    },
-    settleTxHash: {
-        type: String,
-        default: '',
-    },
-    bundleIndex: {
-      type: Number,
-      default: 0,
-    }
-});
+// bundleSchema moved to global-bundle schema
 
 export const randSchema = new mongoose.Schema({
     commitment: {
@@ -183,7 +149,6 @@ export const randSchema = new mongoose.Schema({
 
 export const modelTx = mongoose.model('Tx', txSchema);
 export const modelJob = mongoose.model('Job', jobSchema);
-export const modelBundle = mongoose.model('Bundle', bundleSchema);
 export const modelRand = mongoose.model('Rand', randSchema);
 
 export const ServiceHelper = new ZkWasmServiceHelper(endpoint, "", "");

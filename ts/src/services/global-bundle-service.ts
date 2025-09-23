@@ -43,10 +43,55 @@ export class GlobalBundleService {
     }).sort({ bundleIndex: -1 });
   }
   
+  async getAllBundlesForMD5(imageMD5: string): Promise<IGlobalBundle[]> {
+    return await this.globalBundleModel.find({
+      imageMD5: imageMD5
+    }).sort({ bundleIndex: 1 });
+  }
+  
   async findBundleByMerkle(merkleRoot: string): Promise<IGlobalBundle | null> {
     return await this.globalBundleModel.findOne({
       merkleRoot: merkleRoot
     });
+  }
+  
+  async getBundleChain(merkleRootStr: string, maxLength: number = 20): Promise<IGlobalBundle[]> {
+    const bundles: IGlobalBundle[] = [];
+    
+    // Find starting bundle
+    let bundle = await this.findBundleByMerkle(merkleRootStr);
+    if (!bundle) {
+      return bundles;
+    }
+    
+    const after = bundle;
+    
+    // Go backwards first (up to half maxLength)
+    const backwardLimit = Math.floor(maxLength / 2);
+    while (bundle != null && bundles.length < backwardLimit) {
+      bundles.unshift(bundle);
+      bundle = bundle.preMerkleRoot ? 
+        await this.findBundleByMerkle(bundle.preMerkleRoot) : 
+        null;
+    }
+    
+    // Go forwards from the starting point
+    bundle = after;
+    const len = bundles.length;
+    if (bundle) {
+      bundle = bundle.postMerkleRoot ? 
+        await this.findBundleByMerkle(bundle.postMerkleRoot) : 
+        null;
+    }
+    
+    while (bundle != null && bundles.length < len + (maxLength - backwardLimit)) {
+      bundles.push(bundle);
+      bundle = bundle.postMerkleRoot ? 
+        await this.findBundleByMerkle(bundle.postMerkleRoot) : 
+        null;
+    }
+    
+    return bundles;
   }
   
   async close(): Promise<void> {

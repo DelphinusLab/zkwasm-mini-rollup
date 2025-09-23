@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { ServiceHelper, get_contract_addr, modelBundle, get_user_private_account } from "./config.js";
+import { ServiceHelper, get_contract_addr, get_user_private_account } from "./config.js";
 import abiData from './Proxy.json' assert { type: 'json' };
 import {ZkWasmUtil, PaginationResult, QueryParams, Task, VerifyProofParams} from "zkwasm-service-helper";
 import { U8ArrayUtil } from './lib.js';

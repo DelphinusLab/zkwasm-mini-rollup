@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 // System collections that should be excluded from snapshots
 const SYSTEM_COLLECTIONS = [
-  'accounts', 'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
+  'bundles', 'commits', 'events', 'jobs', 'rands', 'txes'
 ];
 
 export class StateSnapshotService {
@@ -10,6 +10,7 @@ export class StateSnapshotService {
   private static readonly MAX_SNAPSHOTS = 100;
   
   constructor(merkleRoot: string) {
+    
     this.currentMerkleRoot = merkleRoot;
   }
   
@@ -106,12 +107,15 @@ export class StateSnapshotService {
         return;
       }
       
-      // Create snapshot copies for current state with timestamp
+      // Create snapshot copies with state correlation metadata
+      // merkleRoot: Links snapshot to specific rollup state for cross-referencing with bundles
+      // snapshotTimestamp: Enables temporal ordering when multiple snapshots exist for same merkleRoot
+      // _id reset: Prevents MongoDB duplicate key conflicts when inserting into snapshot collection
       const snapshots = activeObjects.map(obj => ({
         ...obj,
-        merkleRoot: this.currentMerkleRoot,
-        snapshotTimestamp: new Date(),
-        _id: undefined
+        merkleRoot: this.currentMerkleRoot,     // State correlation: which rollup state this snapshot represents
+        snapshotTimestamp: new Date(),          // Temporal ordering: creation time for cleanup and versioning
+        _id: undefined                          // Conflict prevention: let MongoDB generate new IDs
       }));
       
       // Batch insert snapshot data using MongoDB native operations
@@ -129,25 +133,27 @@ export class StateSnapshotService {
       const snapshotCollectionName = `${collectionName}_snapshots`;
       
       try {
-        // Get all snapshots grouped by merkleRoot, sorted by timestamp
+        // Storage management: Keep only recent snapshots to prevent unbounded disk growth
+        // Group by merkleRoot because each state needs at least one snapshot for potential rollbacks
+        // Use snapshotTimestamp to determine which snapshots are oldest and can be safely removed
         const allSnapshots = await mongoose.connection.collection(snapshotCollectionName)
           .aggregate([
             { 
               $group: { 
                 _id: "$merkleRoot", 
                 count: { $sum: 1 }, 
-                latestTimestamp: { $max: "$snapshotTimestamp" }
+                latestTimestamp: { $max: "$snapshotTimestamp" }  // Retention priority: newer snapshots more valuable
               } 
             },
-            { $sort: { "latestTimestamp": -1 } } // Sort by actual timestamp, newest first
+            { $sort: { "latestTimestamp": -1 } } // Temporal ordering: newest first for retention
           ]).toArray();
         
         if (allSnapshots.length > StateSnapshotService.MAX_SNAPSHOTS) {
-          // Get merkleRoot list of old snapshots to delete
+          // Retention policy: Remove oldest state snapshots beyond limit to manage storage
           const excessSnapshots = allSnapshots.slice(StateSnapshotService.MAX_SNAPSHOTS);
           const merkleRootsToDelete = excessSnapshots.map(s => s._id);
           
-          // Delete excessive snapshots
+          // Bulk cleanup: Remove all snapshots for obsolete merkleRoots
           const deleteResult = await mongoose.connection.collection(snapshotCollectionName)
             .deleteMany({ merkleRoot: { $in: merkleRootsToDelete } });
           
