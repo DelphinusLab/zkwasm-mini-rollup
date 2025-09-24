@@ -82,7 +82,7 @@ export class TxStateManager {
           // If key exists, push new item to items array
           if (commit.items.length <= counter) {
             commit.items.push(tx);
-            await commit.save();
+            commit.save();
             return false; // new tx, needs track
           } else {
             let trackedTx = commit.items[counter];
