@@ -7,6 +7,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express, {Express} from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
+import { ensureIndexes } from "./commit.js";
 import cors from "cors";
 import { get_mongoose_db, modelBundle, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id } from "./config.js";
 import { getMerkleArray } from "./contract.js";
@@ -323,8 +324,9 @@ export class Service {
       console.error('fatal: mongoose connection error ... process will terminate');
       process.exit(1);
     });
-    db.once('open', () => {
+    db.once('open', async () => {
       console.log('Connected to MongoDB');
+      await ensureIndexes();
     });
 
     console.log("connecting redis server:", redisHost);

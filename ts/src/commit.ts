@@ -40,8 +40,8 @@ const ensureIndexes = async () => {
   }
 };
 
-// Call ensure indexes when module loads
-ensureIndexes();
+// Export function to be called after MongoDB connection
+export const ensureIndexes = ensureIndexes;
 
 export class TxStateManager {
     currentUncommitMerkleRoot: string;
