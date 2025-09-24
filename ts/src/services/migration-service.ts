@@ -127,6 +127,9 @@ export class StateMigrationService {
   private async validateMigrationResults(targetConn: mongoose.Connection, newMD5: string) {
     try {
       await targetConn.asPromise(); // Ensure connection is established
+      if (!targetConn.db) {
+        throw new Error('Database connection not established');
+      }
       const collections = await targetConn.db.listCollections().toArray();
       const businessCollections = collections.filter(c => 
         !c.name.endsWith('_snapshots') && 
@@ -157,6 +160,9 @@ export class StateMigrationService {
     
     try {
       await connection.asPromise(); // Ensure connection is established
+      if (!connection.db) {
+        throw new Error('Database connection not established');
+      }
       const collections = await connection.db.listCollections().toArray();
       const collectionNames = collections.map(c => c.name);
       

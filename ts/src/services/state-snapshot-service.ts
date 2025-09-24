@@ -79,6 +79,9 @@ export class StateSnapshotService {
     
     try {
       await mongoose.connection.asPromise(); // Ensure connection is established
+      if (!mongoose.connection.db) {
+        throw new Error('Database connection not established');
+      }
       const collections = await mongoose.connection.db.listCollections().toArray();
       const collectionNames = collections.map(c => c.name);
       
