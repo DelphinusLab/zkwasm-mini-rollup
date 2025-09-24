@@ -227,38 +227,38 @@ export class Service {
 
 
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array, isReplay = false) {
-    const installStartTime = Date.now();
-    console.log(`[${new Date().toISOString()}] install_transactions started for jobid: ${jobid}, isReplay: ${isReplay}`);
+    // const installStartTime = Date.now();
+    console.log("installing transaction into rollup ...");
     transactions_witness.push(tx);
     // if (!isReplay) {
-    const insertStart = Date.now();
+    // const insertStart = Date.now();
     const handled = await this.txManager.insertTxIntoCommit(tx);
-    const insertEnd = Date.now();
-    console.log(`[${new Date().toISOString()}] insertTxIntoCommit took: ${insertEnd - insertStart}ms, handled: ${handled}`);
+    // const insertEnd = Date.now();
+    // console.log(`[${new Date().toISOString()}] insertTxIntoCommit took: ${insertEnd - insertStart}ms, handled: ${handled}`);
     if (handled == false) {
-        const callbackStart = Date.now();
+        // const callbackStart = Date.now();
         await this.txCallback(tx, events);
-        const callbackEnd = Date.now();
-        console.log(`[${new Date().toISOString()}] txCallback took: ${callbackEnd - callbackStart}ms`);
+        // const callbackEnd = Date.now();
+        // console.log(`[${new Date().toISOString()}] txCallback took: ${callbackEnd - callbackStart}ms`);
     }
     // }
     snapshot = JSON.parse(application.snapshot());
     console.log("transaction installed, rollup pool length is:", transactions_witness.length);
     try {
-      const saveStart = Date.now();
+      // const saveStart = Date.now();
       const txRecord = new modelTx(tx);
       await txRecord.save();
-      const saveEnd = Date.now();
-      console.log(`[${new Date().toISOString()}] txRecord.save took: ${saveEnd - saveStart}ms`);
+      // const saveEnd = Date.now();
+      // console.log(`[${new Date().toISOString()}] txRecord.save took: ${saveEnd - saveStart}ms`);
     } catch (e) {
       console.log("fatal: store tx failed ... process will terminate");
     }
     if (application.preempt()) {
-      const preemptStart = Date.now();
-      console.log(`[${new Date().toISOString()}] Rollup reached preemption point, generating proof`);
+      // const preemptStart = Date.now();
+      console.log("rollup reach its preemption point, generating proof:");
       let txdata = application.finalize();
-      const finalizeEnd = Date.now();
-      console.log(`[${new Date().toISOString()}] application.finalize took: ${finalizeEnd - preemptStart}ms`);
+      // const finalizeEnd = Date.now();
+      // console.log(`[${new Date().toISOString()}] application.finalize took: ${finalizeEnd - preemptStart}ms`);
       console.log("txdata is:", txdata);
       let task_id = null;
 
@@ -276,10 +276,10 @@ export class Service {
         console.log("proving task submitted at:", task_id);
         console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
 
-        const trackStart = Date.now();
+        // const trackStart = Date.now();
         await this.trackBundle(task_id);
-        const trackEnd = Date.now();
-        console.log(`[${new Date().toISOString()}] trackBundle took: ${trackEnd - trackStart}ms`);
+        // const trackEnd = Date.now();
+        // console.log(`[${new Date().toISOString()}] trackBundle took: ${trackEnd - trackStart}ms`);
 
         // clear witness queue and set preMerkleRoot
         transactions_witness = new Array();
@@ -290,27 +290,27 @@ export class Service {
 
 
         // record all the txs externally so that the external db can preserve a snap shot
-        const batchStart = Date.now();
+        // const batchStart = Date.now();
         await this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
-        const batchEnd = Date.now();
-        console.log(`[${new Date().toISOString()}] txBatched took: ${batchEnd - batchStart}ms`);
+        // const batchEnd = Date.now();
+        // console.log(`[${new Date().toISOString()}] txBatched took: ${batchEnd - batchStart}ms`);
 
         // reset application here
         console.log("restore root:", this.merkleRoot);
-        const resetStart = Date.now();
+        // const resetStart = Date.now();
         await (initApplication as any)(bootstrap);
         application.initialize(this.merkleRoot);
         await this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
-        const resetEnd = Date.now();
-        console.log(`[${new Date().toISOString()}] Application reset took: ${resetEnd - resetStart}ms`);
+        // const resetEnd = Date.now();
+        // console.log(`[${new Date().toISOString()}] Application reset took: ${resetEnd - resetStart}ms`);
       } catch (e) {
         console.log(e);
         process.exit(1); // this should never happen and we stop the whole process
       }
     }
     let current_merkle_root = application.query_root();
-    const installEndTime = Date.now();
-    console.log(`[${new Date().toISOString()}] install_transactions completed in ${installEndTime - installStartTime}ms, final root:`, current_merkle_root);
+    // const installEndTime = Date.now();
+    console.log("transaction installed with last root:", current_merkle_root);
   }
 
   async initialize() {
@@ -443,26 +443,26 @@ export class Service {
     }, 30000);
 
     // Monitor queue length every 2 seconds
-    setInterval(async () => {
-      try {
-        const waitingCount = await myQueue.getWaitingCount();
-        const activeCount = await myQueue.getActiveCount();
-        const delayedCount = await myQueue.getDelayedCount();
-        const completedCount = await myQueue.getCompletedCount();
-        const failedCount = await myQueue.getFailedCount();
-        
-        console.log(`[${new Date().toISOString()}] Queue Stats - Waiting: ${waitingCount}, Active: ${activeCount}, Delayed: ${delayedCount}, Completed: ${completedCount}, Failed: ${failedCount}`);
-      } catch (error) {
-        console.error('Error getting queue stats:', error);
-      }
-    }, 2000);
+    // setInterval(async () => {
+    //   try {
+    //     const waitingCount = await myQueue.getWaitingCount();
+    //     const activeCount = await myQueue.getActiveCount();
+    //     const delayedCount = await myQueue.getDelayedCount();
+    //     const completedCount = await myQueue.getCompletedCount();
+    //     const failedCount = await myQueue.getFailedCount();
+    //     
+    //     console.log(`[${new Date().toISOString()}] Queue Stats - Waiting: ${waitingCount}, Active: ${activeCount}, Delayed: ${delayedCount}, Completed: ${completedCount}, Failed: ${failedCount}`);
+    //   } catch (error) {
+    //     console.error('Error getting queue stats:', error);
+    //   }
+    // }, 2000);
 
     this.worker = new Worker('sequencer', async job => {
-      const jobStartTime = Date.now();
-      console.log(`[${new Date().toISOString()}] Worker started processing job: ${job.name}, id: ${job.id}`);
+      // const jobStartTime = Date.now();
+      // console.log(`[${new Date().toISOString()}] Worker started processing job: ${job.name}, id: ${job.id}`);
       
       if (job.name == 'autoJob') {
-        console.log(`[${new Date().toISOString()}] AutoJob tick started`);
+        // console.log(`[${new Date().toISOString()}] AutoJob tick started`);
         try {
           let rand = await generateRandomSeed();
           let oldSeed = application.randSeed();
@@ -477,42 +477,42 @@ export class Service {
           //console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
           application.verify_tx_signature(u64array);
-          const handleTxStart = Date.now();
+          // const handleTxStart = Date.now();
           let txResult = application.handle_tx(u64array);
-          const handleTxEnd = Date.now();
-          console.log(`[${new Date().toISOString()}] AutoJob handle_tx took: ${handleTxEnd - handleTxStart}ms`);
+          // const handleTxEnd = Date.now();
+          // console.log(`[${new Date().toISOString()}] AutoJob handle_tx took: ${handleTxEnd - handleTxStart}ms`);
           
-          const installStart = Date.now();
+          // const installStart = Date.now();
           await this.install_transactions(signature, job.id, txResult);
-          const installEnd = Date.now();
-          console.log(`[${new Date().toISOString()}] AutoJob install_transactions took: ${installEnd - installStart}ms`);
+          // const installEnd = Date.now();
+          // console.log(`[${new Date().toISOString()}] AutoJob install_transactions took: ${installEnd - installStart}ms`);
         } catch (error) {
-          const jobEndTime = Date.now();
-          console.log(`[${new Date().toISOString()}] AutoJob failed after ${jobEndTime - jobStartTime}ms:`, error);
+          // const jobEndTime = Date.now();
+          // console.log(`[${new Date().toISOString()}] AutoJob failed after ${jobEndTime - jobStartTime}ms:`, error);
           console.log("fatal: handling auto tick error, process will terminate.", error);
           process.exit(1);
         }
-        const jobEndTime = Date.now();
-        console.log(`[${new Date().toISOString()}] AutoJob completed in ${jobEndTime - jobStartTime}ms`);
+        // const jobEndTime = Date.now();
+        // console.log(`[${new Date().toISOString()}] AutoJob completed in ${jobEndTime - jobStartTime}ms`);
       } else if (job.name == 'transaction' || job.name == 'replay') {
-        console.log(`[${new Date().toISOString()}] ${job.name} started`);
+        console.log("handle transaction ...");
         try {
           let signature = job.data.value;
           let u64array = signature_to_u64array(signature);
           //console.log("tx data", signature);
           application.verify_tx_signature(u64array);
-          const handleTxStart = Date.now();
+          // const handleTxStart = Date.now();
           let txResult = application.handle_tx(u64array);
-          const handleTxEnd = Date.now();
-          console.log(`[${new Date().toISOString()}] ${job.name} handle_tx took: ${handleTxEnd - handleTxStart}ms`);
+          // const handleTxEnd = Date.now();
+          // console.log(`[${new Date().toISOString()}] ${job.name} handle_tx took: ${handleTxEnd - handleTxStart}ms`);
           
           let errorCode = txResult[0];
           if (errorCode == 0n) {
             // make sure install transaction will succeed
-            const installStart = Date.now();
+            // const installStart = Date.now();
             await this.install_transactions(signature, job.id, txResult, job.name=='replay');
-            const installEnd = Date.now();
-            console.log(`[${new Date().toISOString()}] ${job.name} install_transactions took: ${installEnd - installStart}ms`);
+            // const installEnd = Date.now();
+            // console.log(`[${new Date().toISOString()}] ${job.name} install_transactions took: ${installEnd - installStart}ms`);
             try {
               // If this is the first time of running this tx, the store should work.
               // If the store does not work (jobId conflict) then either there is a jobid
@@ -538,8 +538,8 @@ export class Service {
             throw Error(errorMsg)
           }
 
-          const jobEndTime = Date.now();
-          console.log(`[${new Date().toISOString()}] ${job.name} completed successfully in ${jobEndTime - jobStartTime}ms`);
+          // const jobEndTime = Date.now();
+          console.log("done");
           let player = null;
 
           if (job.name != "replay") {
@@ -555,8 +555,8 @@ export class Service {
           };
           return result
         } catch (e) {
-          const jobEndTime = Date.now();
-          console.log(`[${new Date().toISOString()}] ${job.name} failed after ${jobEndTime - jobStartTime}ms:`, e);
+          // const jobEndTime = Date.now();
+          // console.log(`[${new Date().toISOString()}] ${job.name} failed after ${jobEndTime - jobStartTime}ms:`, e);
           let pkx = job.data.value.pkx;
           let fc = this.blocklist.get(pkx) || 0;
           this.blocklist.set(pkx, fc + 1);
