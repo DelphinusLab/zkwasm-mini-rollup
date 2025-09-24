@@ -141,7 +141,7 @@ export class Service {
     this.migrationService = new StateMigrationService();
   }
 
-  async syncToLatestMerkelRoot() {
+  async syncToLatestMerkleRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
     let prevMerkle = null;
     let bundle = await this.findBundleByMerkle(currentMerkle);
