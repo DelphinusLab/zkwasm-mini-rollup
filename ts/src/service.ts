@@ -324,13 +324,11 @@ export class Service {
       console.error('fatal: mongoose connection error ... process will terminate');
       process.exit(1);
     });
-    db.once('open', async () => {
+    db.once('open', () => {
       console.log('Connected to MongoDB');
-      await ensureIndexes();
     });
     
-    // Also call ensureIndexes immediately after connection
-    console.log('Connected to MongoDB');
+    // Call ensureIndexes after connection is established
     await ensureIndexes();
 
     console.log("connecting redis server:", redisHost);
