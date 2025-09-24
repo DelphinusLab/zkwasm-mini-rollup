@@ -78,6 +78,7 @@ export class StateSnapshotService {
   private async detectBusinessCollections(): Promise<string[]> {
     
     try {
+      await mongoose.connection.asPromise(); // Ensure connection is established
       const collections = await mongoose.connection.db.listCollections().toArray();
       const collectionNames = collections.map(c => c.name);
       

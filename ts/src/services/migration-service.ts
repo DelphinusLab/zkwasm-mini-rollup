@@ -126,6 +126,7 @@ export class StateMigrationService {
   
   private async validateMigrationResults(targetConn: mongoose.Connection, newMD5: string) {
     try {
+      await targetConn.asPromise(); // Ensure connection is established
       const collections = await targetConn.db.listCollections().toArray();
       const businessCollections = collections.filter(c => 
         !c.name.endsWith('_snapshots') && 
@@ -155,6 +156,7 @@ export class StateMigrationService {
   private async detectSnapshotCollections(connection: mongoose.Connection): Promise<string[]> {
     
     try {
+      await connection.asPromise(); // Ensure connection is established
       const collections = await connection.db.listCollections().toArray();
       const collectionNames = collections.map(c => c.name);
       
