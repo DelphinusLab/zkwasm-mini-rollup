@@ -328,6 +328,10 @@ export class Service {
       console.log('Connected to MongoDB');
       await ensureIndexes();
     });
+    
+    // Also call ensureIndexes immediately after connection
+    console.log('Connected to MongoDB');
+    await ensureIndexes();
 
     console.log("connecting redis server:", redisHost);
     const connection = new IORedis(
