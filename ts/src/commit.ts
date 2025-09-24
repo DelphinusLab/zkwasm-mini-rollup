@@ -14,8 +14,34 @@ const commitSchema = new mongoose.Schema({
     items: { type: [txSchema], default: [] } // List of objects
 });
 
+// Add index on key field for fast lookups
+commitSchema.index({ key: 1 });
 
 export const CommitModel = mongoose.model('Commit', commitSchema);
+
+// Ensure indexes exist on existing collections - check and create if needed
+const ensureIndexes = async () => {
+  try {
+    const collection = CommitModel.collection;
+    const indexes = await collection.indexes();
+    const keyIndexExists = indexes.some(index => 
+      index.key && index.key.key === 1
+    );
+    
+    if (!keyIndexExists) {
+      console.log('Creating index on key field for existing database...');
+      await collection.createIndex({ key: 1 });
+      console.log('Index on key field created successfully');
+    } else {
+      console.log('Index on key field already exists');
+    }
+  } catch (error) {
+    console.error('Error ensuring indexes:', error);
+  }
+};
+
+// Export function to be called after MongoDB connection
+export { ensureIndexes };
 
 export class TxStateManager {
     currentUncommitMerkleRoot: string;
