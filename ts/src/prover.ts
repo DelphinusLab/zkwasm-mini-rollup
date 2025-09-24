@@ -13,7 +13,10 @@ import {
   endpoint,
   get_image_md5,
   get_user_addr,
+  modelBundle,
 } from "./config.js";
+
+import { merkleRootToBeHexString, hexStringToMerkleRoot } from "./lib.js";
 
 import dotenv from 'dotenv';
 
@@ -224,12 +227,12 @@ export async function has_task(): Promise<boolean> {
   return tasks.data.length > 0;
 }
 
-export async syncToFirstUnprovedBundle(guideMerkle: BigUint64Array) {
+export async function syncToFirstUnprovedBundle(guideMerkle: BigUint64Array) {
   let currentMerkle = merkleRootToBeHexString(guideMerkle);
-  let bundle = await this.findBundleByMerkle(currentMerkle);
+  let bundle = await modelBundle.findOne({ merkleRoot: currentMerkle });
   while (bundle != null && bundle.taskId!= "" && bundle.postMerkleRoot != null) {
     const postMerkle = new BigUint64Array(hexStringToMerkleRoot(bundle.postMerkleRoot));
-    bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle));
+    bundle = await modelBundle.findOne({ merkleRoot: merkleRootToBeHexString(postMerkle) });
   }
   if(bundle != null && bundle.taskId == "") {
     return bundle;

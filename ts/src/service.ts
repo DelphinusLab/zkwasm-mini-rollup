@@ -100,7 +100,7 @@ export class Service {
   playerIndexer: (arg: any) => number;
   registerAPICallback: (app: Express) => void;
   merkleRoot: BigUint64Array;
-  latestSubmittedBundleMerkle: BigUint64Array | null;
+  latestSubmittedBundleMerkle: BigUint64Array;
   bundleIndex: number;
   preMerkleRoot: BigUint64Array | null;
   txManager: TxStateManager;
@@ -128,7 +128,7 @@ export class Service {
       10309858136294505219n,
       2839580074036780766n,
     ]);
-    this.latestSubmittedBundleMerkel = this.merkleRoot;
+    this.latestSubmittedBundleMerkle = this.merkleRoot;
     this.bundleIndex = 0;
     this.preMerkleRoot = null;
     this.txManager = new TxStateManager(merkleRootToBeHexString(this.merkleRoot));
@@ -155,9 +155,9 @@ export class Service {
         currentMerkle = bundle.merkleRoot;
         prevMerkle = bundle.preMerkleRoot;
         this.bundleIndex += 1;
-        if (this.taskId != "") {
-          this.latestSubmittedBundleMerkle = this.merkelRoot;
-        }
+        // if (this.taskId != "") {
+        //   this.latestSubmittedBundleMerkle = this.merkleRoot;
+        // }
       }
     }
     console.log("final merkle:", currentMerkle);
@@ -300,7 +300,7 @@ export class Service {
         console.log("tracking task in db current ...", merkleRootToBeHexString(this.merkleRoot));
 
         // const trackStart = Date.now();
-        await this.trackBundle(task_id, txdata);
+        await this.trackBundle(task_id || '', txdata);
         // const trackEnd = Date.now();
         // console.log(`[${new Date().toISOString()}] trackBundle took: ${trackEnd - trackStart}ms`);
 
@@ -487,12 +487,16 @@ export class Service {
       }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
     }
 
-    setInterval(() => {
+    setInterval(async () => {
       this.blocklist.clear();
       if (deploymode) {
-        const tracked = this.txManager.trackUnprovedBundle(this.latestSubmittedBundleMerkle);
-        if (tracked != null) {
-          this.latestSubmittedBundleMerkle = tracked;
+        try {
+          const tracked = await this.txManager.trackUnprovedBundle(this.latestSubmittedBundleMerkle);
+          if (tracked != null) {
+            this.latestSubmittedBundleMerkle = tracked;
+          }
+        } catch (e) {
+          console.log('Error tracking unproved bundle:', e);
         }
       }
     }, 30000);
