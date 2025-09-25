@@ -235,9 +235,27 @@ export class TxStateManager {
           // Task found and matched - this bundle is confirmed
           console.log(`Bundle ${merkleRoot} already confirmed, bundle processing complete`);
           
+          // Extract post merkle root from task instances (indices 4-7)
+          let postMerkleRoot = '';
+          if (queryResult.task.instances && queryResult.task.instances.length >= 384) {
+            const { ZkWasmUtil } = await import('zkwasm-service-helper');
+            const instances = ZkWasmUtil.bytesToBN(queryResult.task.instances);
+            
+            if (instances.length >= 8) {
+              const nextMerkle = new BigUint64Array([
+                BigInt(instances[4].toString()),
+                BigInt(instances[5].toString()),
+                BigInt(instances[6].toString()),
+                BigInt(instances[7].toString())
+              ]);
+              postMerkleRoot = merkleRootToBeHexString(nextMerkle);
+            }
+          }
+          
           // Update bundle with confirmed task info  
           await this.globalBundleService.updateBundle(merkleRoot, {
-            taskId: queryResult.task._id.$oid || queryResult.task._id  // Handle MongoDB ObjectId format
+            taskId: queryResult.task._id.$oid || queryResult.task._id,  // Handle MongoDB ObjectId format
+            postMerkleRoot: postMerkleRoot
           });
           
           // This bundle is done, return null to let syncToFirstUnprovedBundle find the next one
