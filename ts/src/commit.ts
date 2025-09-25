@@ -23,21 +23,34 @@ commitSchema.index({ key: 1 });
 
 export const CommitModel = mongoose.model('Commit', commitSchema);
 
-// Ensure indexes exist on existing collections - check and create if needed
+// Ensure indexes exist on collections - create if needed
 const ensureIndexes = async () => {
   try {
     const collection = CommitModel.collection;
-    const indexes = await collection.indexes();
-    const keyIndexExists = indexes.some(index => 
-      index.key && index.key.key === 1
-    );
     
-    if (!keyIndexExists) {
-      console.log('Creating index on key field for existing database...');
-      await collection.createIndex({ key: 1 });
-      console.log('Index on key field created successfully');
-    } else {
-      console.log('Index on key field already exists');
+    // Try to create index directly - MongoDB will handle if collection doesn't exist
+    try {
+      const indexes = await collection.indexes();
+      const keyIndexExists = indexes.some(index => 
+        index.key && index.key.key === 1
+      );
+      
+      if (!keyIndexExists) {
+        console.log('Creating index on key field...');
+        await collection.createIndex({ key: 1 });
+        console.log('Index on key field created successfully');
+      } else {
+        console.log('Index on key field already exists');
+      }
+    } catch (indexError: any) {
+      // If collection doesn't exist, create the index anyway - it will be applied when collection is created
+      if (indexError.code === 26 && indexError.codeName === 'NamespaceNotFound') {
+        console.log('Collection does not exist yet, creating index for when it gets created...');
+        await collection.createIndex({ key: 1 });
+        console.log('Index on key field will be created when collection is first used');
+      } else {
+        throw indexError;
+      }
     }
   } catch (error) {
     console.error('Error ensuring indexes:', error);

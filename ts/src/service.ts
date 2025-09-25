@@ -371,9 +371,6 @@ export class Service {
     db.once('open', () => {
       console.log('Connected to MongoDB');
     });
-    
-    // Call ensureIndexes after connection is established
-    await ensureIndexes();
 
     console.log("connecting redis server:", redisHost);
     const connection = new IORedis(
@@ -474,6 +471,8 @@ export class Service {
     console.log("initialize application merkle db ...");
 
 
+    // Ensure indexes before first use of commits collection
+    await ensureIndexes();
     this.txManager.loadCommit(merkleRootToBeHexString(this.merkleRoot));
     application.initialize(this.merkleRoot);
 
