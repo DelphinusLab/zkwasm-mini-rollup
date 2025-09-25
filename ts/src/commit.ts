@@ -203,7 +203,8 @@ export class TxStateManager {
         }
         
         return {
-          success: false,
+          success: true,  // Query succeeded, just no matching task
+          task: null,     // No matching task found
           error: "No matching task found"
         };
       } catch (error) {
