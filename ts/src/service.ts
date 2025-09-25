@@ -8,6 +8,8 @@ import IORedis from 'ioredis';
 import express, {Express} from 'express';
 import { has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
 import { Worker } from 'worker_threads';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { ensureIndexes } from "./commit.js";
 import cors from "cors";
 import { get_mongoose_db, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id, get_image_md5 } from "./config.js";
@@ -626,7 +628,12 @@ export class Service {
 
   initializeProofWorker() {
     try {
-      this.proofWorker = new Worker('./src/proof-worker.js', {
+      // Get absolute path for worker file
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      const workerPath = join(__dirname, 'proof-worker.js');
+      
+      this.proofWorker = new Worker(workerPath, {
         workerData: {
           // Worker starts with initial merkle and finds all unproved bundles independently
           initialMerkle: Array.from(this.latestSubmittedBundleMerkle)
