@@ -3,10 +3,11 @@ import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
 import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc, createCommand } from "zkwasm-minirollup-rpc";
-import { Queue, Worker, Job } from 'bullmq';
+import { Queue, Worker as BullWorker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express, {Express} from 'express';
-import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
+import { has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
+import { Worker } from 'worker_threads';
 import { ensureIndexes } from "./commit.js";
 import cors from "cors";
 import { get_mongoose_db, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id, get_image_md5 } from "./config.js";
@@ -93,7 +94,7 @@ async function generateRandomSeed() {
 }
 
 export class Service {
-  worker: null | Worker;
+  worker: null | BullWorker;
   queue: null | Queue;
   txCallback: (arg: TxWitness, events: BigUint64Array) => Promise<void>;
   txBatched: (arg: TxWitness[], preMerkleHexRoot: string, postMerkleRoot: string ) => Promise<void>;
@@ -109,6 +110,7 @@ export class Service {
   currentMD5: string;
   stateSnapshotService: StateSnapshotService;
   migrationService: StateMigrationService;
+  proofWorker: Worker | null;
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
@@ -141,6 +143,7 @@ export class Service {
       merkleRootToBeHexString(this.merkleRoot)
     );
     this.migrationService = new StateMigrationService();
+    this.proofWorker = null;
   }
 
   async syncToLatestMerkleRoot() {
@@ -487,18 +490,13 @@ export class Service {
       }, 5000); // Change the interval as needed (e.g., 5000ms for every 5 seconds)
     }
 
+    // Initialize proof worker in deploy mode
+    if (deploymode) {
+      this.initializeProofWorker();
+    }
+    
     setInterval(async () => {
       this.blocklist.clear();
-      if (deploymode) {
-        try {
-          const tracked = await this.txManager.trackUnprovedBundle(this.latestSubmittedBundleMerkle);
-          if (tracked != null) {
-            this.latestSubmittedBundleMerkle = tracked;
-          }
-        } catch (e) {
-          console.log('Error tracking unproved bundle:', e);
-        }
-      }
     }, 30000);
 
     // Monitor queue length every 2 seconds
@@ -516,7 +514,7 @@ export class Service {
     //   }
     // }, 2000);
 
-    this.worker = new Worker('sequencer', async job => {
+    this.worker = new BullWorker('sequencer', async job => {
       // const jobStartTime = Date.now();
       // console.log(`[${new Date().toISOString()}] Worker started processing job: ${job.name}, id: ${job.id}`);
       
@@ -624,6 +622,35 @@ export class Service {
         }
       }
     }, {connection});
+  }
+
+  initializeProofWorker() {
+    try {
+      this.proofWorker = new Worker('./src/proof-worker.js', {
+        workerData: {
+          // Worker starts with initial merkle and finds all unproved bundles independently
+          initialMerkle: Array.from(this.latestSubmittedBundleMerkle)
+        }
+      });
+
+      // Worker handles all proof tracking independently - no messages needed
+      this.proofWorker.on('error', (error) => {
+        console.error('Proof worker error:', error);
+      });
+
+      this.proofWorker.on('exit', (code) => {
+        console.log(`Proof worker exited with code ${code}`);
+        // Restart worker if it crashes
+        if (code !== 0) {
+          console.log('Restarting proof worker...');
+          setTimeout(() => this.initializeProofWorker(), 5000);
+        }
+      });
+
+      console.log('Proof worker initialized - handling all proof tracking independently');
+    } catch (error) {
+      console.error('Failed to initialize proof worker:', error);
+    }
   }
 
   async serve() {

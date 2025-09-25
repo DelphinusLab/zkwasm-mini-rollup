@@ -1,4 +1,4 @@
-import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
+import { has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
 import { getMerkleArray } from "./contract.js";
 import { get_contract_addr } from "./config.js";
 let hasTask = await has_task();

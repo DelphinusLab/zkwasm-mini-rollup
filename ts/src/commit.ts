@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import { TxWitness, syncToFirstUnprovedBundle, submitProof } from './prover.js';
-import { merkleRootToBeHexString } from './lib.js';
+import { merkleRootToBeHexString, hexStringToMerkleRoot } from './lib.js';
+import { ZkWasmServiceHelper } from 'zkwasm-service-helper';
+import { endpoint, get_image_md5 } from './config.js';
+import { GlobalBundleService } from './services/global-bundle-service.js';
 const txSchema = new mongoose.Schema({
   msg: { type: String, required: true },
   pkx: { type: String, required: true },
@@ -44,16 +47,29 @@ const ensureIndexes = async () => {
 // Export function to be called after MongoDB connection
 export { ensureIndexes };
 
+interface QueryResult {
+  success: boolean;
+  task?: any;
+  merkleRoot?: string;
+  error?: string;
+}
+
 export class TxStateManager {
     // initial merkle root of a bundle
     currentUncommitMerkleRoot: string;
     uncommittedTxs: TxWitness[];
     preemptcounter: number;
+    private helper: ZkWasmServiceHelper;
+    private imageMd5: string;
+    private globalBundleService: GlobalBundleService;
 
     constructor(merkleRootHexString: string) {
       this.currentUncommitMerkleRoot = merkleRootHexString;
       this.uncommittedTxs = [];
       this.preemptcounter = 0;
+      this.helper = new ZkWasmServiceHelper(endpoint, "", "");
+      this.imageMd5 = get_image_md5();
+      this.globalBundleService = new GlobalBundleService();
     }
 
     async getTxFromCommit(key: string): Promise<TxWitness[]> {
@@ -151,30 +167,107 @@ export class TxStateManager {
       }
     };
 
-    async trackUnprovedBundle(guideMerkle: BigUint64Array): Promise<BigUint64Array | null> {
-      let bundle = await syncToFirstUnprovedBundle(guideMerkle);
-      if (bundle != null) {
-        try {
-          // TODO: implement queryUntilConfirmed if needed
-          // let query = await this.queryUntilConfirmed();
-          // TODO: assert(query.merkleRoot = bundle.merkleRoot);
-        } catch (e) {
-          console.log("proving service query error ...");
-          return null;
+    private async queryLatestTask(merkleRoot: string): Promise<QueryResult> {
+      try {
+        const recentTasks = await this.helper.loadTasks({
+          md5: this.imageMd5,
+          user_address: null,
+          id: null,
+          tasktype: "Prove",
+          taskstatus: "",  // Query all status (empty means all)
+          total: 1  // Only get the latest task
+        });
+
+        if (recentTasks.data && recentTasks.data.length > 0) {
+          const task = recentTasks.data[0] as any;
+          
+          // Convert merkle root to expected input format for comparison
+          const merkleArray = new BigUint64Array(hexStringToMerkleRoot(merkleRoot));
+          const expectedInputs = [merkleArray[0], merkleArray[1], merkleArray[2], merkleArray[3]]
+            .map(x => `${x}:i64`);
+
+          // Check if this task matches our merkle root
+          if (task.public_inputs && 
+              task.public_inputs.length >= 4 &&
+              task.public_inputs[0] === expectedInputs[0] &&
+              task.public_inputs[1] === expectedInputs[1] &&
+              task.public_inputs[2] === expectedInputs[2] &&
+              task.public_inputs[3] === expectedInputs[3]) {
+            
+            return {
+              success: true,
+              task: task,
+              merkleRoot: merkleRoot
+            };
+          }
         }
-        let merkleRoot = bundle.merkleRoot;
-        let txWitness = await this.getTxFromCommit(merkleRoot);
-        try {
-          // TODO: fix submitProof call - needs proper parameters
-          // let id = await submitProof(merkleRoot, postMerkleRoot, txWitness, bundle.txdata);
-          // bundle.taskId = id;
-          // await bundle.save();
-          return new BigUint64Array(4); // placeholder
-        } catch (e) {
-          return null;
-        }
+        
+        return {
+          success: false,
+          error: "No matching task found"
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: `Query failed: ${error}`
+        };
       }
-      return null;
+    }
+
+    async trackUnprovedBundle(guideMerkle: BigUint64Array): Promise<BigUint64Array | null> {
+      // Find the first unproved bundle starting from guideMerkle
+      let bundle = await syncToFirstUnprovedBundle(guideMerkle);
+      if (bundle == null) {
+        // No unproved bundle found, nothing to track
+        return null;
+      }
+
+      let merkleRoot = bundle.merkleRoot;
+      let txWitness = await this.getTxFromCommit(merkleRoot);
+      
+      // Try to query once - let outer setInterval handle retries
+      const queryResult = await this.queryLatestTask(merkleRoot);
+      
+      if (queryResult.success) {
+        // Query succeeded
+        if (queryResult.task) {
+          // Task found and matched - this bundle is confirmed
+          console.log(`Bundle ${merkleRoot} already confirmed, bundle processing complete`);
+          
+          // Update bundle with confirmed task info  
+          await this.globalBundleService.updateBundle(merkleRoot, {
+            taskId: queryResult.task._id.$oid || queryResult.task._id  // Handle MongoDB ObjectId format
+          });
+          
+          // This bundle is done, return null to let syncToFirstUnprovedBundle find the next one
+          return null;
+        } else {
+          // Query succeeded but no matching task found - need to submit proof
+          console.log(`No confirmed task found for bundle ${merkleRoot}, submitting proof...`);
+          try {
+            const merkleArray = new BigUint64Array(hexStringToMerkleRoot(merkleRoot));
+            const taskId = await submitProof(merkleArray, txWitness, bundle.txdata);
+            
+            // Update bundle with submitted task info
+            await this.globalBundleService.updateBundle(merkleRoot, {
+              taskId: taskId  // taskId is response.id from submitProof
+            });
+            
+            console.log(`Proof submitted for bundle ${merkleRoot}, task ID: ${taskId}`);
+            
+            // Return current merkle to keep tracking this bundle until confirmed
+            return new BigUint64Array(hexStringToMerkleRoot(merkleRoot));
+            
+          } catch (submitError) {
+            console.error(`Failed to submit proof for bundle ${merkleRoot}:`, submitError);
+            return null;
+          }
+        }
+      } else {
+        // Query failed - let outer setInterval retry in 30 seconds
+        console.log(`Query failed for bundle ${merkleRoot}: ${queryResult.error}, will retry in next interval`);
+        return null;
+      }
     }
 }
 
