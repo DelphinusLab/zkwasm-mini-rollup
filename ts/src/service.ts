@@ -493,7 +493,7 @@ export class Service {
     console.log("initialize application merkle db ...");
 
 
-    await this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
+    await this.txManager.loadCommit(merkleRootToBeHexString(this.merkleRoot));
     application.initialize(this.merkleRoot);
 
     // update the merkle root variable
