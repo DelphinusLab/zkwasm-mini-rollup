@@ -66,7 +66,13 @@ export { ensureIndexes };
 
 export class TxStateManager {
     currentUncommitMerkleRoot: string;
+
+    // NOTE: uncommittedTxs is a placeholder for future feature evolution
+    // Currently unused - transactions are tracked via preemptcounter and database only
+    // In future versions, this could cache transactions in memory for quick access
+    // without database queries, improving performance for frequently accessed data
     uncommittedTxs: TxWitness[];
+
     preemptcounter: number;
 
     constructor(merkleRootHexString: string) {

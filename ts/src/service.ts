@@ -2,14 +2,14 @@
 import initBootstrap, * as bootstrap from "./bootstrap/bootstrap.js";
 import initApplication, * as application from "./application/application.js";
 import { test_merkle_db_service } from "./test.js";
-import { verifySign, LeHexBN, sign, PlayerConvention, ZKWasmAppRpc, createCommand } from "zkwasm-minirollup-rpc";
+import { verifySign, LeHexBN, sign, createCommand } from "zkwasm-minirollup-rpc";
 import { Queue, Worker, Job } from 'bullmq';
 import IORedis from 'ioredis';
 import express, {Express} from 'express';
 import { submitProofWithRetry, has_uncomplete_task, TxWitness, get_latest_proof, has_task } from "./prover.js";
 import { ensureIndexes } from "./commit.js";
 import cors from "cors";
-import { get_mongoose_db, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_chain_id, get_image_md5 } from "./config.js";
+import { get_mongoose_db, modelJob, modelRand, get_service_port, get_server_admin_key, modelTx, get_contract_addr, get_image_md5 } from "./config.js";
 import { GlobalBundleService } from "./services/global-bundle-service.js";
 import { StateSnapshotService } from "./services/state-snapshot-service.js";
 import { StateMigrationService } from "./services/migration-service.js";
@@ -21,7 +21,7 @@ import {hexStringToMerkleRoot, merkleRootToBeHexString} from "./lib.js";
 import {sha256} from "ethers";
 import {TxStateManager} from "./commit.js";
 import {queryAccounts, storeAccount} from "./account.js";
-import {decodeWithdraw} from "./convention.js";
+
 
 // Load environment variables from .env file
 dotenv.config();
@@ -75,11 +75,7 @@ if (process.env.TASKID) {
   taskid = process.env.TASKID;
 }
 
-/* Global Params */
-
-let transactions_witness = new Array();
-
-let snapshot = JSON.parse("{}");
+/* Helper Functions */
 
 function randByte()  {
   return Math.floor(Math.random() * 0xff);
@@ -120,6 +116,10 @@ export class Service {
   currentMD5: string;
   stateSnapshotService: StateSnapshotService;
   migrationService: StateMigrationService;
+
+  // Moved from global scope for better encapsulation
+  private transactionsWitness: TxWitness[] = [];
+  private snapshot: any = {};
 
   constructor(
       cb: (arg: TxWitness, events: BigUint64Array) => Promise<void> = async (arg: TxWitness, events: BigUint64Array) => {},
@@ -189,14 +189,14 @@ export class Service {
           merkleRootToBeHexString(merkleRoot),
           this.currentMD5
         );
-        if (prevBundle != null) {
-          return prevBundle!.bundleIndex;
-        } else {
-          throw Error("BundleNotFound");
+        if (!prevBundle) {
+          console.log(`fatal: bundle for ${merkleRoot} is not recorded`);
+          process.exit(1);
         }
+        return prevBundle.bundleIndex;
       } catch (e) {
-        console.log(`fatal: bundle for ${merkleRoot} is not recorded`);
-        process.exit();
+        console.error(`Error finding bundle index for ${merkleRoot}:`, e);
+        process.exit(1);
       }
   }
 
@@ -269,7 +269,7 @@ export class Service {
   async install_transactions(tx: TxWitness, jobid: string | undefined, events: BigUint64Array, isReplay = false) {
     // const installStartTime = Date.now();
     console.log("installing transaction into rollup ...");
-    transactions_witness.push(tx);
+    this.transactionsWitness.push(tx);
     // if (!isReplay) {
     // const insertStart = Date.now();
     const handled = await this.txManager.insertTxIntoCommit(tx);
@@ -285,9 +285,9 @@ export class Service {
     
     // Event data snapshots removed: events are transaction processing outputs, not recoverable state data
     // Events are already processed by txCallback and stored in system collections
-    
-    snapshot = JSON.parse(application.snapshot());
-    console.log("transaction installed, rollup pool length is:", transactions_witness.length);
+
+    this.snapshot = JSON.parse(application.snapshot());
+    console.log("transaction installed, rollup pool length is:", this.transactionsWitness.length);
     try {
       // const saveStart = Date.now();
       const txRecord = new modelTx(tx);
@@ -310,7 +310,7 @@ export class Service {
       // let bundle = await this.trackBundle('');
       if (deploymode) {
         try {
-          task_id = await submitProofWithRetry(this.merkleRoot, transactions_witness, txdata);
+          task_id = await submitProofWithRetry(this.merkleRoot, this.transactionsWitness, txdata);
         } catch (e) {
           console.log(e);
           process.exit(1); // this should never happen and we stop the whole process
@@ -323,7 +323,7 @@ export class Service {
         await this.trackBundle(task_id, txdata);
 
         // clear witness queue and set preMerkleRoot
-        transactions_witness = new Array();
+        this.transactionsWitness = new Array();
         this.preMerkleRoot = this.merkleRoot;
 
         // need to update merkle_root as the input of next proof
@@ -346,7 +346,7 @@ export class Service {
         // KNOWN ISSUE: txBatched receives empty array due to performance optimization
         // Bug introduced in commit 6da6799 (2025-01-31) when adding postMerkleRoot parameter
         //
-        // Current behavior (line 326): transactions_witness is cleared BEFORE txBatched call
+        // Current behavior (line 326): transactionsWitness is cleared BEFORE txBatched call
         // Result: External applications receive empty array in their batchedCallback
         //
         // Impact:
@@ -355,14 +355,14 @@ export class Service {
         // - Workarounds: Use eventCallback (per-tx) or query modelTx database directly
         //
         // To fix (would cause performance impact):
-        // const completedWitnesses = transactions_witness;  // Save reference before clearing
-        // transactions_witness = new Array();
+        // const completedWitnesses = this.transactionsWitness;  // Save reference before clearing
+        // this.transactionsWitness = new Array();
         // await this.txBatched(completedWitnesses, ...);    // Pass saved reference
         //
         // Decision: Not fixing due to performance concerns (saving array reference adds overhead)
         // record all the txs externally so that the external db can preserve a snap shot
         // const batchStart = Date.now();
-        await this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
+        await this.txBatched(this.transactionsWitness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
         // const batchEnd = Date.now();
         // console.log(`[${new Date().toISOString()}] txBatched took: ${batchEnd - batchStart}ms`);
 
@@ -623,7 +623,7 @@ export class Service {
           }
           let result = {
             player: player,
-            state: snapshot,
+            state: this.snapshot,
             bundle: this.txManager.currentUncommitMerkleRoot,
           };
           return result
@@ -643,8 +643,19 @@ export class Service {
   async serve() {
     // replay uncommitted transactions
     console.log("install bootstrap txs");
-    for (const value of await this.txManager.getTxFromCommit(merkleRootToBeHexString(this.merkleRoot))) {
-      this.queue!.add('replay', { value });
+    const txsToReplay = await this.txManager.getTxFromCommit(merkleRootToBeHexString(this.merkleRoot));
+
+    if (txsToReplay.length > 0) {
+      // Use addBulk for better performance - single Redis roundtrip instead of N roundtrips
+      // Priority ensures transactions are processed in order (lower priority = higher precedence)
+      await this.queue!.addBulk(
+        txsToReplay.map((value, index) => ({
+          name: 'replay',
+          data: { value },
+          opts: { priority: index }  // Maintain transaction order
+        }))
+      );
+      console.log(`Queued ${txsToReplay.length} transactions for replay`);
     }
     console.log("start express server");
     const app = express();
@@ -700,7 +711,7 @@ export class Service {
         let job = await modelJob.findOne({
             jobId: hash + pkx,
         });
-        res.status(201).send({
+        res.status(200).send({
           success: true,
           data: job,
         });
@@ -724,10 +735,10 @@ export class Service {
         let player = JSON.parse(jstr);
         let result = {
           player: player,
-          state: snapshot
+          state: this.snapshot
         }
         await storeAccount(value.pkx, player, this.playerIndexer);
-        res.status(201).send({
+        res.status(200).send({
           success: true,
           data: JSON.stringify(result),
         });
@@ -740,13 +751,13 @@ export class Service {
     app.get('/data/players/:start?', async(req:any, res) => {
       let start = req.params.start;
       if (Number.isNaN(start)) {
-        res.status(201).send({
+        res.status(200).send({
           success: false,
           data: [],
         });
       } else {
         let data = await queryAccounts(Number(start));
-        res.status(201).send({
+        res.status(200).send({
           success: true,
           data: data,
         });
@@ -757,16 +768,23 @@ export class Service {
       let merkleRootStr = req.params.merkleroot;
       try {
         if (merkleRootStr == 'latest') {
-          merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
+          if (!this.preMerkleRoot) {
+            return res.status(404).json({
+              success: false,
+              error: 'No bundles completed yet',
+              data: []
+            });
+          }
+          merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot);
         }
         // Filter bundle chain by current MD5 to only show bundles from same application version
         const bundles = await this.globalBundleService.getBundleChain(merkleRootStr, 20, this.currentMD5);
-        return res.status(201).json({
+        return res.status(200).json({
           success: true,
           data: bundles
         });
       } catch (e: any) {
-        return res.status(201).json({
+        return res.status(500).json({
           success: false,
           error: e.toString(),
           data: []
@@ -778,7 +796,7 @@ export class Service {
       try {
         let jobId = req.params.id;
         const job = await Job.fromId(this.queue!, jobId);
-        return res.status(201).json(job);
+        return res.status(200).json(job);
       } catch (err) {
         // job not tracked
         console.log(err);
@@ -787,7 +805,7 @@ export class Service {
     });
 
     app.get('/global', async (req, res) => {
-      return res.status(201).json(snapshot);
+      return res.status(200).json(this.snapshot);
     });
 
 
@@ -797,7 +815,7 @@ export class Service {
         // Filter by current MD5 to only return bundles from same application version
         let record = await this.globalBundleService.findBundleByMerkle(merkleRootString, this.currentMD5);
         if (record) {
-          return res.status(201).json(record);
+          return res.status(200).json(record);
         } else {
           throw Error("TaskNotFound");
         }
@@ -812,7 +830,7 @@ export class Service {
     app.post('/config', async (req, res) => {
       try {
         let jstr = application.get_config();
-        res.status(201).send({
+        res.status(200).send({
           success: true,
           data: jstr
         });
