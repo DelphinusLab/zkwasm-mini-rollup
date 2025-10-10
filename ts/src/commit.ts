@@ -19,15 +19,16 @@ commitSchema.index({ key: 1 });
 
 export const CommitModel = mongoose.model('Commit', commitSchema);
 
-// Ensure indexes exist on existing collections - check and create if needed
+// Ensure indexes exist - handles both existing and fresh databases
 const ensureIndexes = async () => {
   try {
+    // For existing databases: Check if index already exists using MongoDB driver
     const collection = CommitModel.collection;
     const indexes = await collection.indexes();
-    const keyIndexExists = indexes.some(index => 
+    const keyIndexExists = indexes.some(index =>
       index.key && index.key.key === 1
     );
-    
+
     if (!keyIndexExists) {
       console.log('Creating index on key field for existing database...');
       await collection.createIndex({ key: 1 });
@@ -35,8 +36,28 @@ const ensureIndexes = async () => {
     } else {
       console.log('Index on key field already exists');
     }
-  } catch (error) {
-    console.error('Error ensuring indexes:', error);
+  } catch (error: any) {
+    // Handle NamespaceNotFound error - collection doesn't exist yet (fresh database)
+    // This is expected for new MD5 versions starting with empty state
+    if (error.code === 26 || error.codeName === 'NamespaceNotFound') {
+      console.log('Commits collection does not exist yet (fresh database).');
+
+      // Use Mongoose's createIndexes() to create collection and indexes
+      // This method will:
+      // 1. Create the collection if it doesn't exist
+      // 2. Create all indexes defined in the schema (commitSchema.index({ key: 1 }))
+      try {
+        await CommitModel.createIndexes();
+        console.log('Collection and indexes created successfully.');
+      } catch (createError: any) {
+        // This should rarely fail, but if it does, log the error
+        // The application may continue but queries won't be optimized
+        console.error('Failed to create indexes for fresh database:', createError);
+        console.warn('Warning: Commits collection will work but without index optimization.');
+      }
+    } else {
+      console.error('Error ensuring indexes:', error);
+    }
   }
 };
 

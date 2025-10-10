@@ -328,11 +328,11 @@ export class Service {
 
         // need to update merkle_root as the input of next proof
         this.merkleRoot = application.query_root();
-        
+
         // New: Create state snapshot after Bundle completion
         const bundleEndMerkleRoot = merkleRootToBeHexString(this.merkleRoot);
         this.stateSnapshotService.updateMerkleRoot(bundleEndMerkleRoot);
-        
+
         // Create state snapshot asynchronously without blocking Bundle processing
         this.stateSnapshotService.createCompleteSnapshot()
           .then(() => {
@@ -343,6 +343,23 @@ export class Service {
           });
 
 
+        // KNOWN ISSUE: txBatched receives empty array due to performance optimization
+        // Bug introduced in commit 6da6799 (2025-01-31) when adding postMerkleRoot parameter
+        //
+        // Current behavior (line 326): transactions_witness is cleared BEFORE txBatched call
+        // Result: External applications receive empty array in their batchedCallback
+        //
+        // Impact:
+        // - External apps cannot access transaction data via txBatched callback
+        // - Framework core functionality (proof submission, internal storage) NOT affected
+        // - Workarounds: Use eventCallback (per-tx) or query modelTx database directly
+        //
+        // To fix (would cause performance impact):
+        // const completedWitnesses = transactions_witness;  // Save reference before clearing
+        // transactions_witness = new Array();
+        // await this.txBatched(completedWitnesses, ...);    // Pass saved reference
+        //
+        // Decision: Not fixing due to performance concerns (saving array reference adds overhead)
         // record all the txs externally so that the external db can preserve a snap shot
         // const batchStart = Date.now();
         await this.txBatched(transactions_witness, merkleRootToBeHexString(this.preMerkleRoot), merkleRootToBeHexString(this.merkleRoot));
@@ -476,7 +493,7 @@ export class Service {
     console.log("initialize application merkle db ...");
 
 
-    this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
+    await this.txManager.moveToCommit(merkleRootToBeHexString(this.merkleRoot));
     application.initialize(this.merkleRoot);
 
     // update the merkle root variable
