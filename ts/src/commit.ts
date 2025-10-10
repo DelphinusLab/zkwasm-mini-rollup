@@ -28,32 +28,34 @@ const ensureIndexes = async () => {
   try {
     const collection = CommitModel.collection;
     
-    // Try to create index directly - MongoDB will handle if collection doesn't exist
-    try {
-      const indexes = await collection.indexes();
-      const keyIndexExists = indexes.some(index => 
-        index.key && index.key.key === 1
-      );
-      
-      if (!keyIndexExists) {
-        console.log('Creating index on key field...');
-        await collection.createIndex({ key: 1 });
-        console.log('Index on key field created successfully');
-      } else {
-        console.log('Index on key field already exists');
-      }
-    } catch (indexError: any) {
-      // If collection doesn't exist, create the index anyway - it will be applied when collection is created
-      if (indexError.code === 26 && indexError.codeName === 'NamespaceNotFound') {
-        console.log('Collection does not exist yet, creating index for when it gets created...');
-        await collection.createIndex({ key: 1 });
-        console.log('Index on key field will be created when collection is first used');
-      } else {
-        throw indexError;
-      }
+    // Check if database and collection exist first
+    const db = (collection as any).db;
+    const collections = await db.listCollections({ name: collection.collectionName }).toArray();
+    
+    if (collections.length === 0) {
+      console.log('Collection does not exist yet, index will be created automatically from schema');
+      return; // Schema already defines the index, so it will be created when collection is first used
     }
-  } catch (error) {
-    console.error('Error ensuring indexes:', error);
+    
+    // Collection exists, check if index exists
+    const indexes = await collection.indexes();
+    const keyIndexExists = indexes.some(index => 
+      index.key && index.key.key === 1
+    );
+    
+    if (!keyIndexExists) {
+      console.log('Creating index on key field...');
+      await collection.createIndex({ key: 1 });
+      console.log('Index on key field created successfully');
+    } else {
+      console.log('Index on key field already exists');
+    }
+  } catch (error: any) {
+    if (error.code === 26 && error.codeName === 'NamespaceNotFound') {
+      console.log('Collection does not exist yet, index will be created from schema on first use');
+    } else {
+      console.error('Error ensuring indexes:', error);
+    }
   }
 };
 
@@ -278,7 +280,9 @@ export class TxStateManager {
           console.log(`No confirmed task found for bundle ${merkleRoot}, submitting proof...`);
           try {
             const merkleArray = new BigUint64Array(hexStringToMerkleRoot(merkleRoot));
-            const taskId = await submitProof(merkleArray, txWitness, bundle.txdata);
+            // Convert Buffer to Uint8Array for submitProof
+            const txdataUint8 = bundle.txdata ? new Uint8Array(bundle.txdata) : new Uint8Array(0);
+            const taskId = await submitProof(merkleArray, txWitness, txdataUint8);
             
             // Update bundle with submitted task info
             await this.globalBundleService.updateBundle(merkleRoot, {
