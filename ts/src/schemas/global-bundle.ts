@@ -4,7 +4,6 @@ export const globalBundleSchema = new mongoose.Schema({
   merkleRoot: {
     type: String,
     required: true,
-    unique: true,
     index: true
   },
   preMerkleRoot: {
@@ -53,6 +52,8 @@ export const globalBundleSchema = new mongoose.Schema({
 globalBundleSchema.index({ imageMD5: 1 });
 globalBundleSchema.index({ preMerkleRoot: 1, postMerkleRoot: 1 });
 globalBundleSchema.index({ merkleRoot: 1 });
+// Compound unique index: allow same merkleRoot for different MD5s, but prevent duplicates within same MD5
+globalBundleSchema.index({ merkleRoot: 1, imageMD5: 1 }, { unique: true });
 export interface IGlobalBundle extends mongoose.Document {
   merkleRoot: string;
   preMerkleRoot: string;

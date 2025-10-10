@@ -30,7 +30,19 @@ let remote = false;
 let migrate = false;
 let redisHost = 'localhost';
 
-//if md5 is invalid, this will throw an error; if unspecified, this will return false
+// First, check if there are uncompleted tasks (Pending/Processing) and wait for completion
+// This ensures we don't miss tasks that are currently being processed
+if (await has_uncomplete_task()) {
+  console.log("Found uncompleted tasks (Pending/Processing), waiting for completion before determining mode...");
+  while (await has_uncomplete_task()) {
+    console.log("Tasks still processing, waiting 10 seconds...");
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+  console.log("All uncompleted tasks have finished.");
+}
+
+// Now check if there are successfully completed tasks (Done status)
+// if md5 is invalid, this will throw an error; if unspecified, this will return false
 let hasTask = await has_task();
 let contractAddr = get_contract_addr();
 
@@ -143,18 +155,19 @@ export class Service {
   async syncToLatestMerkelRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
     let prevMerkle = null;
-    let bundle = await this.findBundleByMerkle(currentMerkle);
+    // Filter by current MD5 to only sync bundles from same application version
+    let bundle = await this.findBundleByMerkle(currentMerkle, true);
     while (bundle != null && bundle.postMerkleRoot != null) {
       const postMerkle = new BigUint64Array(hexStringToMerkleRoot(bundle.postMerkleRoot));
-      console.log("sync merkle:", currentMerkle, "taskId:", bundle.taskId);
-      bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle));
+      console.log("sync merkle:", currentMerkle, "taskId:", bundle.taskId, "MD5:", bundle.imageMD5);
+      bundle = await this.findBundleByMerkle(merkleRootToBeHexString(postMerkle), true);
       if(bundle != null) {
         currentMerkle = bundle.merkleRoot;
         prevMerkle = bundle.preMerkleRoot;
         this.bundleIndex += 1;
       }
     }
-    console.log("final merkle:", currentMerkle);
+    console.log("final merkle:", currentMerkle, "MD5:", this.currentMD5);
     this.merkleRoot = new BigUint64Array(hexStringToMerkleRoot(currentMerkle));
     if (prevMerkle) {
       this.preMerkleRoot = new BigUint64Array(hexStringToMerkleRoot(prevMerkle));
@@ -162,15 +175,18 @@ export class Service {
     }
   }
 
-  async findBundleByMerkle(merkleHexRoot: string) {
-    const prevBundle = await this.globalBundleService.findBundleByMerkle(merkleHexRoot);
+  async findBundleByMerkle(merkleHexRoot: string, filterByCurrentMD5: boolean = false) {
+    const imageMD5 = filterByCurrentMD5 ? this.currentMD5 : undefined;
+    const prevBundle = await this.globalBundleService.findBundleByMerkle(merkleHexRoot, imageMD5);
     return prevBundle;
   }
 
   async findBundleIndex(merkleRoot: BigUint64Array) {
       try {
+        // Filter by current MD5 when finding bundle index
         const prevBundle = await this.globalBundleService.findBundleByMerkle(
-          merkleRootToBeHexString(merkleRoot)
+          merkleRootToBeHexString(merkleRoot),
+          this.currentMD5
         );
         if (prevBundle != null) {
           return prevBundle!.bundleIndex;
@@ -190,17 +206,18 @@ export class Service {
       preMerkleRootStr = merkleRootToBeHexString(this.preMerkleRoot);
       console.log("update merkle chain ...", preMerkleRootStr);
       try {
-        const prevBundle = await this.globalBundleService.findBundleByMerkle(preMerkleRootStr);
+        // Filter by current MD5 when looking up previous bundle
+        const prevBundle = await this.globalBundleService.findBundleByMerkle(preMerkleRootStr, this.currentMD5);
         if (!prevBundle) {
           throw Error(`fatal: can not find bundle for previous MerkleRoot: ${preMerkleRootStr}`);
         }
-        
+
         if (this.bundleIndex != prevBundle!.bundleIndex) {
           console.log(`fatal: bundleIndex does not match: ${this.bundleIndex}, ${prevBundle!.bundleIndex}`);
           throw Error(`Bundle Index does not match: current index is ${this.bundleIndex}, previous index is ${prevBundle!.bundleIndex}`);
         }
         console.log("merkle chain prev is", prevBundle);
-        
+
         // Update chain relationships in global Bundle registry
         await this.globalBundleService.updateBundle(preMerkleRootStr, {
           postMerkleRoot: merkleRootToBeHexString(this.merkleRoot)
@@ -394,18 +411,9 @@ export class Service {
         throw migrationError;
       }
     } else if(remote) {
-    //initialize merkle_root based on the latest task
-      while (true) {
-        const hasTasks = await has_uncomplete_task();
-        if (hasTasks) {
-          console.log("remote = 1, There are uncompleted tasks. Trying again in 5 second...");
-          await new Promise(resolve => setTimeout(resolve, 5000)); // Sleep for 5 second
-        } else {
-          console.log("remote = 1, No incomplete tasks. Proceeding...");
-          break; // Exit the loop if there are no incomplete tasks
-        }
-      }
-
+      // Initialize merkle_root based on the latest task
+      // Note: We already waited for uncompleted tasks at startup,
+      // so we can directly get the latest proof
       let task = await get_latest_proof(taskid);
       console.log("latest taskId got from remote:", task?._id);
       console.log("latest task", task?.instances);
@@ -667,7 +675,8 @@ export class Service {
         if (merkleRootStr == 'latest') {
           merkleRootStr = merkleRootToBeHexString(this.preMerkleRoot!);
         }
-        const bundles = await this.globalBundleService.getBundleChain(merkleRootStr, 20);
+        // Filter bundle chain by current MD5 to only show bundles from same application version
+        const bundles = await this.globalBundleService.getBundleChain(merkleRootStr, 20, this.currentMD5);
         return res.status(201).json({
           success: true,
           data: bundles
@@ -701,7 +710,8 @@ export class Service {
     app.get('/prooftask/:root', async (req, res) => {
       try {
         let merkleRootString = req.params.root;
-        let record = await this.globalBundleService.findBundleByMerkle(merkleRootString);
+        // Filter by current MD5 to only return bundles from same application version
+        let record = await this.globalBundleService.findBundleByMerkle(merkleRootString, this.currentMD5);
         if (record) {
           return res.status(201).json(record);
         } else {

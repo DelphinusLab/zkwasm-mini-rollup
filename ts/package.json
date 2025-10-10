@@ -31,6 +31,7 @@
     "settle": "node src/settle.js",
     "build": "npx tsc",
     "test": "jest",
+    "test:task": "node src/test_has_task.js",
     "postinstall": "npm run build"
   }
 }

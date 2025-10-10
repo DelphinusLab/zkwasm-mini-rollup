@@ -49,48 +49,50 @@ export class GlobalBundleService {
     }).sort({ bundleIndex: 1 });
   }
   
-  async findBundleByMerkle(merkleRoot: string): Promise<IGlobalBundle | null> {
-    return await this.globalBundleModel.findOne({
-      merkleRoot: merkleRoot
-    });
+  async findBundleByMerkle(merkleRoot: string, imageMD5?: string): Promise<IGlobalBundle | null> {
+    const query: any = { merkleRoot: merkleRoot };
+    if (imageMD5) {
+      query.imageMD5 = imageMD5;
+    }
+    return await this.globalBundleModel.findOne(query);
   }
   
-  async getBundleChain(merkleRootStr: string, maxLength: number = 20): Promise<IGlobalBundle[]> {
+  async getBundleChain(merkleRootStr: string, maxLength: number = 20, imageMD5?: string): Promise<IGlobalBundle[]> {
     const bundles: IGlobalBundle[] = [];
-    
+
     // Find starting bundle
-    let bundle = await this.findBundleByMerkle(merkleRootStr);
+    let bundle = await this.findBundleByMerkle(merkleRootStr, imageMD5);
     if (!bundle) {
       return bundles;
     }
-    
+
     const after = bundle;
-    
+
     // Go backwards first (up to half maxLength)
     const backwardLimit = Math.floor(maxLength / 2);
     while (bundle != null && bundles.length < backwardLimit) {
       bundles.unshift(bundle);
-      bundle = bundle.preMerkleRoot ? 
-        await this.findBundleByMerkle(bundle.preMerkleRoot) : 
+      bundle = bundle.preMerkleRoot ?
+        await this.findBundleByMerkle(bundle.preMerkleRoot, imageMD5) :
         null;
     }
-    
+
     // Go forwards from the starting point
     bundle = after;
     const len = bundles.length;
     if (bundle) {
-      bundle = bundle.postMerkleRoot ? 
-        await this.findBundleByMerkle(bundle.postMerkleRoot) : 
+      bundle = bundle.postMerkleRoot ?
+        await this.findBundleByMerkle(bundle.postMerkleRoot, imageMD5) :
         null;
     }
-    
+
     while (bundle != null && bundles.length < len + (maxLength - backwardLimit)) {
       bundles.push(bundle);
-      bundle = bundle.postMerkleRoot ? 
-        await this.findBundleByMerkle(bundle.postMerkleRoot) : 
+      bundle = bundle.postMerkleRoot ?
+        await this.findBundleByMerkle(bundle.postMerkleRoot, imageMD5) :
         null;
     }
-    
+
     return bundles;
   }
   

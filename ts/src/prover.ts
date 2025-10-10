@@ -184,6 +184,11 @@ export async function get_latest_proof(taskid: string | null): Promise<Task | nu
 }
 
 export async function has_uncomplete_task(): Promise<boolean> {
+  if (get_image_md5() == "unspecified") {
+    console.log("md5 is unspecified");
+    return false;
+  }
+
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
   let query = {
     md5: get_image_md5(),
@@ -211,12 +216,15 @@ export async function has_task(): Promise<boolean> {
     return false;
   }
   const helper = new ZkWasmServiceHelper(endpoint, "", "");
+
+  // Check for successfully completed tasks (Done status)
+  // This excludes failed tasks like DryRunFailed, Fail
   let query = {
     md5: get_image_md5(),
     user_address: null,
     id: null,
     tasktype: "Prove",
-    taskstatus: "",
+    taskstatus: "Done",
     total: 1,
   };
   let tasks = await helper.loadTasks(query);
