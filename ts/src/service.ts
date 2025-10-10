@@ -125,7 +125,7 @@ export class Service {
     this.blocklist = new Map();
   }
 
-  async syncToLatestMerkelRoot() {
+  async syncToLatestMerkleRoot() {
     let currentMerkle = merkleRootToBeHexString(this.merkleRoot);
     let prevMerkle = null;
     let bundle = await this.findBundleByMerkle(currentMerkle);
