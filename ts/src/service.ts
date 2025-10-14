@@ -511,6 +511,12 @@ export class Service {
 
     app.use(express.json());
     app.use(cors());
+    app.use((req, res, next) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      next();
+    });
 
     app.post('/send', async (req, res) => {
       const value = req.body;
