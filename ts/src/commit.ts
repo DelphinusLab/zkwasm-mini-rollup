@@ -86,7 +86,9 @@ export class TxStateManager {
         const commit = await CommitModel.findOne({ key });
         if (commit) {
           console.info(`load commit ${key}: total uncommitted ${commit.items.length}`);
-          this.preemptcounter = commit.items.length;
+          // Do NOT set preemptcounter to commit.items.length
+          // The counter should start from 0 for replay to work correctly
+          // Replay transactions will match against existing items using counter as index
         } else {
           console.info(`non transactions recorded for commit ${key}`);
         }
