@@ -466,8 +466,17 @@ export class Service {
       if (job.name == 'autoJob') {
         // console.log(`[${getTimestamp()}] AutoJob tick started`);
         try {
+          const randStartTime = performance.now();
           let rand = await generateRandomSeed();
+          const randEndTime = performance.now();
+          console.log(`[${getTimestamp()}] AutoJob generateRandomSeed took: ${randEndTime - randStartTime}ms`);
+
+          const oldSeedStartTime = performance.now();
           let oldSeed = application.randSeed();
+          const oldSeedEndTime = performance.now();
+          console.log(`[${getTimestamp()}] AutoJob get old seed took: ${oldSeedEndTime - oldSeedStartTime}ms`);
+
+          const oldSeedFindStartTime = performance.now();
           let seed = 0n;
           if (oldSeed != 0n) {
             const randRecord = await modelRand.find({
@@ -475,10 +484,18 @@ export class Service {
             });
             seed = randRecord[0].seed!.readBigInt64LE();
           };
+          const oldSeedFindEndTime = performance.now();
+          console.log(`[${getTimestamp()}] AutoJob find old seed took: ${oldSeedFindEndTime - oldSeedFindStartTime}ms`);
+
           let signature = sign(createCommand(0n, 0n, [seed, rand, 0n, 0n]), get_server_admin_key());
           //console.log("signautre is", signature);
           let u64array = signature_to_u64array(signature);
+
+          const verifyTxSignatureStartTime = performance.now();
           application.verify_tx_signature(u64array);
+          const verifyTxSignatureEndTime = performance.now();
+          console.log(`[${getTimestamp()}] AutoJob verify_tx_signature took: ${verifyTxSignatureEndTime - verifyTxSignatureStartTime}ms`);
+
           const handleTxStart = performance.now();
           let txResult = application.handle_tx(u64array);
           const handleTxEnd = performance.now();
@@ -545,7 +562,7 @@ export class Service {
           // const jobEndTime = performance.now();
           console.log("done");
           let player = null;
-
+          const getStateStartTime = performance.now();
           if (job.name != "replay") {
             // in replay mode we do not need the return value for player
             const pkx = new LeHexBN(job.data.value.pkx).toU64Array();
@@ -557,6 +574,8 @@ export class Service {
             state: snapshot,
             bundle: this.txManager.currentUncommitMerkleRoot,
           };
+          const getStateEndTime = performance.now();
+          console.log(`[${getTimestamp()}] ${job.name} get_state took: ${getStateEndTime - getStateStartTime}ms`);
           return result
         } catch (e) {
           const jobEndTime = performance.now();
