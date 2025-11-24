@@ -78,10 +78,31 @@ export class TxStateManager {
         return [];
       }
     }
+    async loadCommit(key: string) {
+      this.currentUncommitMerkleRoot = key;
+      this.uncommittedTxs = [];
+      this.preemptcounter = 0;
+      try {
+        const commit = await CommitModel.findOne({ key });
+        if (commit) {
+          console.info(`load commit ${key}: total uncommitted ${commit.items.length}`);
+          // Do NOT set preemptcounter to commit.items.length
+          // The counter should start from 0 for replay to work correctly
+          // Replay transactions will match against existing items using counter as index
+        } else {
+          console.info(`non transactions recorded for commit ${key}`);
+        }
+      } catch (error) {
+        console.info(`fatal: can not load target commit`);
+        process.exit(1);
+      }
+    }
+
 
     async moveToCommit(key: string) {
       this.currentUncommitMerkleRoot = key;
       this.preemptcounter = 0;
+      this.uncommittedTxs = [];
       try {
         await CommitModel.findOneAndUpdate({
           key: key
