@@ -1,0 +1,3 @@
+[submodule "ts"]
+	path = ts
+	url = https://github.com/DelphinusLab/zkwasm-minirollup-ts.git
